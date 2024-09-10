@@ -1,0 +1,195 @@
+package server.game.docker.server;
+
+import java.io.IOException;
+import java.net.DatagramPacket;
+import java.net.DatagramSocket;
+import java.net.InetAddress;
+import java.time.Instant;
+import java.util.List;
+import java.util.Objects;
+import java.util.Random;
+
+import server.game.docker.net.Packet;
+import server.game.docker.net.Packet.PacketTypes;
+import server.game.docker.net.Packet00Join;
+import server.game.docker.net.Packet01Disconnect;
+import server.game.docker.net.Packet02WorldInfo;
+
+public class SimpleRTSGameServerSideLogic {
+    private final GameSession gameSession;
+    private final byte [][] gameMap;
+    private static enum TileType {
+        NEXUS(Byte.MAX_VALUE), RIVER((byte) -1), RESOURCENODE((byte) 1), GOLDMINE((byte) 2), BRIDGE((byte) (Byte.MAX_VALUE - 1)), BLANK((byte) 0);
+
+        private Byte tileID;
+
+        private TileType(Byte tileID){
+            this.tileID = tileID;
+        }
+
+        public Byte getTileID() {
+            return tileID;
+        }
+    }
+    private Integer winnerPlayerID;
+    //Game logic
+    //todo: only client copy - server must handle
+    private Integer playerGoldBalance = 0;
+    private Short playerMineBalance = 0 + 2;
+    private Long gameStartMills;
+    private Long lastGoldWithdraw;
+
+    public SimpleRTSGameServerSideLogic(GameSession gameSession){
+        this.gameSession = gameSession;
+        gameMap = new byte[][] {
+            {0, 0, 0, 0, 0, Byte.MAX_VALUE, 0, 0, 0, 0, 0},
+            {0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0},
+            {0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0},
+            {0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0},
+            {0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0},
+            {-1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1},
+            {0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0},
+            {0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0},
+            {0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0},
+            {0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0},
+            {0, 0, 0, 0, 0, Byte.MAX_VALUE, 0, 0, 0, 0, 0}
+        };
+
+        //Generate resource nodes
+        // System.out.println("Generating map ...");
+        // for (int i = 1; (i < gameMap.length - 1)/* && (i != 5)*/; i++) {
+        //     if(i == 5) 
+        //         continue;
+        //     for (int j = 0; j < gameMap[i].length; j++) {
+        //         //1 in 5 (0 - 4) chance for a resource node
+        //         Boolean isRersourceNode = new Random().nextInt(5) == 2;
+        //         gameMap[i][j] = isRersourceNode? TileType.RESOURCENODE.tileID : TileType.BLANK.tileID;
+        //         if(isRersourceNode)
+        //             sendToAll(new Packet02WorldInfo(new byte[] {(byte) i, (byte) j}).getData());
+        //     }
+        // }
+        // System.out.println("Map generated");
+        System.out.println();
+
+        initGameLoop();
+    }
+
+    private Integer withdrawGold(){
+        //10 gold every 1 second
+        final Integer withdrawnSum = playerMineBalance * (int) ((Instant.now().toEpochMilli() - lastGoldWithdraw) / 100);
+        lastGoldWithdraw = Instant.now().toEpochMilli();
+        return withdrawnSum;
+    }
+
+    private void initGameLoop(){
+        //todo: implement game timer
+        gameStartMills = lastGoldWithdraw = Instant.now().toEpochMilli();
+        /*while(Objects.isNull(winnerPlayerID)){
+            playerGoldBalance += withdrawGold();
+            switch(*//*awaitPlayerInput()*//*"placeholder"){
+                case "exit" -> winnerPlayerID = 1;
+                case "mine" -> {
+                    //todo: e.g. mine E 4
+                    if(((playerGoldBalance += withdrawGold()) - 1000) >= 0){
+                        playerMineBalance++;
+                        playerGoldBalance -= 1000;
+                        System.out.println(String.format("Bought a mine, new gold: %d, new mines: %d", playerGoldBalance, playerMineBalance));
+                    }
+                    else 
+                        System.out.println("Not enough for mine");
+                }
+                case "bridge" -> {
+                    playerGoldBalance += withdrawGold();
+                    if(playerMineBalance > 4 && playerGoldBalance >= 400)
+                        winnerPlayerID = 1;
+                    else
+                        System.out.println("Not enough for bridge");
+                }
+                case "gold" -> {
+                    System.out.println(String.format("You have %d gold", playerGoldBalance += withdrawGold()));
+                }
+                default -> 
+                    System.out.println("Unrecognised command");
+            }
+        }*/
+        System.out.println("You won");
+    }
+
+    public void parsePacket(byte[] data, InetAddress address, int port) { //todo: will become packet router Map<PacketType, PacketN> - Packet -> PacketRouter.route -> NO PacketN (e.g. game system Controller class)
+        // TODO Auto-generated method stub
+        // throw new UnsupportedOperationException("Unimplemented method 'parsePacket'");
+        PacketTypes type = Packet.lookupPacket(new String(data).trim().substring(0, 2));
+        switch (type) {
+            case INVALID -> 
+                System.out.println("Invalid pakcet received");
+
+            case JOIN -> {
+                Packet00Join joinPacket = new Packet00Join(data);
+                System.out.println(String.format("A player (%s / %s) has joined the session", joinPacket.getUsername(), address.getHostAddress()));
+                addConnection(new GameClientPlayer(address, port, joinPacket.getUsername()), joinPacket);
+                if(gameSession.connectedClients.size() == 2)
+                    generateWorld();
+            }
+
+            case DISCONNECT -> {
+                Packet01Disconnect disconnectPacket = new Packet01Disconnect(data);
+                System.out.println(String.format("A player (%s / %s) has left the session", disconnectPacket.getUsername(), address.getHostAddress()));
+                gameSession.connectedClients.remove(gameSession.connectedClients.indexOf(gameSession.connectedClients.stream().filter(c -> disconnectPacket.getUsername().equals(c.getUsername())).findAny().orElse(null)));
+                sendToAll(data);
+            }
+
+            // case WORLDINFO -> {
+            //     Packet02WorldInfo worldInfoPacket = new Packet02WorldInfo(data);
+            //     gameMap[worldInfoPacket.getI()][worldInfoPacket.getJ()] = TileType.RESOURCENODE.tileID;
+            // }
+        
+            default -> 
+                System.out.println("Invalid packet received");
+        }
+    }
+
+    private void generateWorld() {
+        // TODO Auto-generated method stub
+        // throw new UnsupportedOperationException("Unimplemented method 'generateWorld'");
+        System.out.println("Generating map ...");
+        for (int i = 1; (i < gameMap.length - 1)/* && (i != 5)*/; i++) {
+            if(i == 5) 
+                continue;
+            for (int j = 0; j < gameMap[i].length; j++) {
+                //1 in 5 (0 - 4) chance for a resource node
+                Boolean isRersourceNode = new Random().nextInt(5) == 2;
+                gameMap[i][j] = isRersourceNode? TileType.RESOURCENODE.tileID : TileType.BLANK.tileID;
+                if(isRersourceNode)
+                    sendToAll(new Packet02WorldInfo("02".concat(Byte.toString((byte) i)).concat(",").concat(Byte.toString((byte) j)).concat(",").concat(Byte.toString((byte) (/*i == gameMap.length - 1 && j == gameMap[i].length -1? 1 : */0))).getBytes()).getData());
+            }
+            if(i == gameMap.length - 2/* && j == gameMap[i].length -1*/)
+                sendToAll(new Packet02WorldInfo("02".concat(Byte.toString((byte) -1)).concat(",").concat(Byte.toString((byte) -1)).concat(",").concat(Byte.toString((byte) 1)).getBytes()).getData());
+        }
+        System.out.println("Map generated");
+    }
+
+    public void sendData(byte[] data, InetAddress senderIP, Integer port){
+        DatagramPacket packet = new DatagramPacket(data, data.length, senderIP, port);
+        try {
+            gameSession.socket.send(packet);
+        } catch (IOException e) {
+            // TODO: handle exception
+            e.printStackTrace();
+        }
+    }
+
+    public void sendToAll(byte[] data) {
+        // TODO Auto-generated method stub
+        // throw new UnsupportedOperationException("Unimplemented method 'sendToAll'");
+        gameSession.connectedClients.forEach(c -> sendData(data, c.getiPAddress(), c.getPort()));
+    }
+
+    private void addConnection(GameClientPlayer gameClientPlayer, Packet00Join joinPacket){
+        // if(gameClientPlayer.getID().equals(joinPacket)) //todo: base on "client side" connectionID;
+        if(gameSession.connectedClients.stream().map(GameClientPlayer::getUsername).noneMatch(joinPacket.getUsername()::equals)){
+            gameSession.connectedClients.add(gameClientPlayer);
+            // sendToAll(joinPacket.getData());
+            gameSession.connectedClients.stream().filter(c -> !c.getUsername().equals(gameClientPlayer.getUsername())).forEach(c -> sendData(joinPacket.getData(), c.getiPAddress(), c.getPort()));
+        }
+    }
+}
