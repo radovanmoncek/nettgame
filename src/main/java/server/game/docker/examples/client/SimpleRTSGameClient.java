@@ -23,11 +23,10 @@ class SimpleRTSGameClient {
     /**
      * The server port
      */
-    // public static final Integer serverPort = 4321;
+    public final Integer serverPort;
     /**
-     * The client IP address
+     * The server IP address
      */
-    // public static final String iP = "127.0.0.1";
     private InetAddress iPAddress;
     /**
      * The client socket
@@ -48,40 +47,14 @@ class SimpleRTSGameClient {
     public static final String ANSI_WHITE = "\u001B[37m";
 
     private final byte [][] gameMap;
-    // private static enum TileType {
-    //     NEXUS(Byte.MAX_VALUE), RIVER((byte) -1), RESOURCENODE((byte) 1), GOLDMINE((byte) 2), BRIDGE((byte) (Byte.MAX_VALUE - 1)), BLANK((byte) 0);
-
-    //     private Byte tileID;
-
-    //     private TileType(Byte tileID){
-    //         this.tileID = tileID;
-    //     }
-
-    //     public Byte getTileID() {
-    //         return tileID;
-    //     }
-    // }
-    // private Integer winnerPlayerID;
-    // private String playerName;
-    // private String oponentName;
-    //Networking
     private final Thread clientNetworkListener;
-    // private final DatagramSocket socket;
-    // private final InetAddress iPAddress;
-    //Game logic
-    //todo: only client copy - server must handle
-    // private Integer playerGoldBalance = 0;
-    // private Short playerMineBalance = 0 + 2;
-    // private Long gameStartMills;
-    // private Long lastGoldWithdraw;
     private Long clientID;
     private MyPDUActionHandler actionRouter;
     private String player1Name;
     private String player2Name;
 
-    public SimpleRTSGameClient(/*DatagramSocket socket, InetAddress iPAddress*/String [] args){
-        // this.socket = socket;
-        // this.iPAddress = iPAddress;
+    public SimpleRTSGameClient(String [] args){
+        serverPort = 4321;
         gameMap = new byte[][] {
             {0, 0, 0, 0, 0, Byte.MAX_VALUE, 0, 0, 0, 0, 0},
             {0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0},
@@ -97,9 +70,8 @@ class SimpleRTSGameClient {
         };
         try {
             socket = new DatagramSocket();
-            this.iPAddress = InetAddress.getByName(/*iPAddress*/"localhost");
+            iPAddress = InetAddress.getByName("localhost");
         } catch (UnknownHostException | SocketException e) {
-            // TODO: handle exception
             e.printStackTrace();
         }
         actionRouter = new MyPDUActionHandler()
@@ -107,7 +79,7 @@ class SimpleRTSGameClient {
             .withActionEntry(MyPDUTypes.JOIN.getPacketID(), p -> {
                 //A second player has joined, game must be starting by now
                 sendUnicast(new MyPDU((byte) 04));
-                // System.out.println("Session found");
+                //todo: speacial MyPDU about successfull connection to a game session
                 System.out.println("Game started");
             })
             .withActionEntry(MyPDUTypes.DISCONNECT.getPacketID(), p -> {
@@ -125,73 +97,28 @@ class SimpleRTSGameClient {
             })
             .withActionEntry((byte) 05, p -> clientID = Long.valueOf(p.decode().get(0)))
             .withActionEntry((byte) 06, p -> {
-                System.out.println(String.format(/*"%s! %s has won"*/"%s!", Long.parseLong(p.decode().get(0)) == clientID? "Victory" : "Defeat"/*, p.decode().get(1)*/));
+                System.out.println(String.format("%s!", Long.parseLong(p.decode().get(0)) == clientID? "Victory" : "Defeat"));
                 System.exit(0);
             })
             .withActionEntry((byte) 07, p -> System.out.println(String.format("Gold update: %s", p.decode().get(0))));
         this.clientNetworkListener = new Thread(){
-
             @Override
             public void run() {
-                // TODO Auto-generated method stub
-                // super.run();
-            //     while(Objects.isNull(winnerPlayerID)){
-                    
-            //     }
-            // }
-        
-                while(true/*Objects.isNull(winnerPlayerID)*/){
-                    // sendData("koupit".getBytes());
+                while(true){
                     byte [] data = new byte[1024];
                     DatagramPacket packet = new DatagramPacket(data, data.length);
                     try {
                         socket.receive(packet);
                     } catch (IOException e) {
-                        // TODO: handle exception
                         e.printStackTrace();
                     }
-                    // System.out.println(String.format("Server sent: %s", new String(packet.getData()).trim()));
-                    // parsePacket(data, packet.getAddress(), packet.getPort());
                     actionRouter.handle(packet);
                 }
             }
         };
         clientNetworkListener.start();
-        // gameMap = new byte[][] {
-        //     {0, 0, 0, 0, 0, Byte.MAX_VALUE, 0, 0, 0, 0, 0},
-        //     {0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0},
-        //     {0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0},
-        //     {0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0},
-        //     {0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0},
-        //     {-1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1},
-        //     {0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0},
-        //     {0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0},
-        //     {0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0},
-        //     {0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0},
-        //     {0, 0, 0, 0, 0, Byte.MAX_VALUE, 0, 0, 0, 0, 0}
-        // };
-
-        //Generate resource nodes
-        // System.out.println("Generating map ...");
-        // for (int i = 1; (i < gameMap.length - 1)/* && (i != 5)*/; i++) {
-        //     if(i == 5) 
-        //         continue;
-        //     for (int j = 0; j < gameMap[i].length; j++) 
-        //         //1 in 5 (0 - 4) chance for a resource node
-        //         gameMap[i][j] = new Random().nextInt(5) == 2? TileType.RESOURCENODE.tileID : TileType.BLANK.tileID;
-        // }
-        // System.out.println("Map generated");
-        // System.out.println();
-
-        //Draw map
-        // drawMap();
-
-        //todo: networking - await other player etc.
-
-        //Start game
-        System.out.println("The client has started");
+        //Give control to player
         initInputLoop();
-        // System.out.println("The client has started");
     }
 
     private void drawMap(){
@@ -199,9 +126,9 @@ class SimpleRTSGameClient {
         for (int i = 0; i < gameMap.length; i++) {
             for (int j = 0; j < gameMap[i].length; j++) {
                 if(gameMap[i][j] == TileType.NEXUS.getTileID())
-                    System.out.print(String.format(/*"  %sN(%2s)%s  "*/"  %sN1%s  ", ANSI_GREEN,/* i != 0? player1Name : oponentplayer2Name,*/ ANSI_RESET));
+                    System.out.print(String.format("  %sN1%s  ", ANSI_GREEN, ANSI_RESET));
                 else if(gameMap[i][j] == TileType.NEXUS2.getTileID())
-                    System.out.print(String.format(/*"  %sN(%2s)%s  "*/"  %sN2%s  ", ANSI_GREEN,/* i != 0? player1Name : oponentplayer2Name,*/ ANSI_RESET));
+                    System.out.print(String.format("  %sN2%s  ", ANSI_GREEN, ANSI_RESET));
                 else if(gameMap[i][j] == TileType.RESOURCENODE.getTileID())
                     System.out.print(String.format("  %sG(a)%s  ", ANSI_YELLOW, ANSI_RESET));
                 else if(gameMap[i][j] == TileType.GOLDMINE.getTileID())
@@ -213,66 +140,26 @@ class SimpleRTSGameClient {
             }
             System.out.println();
         }
-        // System.out.println(playerName);
-        // System.out.print(String.format("gold: %d, mines: %d", playerGoldBalance, playerMineBalance));
     }
 
     private void initInputLoop(){
-        //todo: implement game timer
-        // gameStartMills = lastGoldWithdraw = Instant.now().toEpochMilli();
-        
-        //Run socket listener on separate thread
-
-        // clientNetworkListener.start();
-        //Login to game session - todo: maybe JWT auth??
-        // System.out.print("Enter username, please: ");
-        // sendUnicast(new Packet00Join(/*playerName = awaitPlayerInput()*/)/*.getData()*/);
-        // drawMap();
-        // System.out.println();
         System.out.println("Type 'join' to join a session");
-        while(/*Objects.isNull(winnerPlayerID)*/true/* && false*/){
-            // playerGoldBalance += withdrawGold();
+        while(true){
             switch(awaitPlayerInput()){
                 case "join" -> {
                     System.out.println("Joining a server ...");
                     sendUnicast(new MyPDU00Join());
                 }
-                case "exit" -> {
-                    // winnerPlayerID = 1;
-                    // Packet01Disconnect packet = new Packet01Disconnect(/*playerName*/clientID);
-                    // sendUnicast(packet/*.getData()*/);
-                    //todo: await game end acknowledgement
-                    // System.exit(0);
+                case "exit" -> 
                     sendUnicast(new MyPDU01Disconnect(clientID));
-                }
-                case "mine" -> {
-                    // todo: e.g. mine E 4
-                    // if(/*((playerGoldBalance += withdrawGold()) - 1000) >= 0*/false){
-                        // playerMineBalance++;
-                        // playerGoldBalance -= 1000;
-                        // System.out.println(String.format("Bought a mine, new gold: %d, new mines: %d", playerGoldBalance, playerMineBalance));
-                    // }
-                    // else 
-                        // System.out.println("Not enough for mine");
+                case "mine" -> 
                     buyGoldMine();
-                }
-                case "bridge" -> {
-                    // playerGoldBalance += withdrawGold();
-                    // if(playerMineBalance > 4 && playerGoldBalance >= 400)
-                    //     winnerPlayerID = 1;
-                    // else
-                    //     System.out.println("Not enough for bridge");
+                case "bridge" -> 
                     sendUnicast(new MyPDU03PlayerMove(clientID.toString(), "1"));
-                }
-                // case "gold" -> {
-                //     System.out.println(String.format("You have %d gold", playerGoldBalance/* += withdrawGold()*/));
-                //     // drawMap();
-                // }
                 default -> 
                     System.out.println("Unrecognised command");
             }
         }
-        // System.out.println("You won");
     }
 
     private String awaitPlayerInput(){
@@ -280,125 +167,21 @@ class SimpleRTSGameClient {
             BufferedReader playerInput = new BufferedReader(new InputStreamReader(System.in));
             return playerInput.readLine();
         } catch (IOException e) {
-            // TODO: handle exception
             e.printStackTrace();
             return null;
         }
     }
 
-    // private Integer withdrawGold(){
-    //     //10 gold every 1 second
-    //     final Integer withdrawnSum = playerMineBalance * (int) ((Instant.now().toEpochMilli() - lastGoldWithdraw) / 100);
-    //     lastGoldWithdraw = Instant.now().toEpochMilli();
-    //     return withdrawnSum;
-    // }
-
-    public void sendUnicast(/*byte[] data*/MyPDU p){
-        DatagramPacket packet = new DatagramPacket(/*data*/p.getByteBuffer(), /*data.length*/p.getByteBuffer().length, iPAddress, 4321);
+    public void sendUnicast(MyPDU p){
+        DatagramPacket packet = new DatagramPacket(p.getByteBuffer(), p.getByteBuffer().length, iPAddress, serverPort);
         try {
             socket.send(packet);
         } catch (IOException e) {
-            // TODO: handle exception
             e.printStackTrace();
         }
     }
 
-    // public void buyGoldMine(){
-    //     // while(true){
-    //         sendData("koupit".getBytes());
-    //         byte [] data = new byte[1024];
-    //         DatagramPacket packet = new DatagramPacket(data, data.length);
-    //         try {
-    //             socket.receive(packet);
-    //         } catch (IOException e) {
-    //             // TODO: handle exception
-    //             e.printStackTrace();
-    //         }
-    //         System.out.println(String.format("Server sent: %s", new String(packet.getData()).trim()));
-    //     // }
-    // }
-
-    // @Deprecated
-    // private void parsePacket(byte[] data, InetAddress address, int port) { //todo: will become packet router Map<PacketType, PacketN> - Packet -> PacketRouter.route -> NO PacketN (e.g. game system Controller class) NO ClientIOCAction
-        // TODO Auto-generated method stub
-        // throw new UnsupportedOperationException("Unimplemented method 'parsePacket'");
-        // PacketTypes type = Packet.lookupPacket(new String(data).trim().substring(0, 2));
-        // switch (type) {
-        //     case INVALID -> 
-        //         System.out.println("Invalid pakcet received");
-
-        //     case JOIN -> {
-        //         Packet00Join joinPacket = new Packet00Join(data);
-        //         // System.out.println(String.format("%s has joined", joinPacket.getUsername()));
-        //         oponentName = joinPacket.getUsername();
-        //         System.out.println(String.format("%s %s has joined%s", ANSI_GREEN, joinPacket.getUsername(), ANSI_RESET));
-        //         drawMap();
-        //         // System.out.print(String.format("%s has joined", joinPacket.getUsername()));
-        //         // System.out.println();
-        //         // addConnection(new GameClientPlayer(address, port, joinPacket.getUsername()), joinPacket);
-        //     }
-
-        //     case DISCONNECT -> {
-        //         Packet01Disconnect disconnectPacket = new Packet01Disconnect(data);
-        //         // System.out.println(String.format("%s %s has left the world %s", ANSI_RED, disconnectPacket.getUsername(), ANSI_RESET));
-        //         oponentName = null;
-        //         //Stop listening for updates from server
-        //         // clientNetworkListener.
-        //         // winnerPlayerID = 1;
-        //         // System.exit(0);
-        //         System.out.println(String.format("%s %s has left the world%s", ANSI_RED, disconnectPacket.getClientID(), ANSI_RESET));
-        //         drawMap();
-        //         // System.out.println();
-        //     }
-
-        //     case WORLDINFO -> {
-        //         Packet02WorldInfo worldInfoPacket = new Packet02WorldInfo(data);
-        //         if(worldInfoPacket.generated == 1)
-        //             drawMap();
-        //         else
-        //             gameMap[worldInfoPacket.getI()][worldInfoPacket.getJ()] = TileType.RESOURCENODE.tileID;
-        //     }
-        
-        //     default -> 
-        //         System.out.println("Invalid packet received");
-        // }
-    // }
-
-    // private void addConnection(GameClientPlayer gameClientPlayer, Packet00Join joinPacket) {
-    //     // TODO Auto-generated method stub
-    //     // throw new UnsupportedOperationException("Unimplemented method 'addConnection'");
-    // }
-    // @FunctionalInterface
-    // private interface ClientIOCAction {
-    //     void perform();
-    // }
-
     public void buyGoldMine(){
-        // while(true){
-            sendUnicast(new MyPDU03PlayerMove(/*"koupit"*/clientID.toString(), "0")/*.getBytes()*/);
-            // byte [] data = new byte[1024];
-            // DatagramPacket packet = new DatagramPacket(data, data.length);
-            // try {
-            //     socket.receive(packet);
-            // } catch (IOException e) {
-            //     // TODO: handle exception
-            //     e.printStackTrace();
-            // }
-            // System.out.println(String.format("Server sent: %s", new String(packet.getData()).trim()));
-        // }
+        sendUnicast(new MyPDU03PlayerMove(clientID.toString(), "0"));
     }
-
-    // public void sendData(byte[] data){
-    //     DatagramPacket packet = new DatagramPacket(data, data.length, iPAddress, 4321);
-    //     try {
-    //         socket.send(packet);
-    //     } catch (IOException e) {
-    //         // TODO: handle exception
-    //         e.printStackTrace();
-    //     }
-    // }
-
-    // public Integer getPort(){
-    //     return socket.getPort();
-    // }
 }

@@ -34,135 +34,33 @@ public class SimpleRTSGameServerSideLogic {
         }
     }
     private final LinkedList<byte[]> availableGoldMinesPool1, availableGoldMinesPool2;
-    // private Integer winnerPlayerID;
-    //Game logic
-    //todo: only client copy - server must handle
-    // private Integer playerGoldBalance = 0;
-    // private Short playerMineBalance = 0 + 2;
     //Session metadata
     private Long gameStartMills;
     private Long gameSessionID;
-    // private Long lastGoldWithdraw;
 
     public SimpleRTSGameServerSideLogic(GameSession gameSession){
         this.gameSession = gameSession;
-        players = new Vector<>(/*gameSession.connectedClients.stream().map(GameClientPlayer::new).toList()*/);
+        players = new Vector<>();
         gameMap = new byte[][] {
-            {0, 0, 0, 0, 0, /*Byte.MAX_VALUE*/0, 0, 0, 0, 0, 0},
             {0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0},
             {0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0},
             {0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0},
             {0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0},
-            {-1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1},
+            {0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0},
+            {TileType.RIVER.tileID, TileType.RIVER.tileID, TileType.RIVER.tileID, TileType.RIVER.tileID, TileType.RIVER.tileID, TileType.RIVER.tileID, TileType.RIVER.tileID, TileType.RIVER.tileID, TileType.RIVER.tileID, TileType.RIVER.tileID, TileType.RIVER.tileID},
             {0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0},
             {0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0},
             {0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0},
             {0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0},
-            {0, 0, 0, 0, 0, /*Byte.MAX_VALUE*/0, 0, 0, 0, 0, 0}
+            {0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0}
         };
         availableGoldMinesPool1 = new LinkedList<>();
         availableGoldMinesPool2 = new LinkedList<>();
-
-        //Generate resource nodes
-        // System.out.println("Generating map ...");
-        // for (int i = 1; (i < gameMap.length - 1)/* && (i != 5)*/; i++) {
-        //     if(i == 5) 
-        //         continue;
-        //     for (int j = 0; j < gameMap[i].length; j++) {
-        //         //1 in 5 (0 - 4) chance for a resource node
-        //         Boolean isRersourceNode = new Random().nextInt(5) == 2;
-        //         gameMap[i][j] = isRersourceNode? TileType.RESOURCENODE.tileID : TileType.BLANK.tileID;
-        //         if(isRersourceNode)
-        //             sendToAll(new Packet02WorldInfo(new byte[] {(byte) i, (byte) j}).getData());
-        //     }
-        // }
-        // System.out.println("Map generated");
-        // System.out.println();
-
-        // initGameLoop();
     }
 
-    // private Integer withdrawGold(){
-    //     //10 gold every 1 second
-    //     final Integer withdrawnSum = playerMineBalance * (int) ((Instant.now().toEpochMilli() - lastGoldWithdraw) / 100);
-    //     lastGoldWithdraw = Instant.now().toEpochMilli();
-    //     return withdrawnSum;
-    // }
-
-    // @Deprecated
-    // private void initGameLoop(){
-        //todo: implement game timer
-        // gameStartMills = lastGoldWithdraw = Instant.now().toEpochMilli();
-        /*while(Objects.isNull(winnerPlayerID)){
-            playerGoldBalance += withdrawGold();
-            switch(*//*awaitPlayerInput()*//*"placeholder"){
-                case "exit" -> winnerPlayerID = 1;
-                case "mine" -> {
-                    //todo: e.g. mine E 4
-                    if(((playerGoldBalance += withdrawGold()) - 1000) >= 0){
-                        playerMineBalance++;
-                        playerGoldBalance -= 1000;
-                        System.out.println(String.format("Bought a mine, new gold: %d, new mines: %d", playerGoldBalance, playerMineBalance));
-                    }
-                    else 
-                        System.out.println("Not enough for mine");
-                }
-                case "bridge" -> {
-                    playerGoldBalance += withdrawGold();
-                    if(playerMineBalance > 4 && playerGoldBalance >= 400)
-                        winnerPlayerID = 1;
-                    else
-                        System.out.println("Not enough for bridge");
-                }
-                case "gold" -> {
-                    System.out.println(String.format("You have %d gold", playerGoldBalance += withdrawGold()));
-                }
-                default -> 
-                    System.out.println("Unrecognised command");
-            }
-        }*/
-        // System.out.println("You won");
-    // }
-
-    // @Deprecated
-    // public void parsePacket(byte[] data, InetAddress address, int port) { //todo: will become packet router Map<PacketType, PacketN> - Packet -> PacketRouter.route -> NO PacketN (e.g. game system Controller class)
-        // TODO Auto-generated method stub
-        // throw new UnsupportedOperationException("Unimplemented method 'parsePacket'");
-        // PacketTypes type = Packet.lookupPacket(new String(data).trim().substring(0, 2));
-        // switch (type) {
-        //     case INVALID -> 
-        //         System.out.println("Invalid pakcet received");
-
-        //     case JOIN -> {
-        //         Packet00Join joinPacket = new Packet00Join(data);
-        //         System.out.println(String.format("A player (%s / %s) has joined the session", joinPacket.getUsername(), address.getHostAddress()));
-        //         addConnection(new GameClientPlayer(address, port, joinPacket.getUsername()), joinPacket);
-        //         if(gameSession.connectedClients.size() == 2)
-        //             generateWorld();
-        //     }
-
-        //     case DISCONNECT -> {
-        //         Packet01Disconnect disconnectPacket = new Packet01Disconnect(data);
-        //         System.out.println(String.format("A player (%s / %s) has left the session", disconnectPacket.getUsername(), address.getHostAddress()));
-        //         gameSession.connectedClients.remove(gameSession.connectedClients.indexOf(gameSession.connectedClients.stream().filter(c -> disconnectPacket.getUsername().equals(c.getUsername())).findAny().orElse(null)));
-        //         sendToAll(data);
-        //     }
-
-            // case WORLDINFO -> {
-            //     Packet02WorldInfo worldInfoPacket = new Packet02WorldInfo(data);
-            //     gameMap[worldInfoPacket.getI()][worldInfoPacket.getJ()] = TileType.RESOURCENODE.tileID;
-            // }
-        
-            // default -> 
-            //     System.out.println("Invalid packet received");
-        // }
-    // }
-
     private void generateWorld() {
-        // TODO Auto-generated method stub
-        // throw new UnsupportedOperationException("Unimplemented method 'generateWorld'");
         System.out.println("Generating map ...");
-        for (byte i = 1; (i < gameMap.length - 1)/* && (i != 5)*/; i++) {
+        for (byte i = 1; (i < gameMap.length - 1); i++) {
             if(i == 5) 
                 continue;
             for (byte j = 0; j < gameMap[i].length; j++) {
@@ -170,17 +68,14 @@ public class SimpleRTSGameServerSideLogic {
                 Boolean isRersourceNode = new Random().nextInt(5) == 2;
                 gameMap[i][j] = isRersourceNode? TileType.RESOURCENODE.tileID : TileType.BLANK.tileID;
                 if(isRersourceNode){
-                    // gameSession.sendMulticast(new Packet02WorldInfo("02".concat(Byte.toString((byte) i)).concat(",").concat(Byte.toString((byte) j)).concat(",").concat(Byte.toString((byte) (/*i == gameMap.length - 1 && j == gameMap[i].length -1? 1 : */0))).getBytes()).getData());
                     if(i <= 4) 
                         availableGoldMinesPool1.add(0, new byte[]{i, j});
                     else 
                         availableGoldMinesPool2.add(0, new byte[]{i, j});
-                    gameSession.sendMulticast(new MyPDU02WorldInfo(i, j, /*(byte) 0*/TileType.RESOURCENODE.tileID));
+                    gameSession.sendMulticast(new MyPDU02WorldInfo(i, j, TileType.RESOURCENODE.tileID));
                 }
             }
-            if(i == gameMap.length - 2/* && j == gameMap[i].length -1*/){
-                // gameSession.sendMulticast(new Packet02WorldInfo("02".concat(Byte.toString((byte) -1)).concat(",").concat(Byte.toString((byte) -1)).concat(",").concat(Byte.toString((byte) 1)).getBytes()).getData());
-                // gameSession.sendMulticast(new Packet02WorldInfo((byte) -1, (byte) -1, (byte) 1));
+            if(i == gameMap.length - 2){
                 //Player side decision
                 players.get(0).setMaximumOwnableArea(new Byte[]{1, 4});
                 gameSession.sendMulticast(new MyPDU02WorldInfo((byte) 0, (byte) 5, /*players.get(0).getUsername()*/Byte.MAX_VALUE));
@@ -207,7 +102,7 @@ public class SimpleRTSGameServerSideLogic {
                                 for (byte i = p.getMaximumOwnableArea()[0]; i <= p.getMaximumOwnableArea()[1]; i++) 
                                     for (byte j = 0; j < gameMap[i].length; j++) 
                                         if(gameMap[i][j] == TileType.GOLDMINE.tileID)
-                                            //Each mine has a production quota of 100 gold per second (tick)
+                                            //Each mine has a production quota of 100 gold per 10 seconds (tick)
                                             p.setGold(p.getGold() + 100);
                                 MyPDU serverGoldTickInfo = new MyPDU((byte) 07, p.getGold().toString());
                                 GameSessionClient currentGameSessionClient = gameSession.connectedClients.stream().filter(c -> c.getClientID().equals(p.getClientID())).findAny().orElse(null);
@@ -224,26 +119,16 @@ public class SimpleRTSGameServerSideLogic {
                 GameClientPlayer currentPlayer = players.stream().filter(player -> Long.valueOf(packetData.get(0)).equals(player.getClientID())).findAny().orElse(null);
                 switch(packetData.get(1)){
                     case "0" -> {
-                        //todo: e.g. mine E 4
-                    if((/*(playerGoldBalance += withdrawGold())*/currentPlayer.getGold() - 1000) >= 0 && currentPlayer.getMaximumOwnableArea()[1] <= 4? !availableGoldMinesPool1.isEmpty() : !availableGoldMinesPool2.isEmpty()){
-                        // playerMineBalance++;
-                        // playerGoldBalance -= 1000;
-                        // System.out.println(String.format("Bought a mine, new gold: %d, new mines: %d", playerGoldBalance, playerMineBalance));
-                        currentPlayer.setGold(currentPlayer.getGold() - 1000);
-                        byte [] boughtMine = currentPlayer.getMaximumOwnableArea()[1] <= 4? availableGoldMinesPool1.removeLast() : availableGoldMinesPool2.removeLast();
-                        gameMap[boughtMine[0]][boughtMine[1]] = TileType.GOLDMINE.tileID;
-                        gameSession.sendMulticast(new MyPDU02WorldInfo(boughtMine[0], boughtMine[1], TileType.GOLDMINE.tileID));
-                        System.out.println(String.format("Player %s just bought a mine %d %d", currentPlayer.getUsername(), boughtMine[0], boughtMine[1]));
-                    }
-                    // else 
-                        // System.out.println("Not enough for mine");
+                        //todo: e.g. mine E 4 (Client / Player serlectable position)
+                        if((currentPlayer.getGold() - 1000) >= 0 && currentPlayer.getMaximumOwnableArea()[1] <= 4? !availableGoldMinesPool1.isEmpty() : !availableGoldMinesPool2.isEmpty()){
+                            currentPlayer.setGold(currentPlayer.getGold() - 1000);
+                            byte [] boughtMine = currentPlayer.getMaximumOwnableArea()[1] <= 4? availableGoldMinesPool1.removeLast() : availableGoldMinesPool2.removeLast();
+                            gameMap[boughtMine[0]][boughtMine[1]] = TileType.GOLDMINE.tileID;
+                            gameSession.sendMulticast(new MyPDU02WorldInfo(boughtMine[0], boughtMine[1], TileType.GOLDMINE.tileID));
+                            System.out.println(String.format("Player %s just bought a mine %d %d", currentPlayer.getUsername(), boughtMine[0], boughtMine[1]));
+                        }
                     }
                     case "1" -> {
-                        // playerGoldBalance += withdrawGold();
-                        // if(playerMineBalance > 4 && playerGoldBalance >= 400)
-                            // winnerPlayerID = 1;//todo: special game winner packet
-                        // else
-                            // System.out.println("Not enough for bridge");
                         if(currentPlayer.getGold() >= 10000){
                             gameSession.sendMulticast(new MyPDU((byte) 06, currentPlayer.getClientID().toString(), currentPlayer.getUsername()));
                             gameSession.endSession(currentPlayer.getUsername());
