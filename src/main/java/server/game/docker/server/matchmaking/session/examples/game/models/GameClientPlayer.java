@@ -1,4 +1,4 @@
-package server.game.docker.server.matchmaking.session.example.game.models;
+package server.game.docker.server.matchmaking.session.examples.game.models;
 
 import server.game.docker.server.matchmaking.session.models.GameSessionClient;
 

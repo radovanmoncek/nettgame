@@ -30,13 +30,13 @@ public class MyPDU02WorldInfo extends MyPDU {
         super((byte) 02, Byte.toString(i), Byte.toString(j), /*playerName*/structureByte.toString());
     }
 
-    @Override
-    @Deprecated
-    public byte[] getData() {
-        // TODO Auto-generated method stub
-        // throw new UnsupportedOperationException("Unimplemented method 'getData'");
-        return "02"/*.concat(Byte.toString(i)).concat(",").concat(Byte.toString(j)).concat(",").concat(Byte.toString(generated(byte) 0))*/.getBytes();
-    }
+    // @Override
+    // @Deprecated
+    // public byte[] getData() {
+    //     // TODO Auto-generated method stub
+    //     // throw new UnsupportedOperationException("Unimplemented method 'getData'");
+    //     return "02"/*.concat(Byte.toString(i)).concat(",").concat(Byte.toString(j)).concat(",").concat(Byte.toString(generated(byte) 0))*/.getBytes();
+    // }
 
     // public Byte getI() {
     //     // TODO Auto-generated method stub

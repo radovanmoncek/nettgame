@@ -1,7 +1,5 @@
 package server.game.docker.net;
 
-import java.lang.reflect.Array;
-
 public class MyPDU01Disconnect extends MyPDU {
     // private String username;
 
@@ -16,12 +14,12 @@ public class MyPDU01Disconnect extends MyPDU {
         // this.username = username;
     }
 
-    @Override
-    public byte[] getData() {
-        // TODO Auto-generated method stub
-        // throw new UnsupportedOperationException("Unimplemented method 'getData'");
-        return "01"/*.concat(username)*/.getBytes();
-    }
+    // @Override
+    // public byte[] getData() {
+    //     // TODO Auto-generated method stub
+    //     // throw new UnsupportedOperationException("Unimplemented method 'getData'");
+    //     return "01"/*.concat(username)*/.getBytes();
+    // }
 
     // @Deprecated
     // public Object getUsername() {

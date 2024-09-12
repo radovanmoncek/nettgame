@@ -4,7 +4,6 @@ import java.net.InetAddress;
 import java.util.Arrays;
 import java.util.List;
 import java.util.Vector;
-import java.util.stream.Stream;
 
 // import server.game.docker.client.GameClient;
 // import server.game.docker.server.DockerGameServer;
@@ -53,7 +52,7 @@ public /*abstract*/ class MyPDU {
     }
 
     public MyPDU(final Byte packetID){
-        //todo: Packet must be ID under 99, else throw IligiblePacketIDException
+        //todo: Packet must be ID under 99, else throw IligiblePacketIDException - no
         final byte [] encodedPakcetID = packetID < 10? "0".concat(Byte.toString(packetID)).getBytes() : Byte.toString(packetID).getBytes();
         this.packetID = packetID.byteValue();
         byteBuffer = encodedPakcetID/*new byte[]{packetID}*/;
@@ -88,39 +87,39 @@ public /*abstract*/ class MyPDU {
     // public abstract void writeData(GameClient gameClient);
     // Broadcast data send
     // public abstract void writeData(DockerGameServer dockerGameServer);
-    @Deprecated
-    public String readData(byte[] data){
-        //todo: serialization; milestone
-        //Packet sanitization; omit ID bytes
-        return new String(data).trim().substring(2);
-    }
+    // @Deprecated
+    // public String readData(byte[] data){
+    //     //todo: serialization; milestone
+    //     //Packet sanitization; omit ID bytes
+    //     return new String(data).trim().substring(2);
+    // }
 
-    @Deprecated
-    public /*abstract*/ byte [] getData(){return new byte [0];};
+    // @Deprecated
+    // public /*abstract*/ byte [] getData(){return new byte [0];};
 
     //todo: PacketRouter
-    @Deprecated
-    public static MyPDUTypes lookupPacket(Integer id){
-        return Stream.of(MyPDUTypes.values()).filter(p -> p.packetID.equals(id)).findAny().orElse(MyPDUTypes.INVALID);
-    }
+    // @Deprecated
+    // public static MyPDUTypes lookupPacket(Integer id){
+    //     return Stream.of(MyPDUTypes.values()).filter(p -> p.packetID.equals(id)).findAny().orElse(MyPDUTypes.INVALID);
+    // }
 
-    @Deprecated
-    public static MyPDUTypes lookupPacket(String packetID) {
-        // TODO Auto-generated method stub
-        // throw new UnsupportedOperationException("Unimplemented method 'lookupPacket'");
-        try {
-            return lookupPacket(Integer.parseInt(packetID));
-        } catch (NumberFormatException e) {
-            // TODO: handle exception
-            e.printStackTrace();
-            return MyPDUTypes.INVALID;
-        }
-    }
+    // @Deprecated
+    // public static MyPDUTypes lookupPacket(String packetID) {
+    //     // TODO Auto-generated method stub
+    //     // throw new UnsupportedOperationException("Unimplemented method 'lookupPacket'");
+    //     try {
+    //         return lookupPacket(Integer.parseInt(packetID));
+    //     } catch (NumberFormatException e) {
+    //         // TODO: handle exception
+    //         e.printStackTrace();
+    //         return MyPDUTypes.INVALID;
+    //     }
+    // }
 
-    private boolean checkPacketIDEligibility(Byte packetID){
-        return packetID >= 4;
-    }
+    // private void checkPacketIDEligibility(Byte packetID) throws IneligiblePacketIDException {
+    //     if(packetID > 99) throw new IneligiblePacketIDException();
+    // }
 
-    public static class IneligiblePacketIDException extends Exception {
-    }
+    // public static class IneligiblePacketIDException extends Exception {
+    // }
 }

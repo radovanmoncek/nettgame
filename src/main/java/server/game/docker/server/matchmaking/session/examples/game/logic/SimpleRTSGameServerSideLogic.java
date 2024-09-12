@@ -1,28 +1,20 @@
-package server.game.docker.server.matchmaking.session.example.game.logic;
+package server.game.docker.server.matchmaking.session.examples.game.logic;
 
-import java.io.IOException;
-import java.net.DatagramPacket;
-import java.net.DatagramSocket;
-import java.net.InetAddress;
 import java.time.Instant;
 import java.util.LinkedList;
-import java.util.List;
 import java.util.Objects;
-import java.util.Queue;
 import java.util.Random;
 import java.util.Timer;
 import java.util.TimerTask;
 import java.util.Vector;
 
 import server.game.docker.net.MyPDU;
-import server.game.docker.server.matchmaking.session.GameSession;
-import server.game.docker.server.matchmaking.session.example.game.models.GameClientPlayer;
-import server.game.docker.server.matchmaking.session.models.GameSessionClient;
-import server.game.docker.net.MyPDU00Join;
-import server.game.docker.net.MyPDU01Disconnect;
 import server.game.docker.net.MyPDU02WorldInfo;
 import server.game.docker.net.MyPDUActionHandler;
 import server.game.docker.net.MyPDUTypes;
+import server.game.docker.server.matchmaking.session.GameSession;
+import server.game.docker.server.matchmaking.session.examples.game.models.GameClientPlayer;
+import server.game.docker.server.matchmaking.session.models.GameSessionClient;
 
 public class SimpleRTSGameServerSideLogic {
     private final GameSession gameSession;
@@ -132,8 +124,8 @@ public class SimpleRTSGameServerSideLogic {
         // System.out.println("You won");
     // }
 
-    @Deprecated
-    public void parsePacket(byte[] data, InetAddress address, int port) { //todo: will become packet router Map<PacketType, PacketN> - Packet -> PacketRouter.route -> NO PacketN (e.g. game system Controller class)
+    // @Deprecated
+    // public void parsePacket(byte[] data, InetAddress address, int port) { //todo: will become packet router Map<PacketType, PacketN> - Packet -> PacketRouter.route -> NO PacketN (e.g. game system Controller class)
         // TODO Auto-generated method stub
         // throw new UnsupportedOperationException("Unimplemented method 'parsePacket'");
         // PacketTypes type = Packet.lookupPacket(new String(data).trim().substring(0, 2));
@@ -164,7 +156,7 @@ public class SimpleRTSGameServerSideLogic {
             // default -> 
             //     System.out.println("Invalid packet received");
         // }
-    }
+    // }
 
     private void generateWorld() {
         // TODO Auto-generated method stub

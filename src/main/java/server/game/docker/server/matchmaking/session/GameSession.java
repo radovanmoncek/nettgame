@@ -1,32 +1,17 @@
 package server.game.docker.server.matchmaking.session;
 
-import java.io.BufferedReader;
 import java.io.IOException;
-import java.io.InputStreamReader;
-import java.io.PrintWriter;
 import java.net.DatagramPacket;
 import java.net.DatagramSocket;
-import java.net.InetAddress;
-import java.net.InetSocketAddress;
-import java.net.ServerSocket;
-import java.net.Socket;
 import java.net.SocketException;
-import java.net.UnknownHostException;
-import java.nio.channels.DatagramChannel;
-import java.security.Timestamp;
-import java.time.Instant;
-import java.time.LocalDate;
-import java.util.ArrayList;
-import java.util.LinkedList;
 import java.util.List;
 import java.util.Vector;
 
 import server.game.docker.net.MyPDU;
 import server.game.docker.net.MyPDU00Join;
-import server.game.docker.net.MyPDU01Disconnect;
 import server.game.docker.net.MyPDUActionHandler;
 import server.game.docker.net.MyPDUTypes;
-import server.game.docker.server.matchmaking.session.example.game.logic.SimpleRTSGameServerSideLogic;
+import server.game.docker.server.matchmaking.session.examples.game.logic.SimpleRTSGameServerSideLogic;
 import server.game.docker.server.matchmaking.session.models.GameSessionClient;
 
 public class GameSession {
@@ -34,7 +19,7 @@ public class GameSession {
     /**
      * The server port
      */
-    // public static final Integer port = 4321; 
+    public final Integer port; 
     /**
      * The server IP address
      */
@@ -50,10 +35,12 @@ public class GameSession {
     /**
      * The ID of this game session
      */
-    private final Long gameSessionID = -1L;
+    private final Long gameSessionID;
     private final MyPDUActionHandler actionRouter;
 
     public GameSession(String [] args){// todo: rename to GameSession
+        gameSessionID = -1L;
+        port = 4321;
         connectedClients = new Vector<>();
         actionRouter = new MyPDUActionHandler()
             .withActionEntry(MyPDUTypes.INVALID.getPacketID(), p -> System.out.println("Invalid packet received"))
@@ -83,26 +70,26 @@ public class GameSession {
             // TODO: handle exception
             e.printStackTrace();
         }
-        new Thread(){
-            @Override 
-            public void run(){
-                serve(/*new SimpleRTSGameServerSideLogic(this)*/);
-            }
-        }.start();
-        System.out.println("Server has started");
+        // new Thread(){
+        //     @Override 
+        //     public void run(){
+        serve(/*new SimpleRTSGameServerSideLogic(this)*/);
+        //     }
+        // }.start();
+        System.out.println(String.format("Session ID: %d port: %d has started", gameSessionID, port));
     }
     
-    @Deprecated
-    public void init(String[] args) {
-        System.out.println("Server has started");
+    // @Deprecated
+    // public void init(String[] args) {
+    //     System.out.println("Server has started");
         // GameSession gameSession = new GameSession();
 
-        new Thread(){
-            @Override 
-            public void run(){
+        // new Thread(){
+        //     @Override 
+        //     public void run(){
                 // gameSession.serve(new SimpleRTSGameServerSideLogic(gameSession));
-            }
-        }.start();
+        //     }
+        // }.start();
 
         // new SimpleRTSGameServerSideLogic(gameSession);
 
@@ -129,7 +116,7 @@ public class GameSession {
         // catch(IOException e){
         //     e.printStackTrace();
         // }
-    }
+    // }
 
     private void serve(/*SimpleRTSGameServerSideLogic gameLogic*/){
         while(true){

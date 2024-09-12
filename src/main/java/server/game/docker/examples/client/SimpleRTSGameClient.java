@@ -1,4 +1,4 @@
-package server.game.docker.example.client;
+package server.game.docker.examples.client;
 
 import java.io.BufferedReader;
 import java.io.IOException;
@@ -8,22 +8,15 @@ import java.net.DatagramSocket;
 import java.net.InetAddress;
 import java.net.SocketException;
 import java.net.UnknownHostException;
-import java.time.Instant;
-import java.util.Objects;
-import java.util.Random;
 import java.util.Vector;
-
-import javax.swing.JOptionPane;
 
 import server.game.docker.net.MyPDU;
 import server.game.docker.net.MyPDU00Join;
 import server.game.docker.net.MyPDU01Disconnect;
-import server.game.docker.net.MyPDU02WorldInfo;
 import server.game.docker.net.MyPDU03PlayerMove;
 import server.game.docker.net.MyPDUActionHandler;
 import server.game.docker.net.MyPDUTypes;
-import server.game.docker.server.matchmaking.session.example.game.logic.SimpleRTSGameServerSideLogic.TileType;
-import server.game.docker.server.matchmaking.session.models.GameSessionClient;
+import server.game.docker.server.matchmaking.session.examples.game.logic.SimpleRTSGameServerSideLogic.TileType;
 
 class SimpleRTSGameClient {
     //Config
@@ -236,7 +229,7 @@ class SimpleRTSGameClient {
         // sendUnicast(new Packet00Join(/*playerName = awaitPlayerInput()*/)/*.getData()*/);
         // drawMap();
         // System.out.println();
-        System.out.println("Type 'join' to join a server");
+        System.out.println("Type 'join' to join a session");
         while(/*Objects.isNull(winnerPlayerID)*/true/* && false*/){
             // playerGoldBalance += withdrawGold();
             switch(awaitPlayerInput()){
@@ -325,8 +318,8 @@ class SimpleRTSGameClient {
     //     // }
     // }
 
-    @Deprecated
-    private void parsePacket(byte[] data, InetAddress address, int port) { //todo: will become packet router Map<PacketType, PacketN> - Packet -> PacketRouter.route -> NO PacketN (e.g. game system Controller class) NO ClientIOCAction
+    // @Deprecated
+    // private void parsePacket(byte[] data, InetAddress address, int port) { //todo: will become packet router Map<PacketType, PacketN> - Packet -> PacketRouter.route -> NO PacketN (e.g. game system Controller class) NO ClientIOCAction
         // TODO Auto-generated method stub
         // throw new UnsupportedOperationException("Unimplemented method 'parsePacket'");
         // PacketTypes type = Packet.lookupPacket(new String(data).trim().substring(0, 2));
@@ -369,7 +362,7 @@ class SimpleRTSGameClient {
         //     default -> 
         //         System.out.println("Invalid packet received");
         // }
-    }
+    // }
 
     // private void addConnection(GameClientPlayer gameClientPlayer, Packet00Join joinPacket) {
     //     // TODO Auto-generated method stub
