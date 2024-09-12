@@ -233,7 +233,7 @@ public class SimpleRTSGameServerSideLogic {
                 switch(packetData.get(1)){
                     case "0" -> {
                         //todo: e.g. mine E 4
-                    if((/*(playerGoldBalance += withdrawGold())*/currentPlayer.getGold() - 1000) >= 0 && !availableGoldMinesPool1.isEmpty() && !availableGoldMinesPool2.isEmpty()){
+                    if((/*(playerGoldBalance += withdrawGold())*/currentPlayer.getGold() - 1000) >= 0 && currentPlayer.getMaximumOwnableArea()[1] <= 4? !availableGoldMinesPool1.isEmpty() : !availableGoldMinesPool2.isEmpty()){
                         // playerMineBalance++;
                         // playerGoldBalance -= 1000;
                         // System.out.println(String.format("Bought a mine, new gold: %d, new mines: %d", playerGoldBalance, playerMineBalance));
@@ -254,7 +254,7 @@ public class SimpleRTSGameServerSideLogic {
                             // System.out.println("Not enough for bridge");
                         if(currentPlayer.getGold() >= 10000){
                             gameSession.sendMulticast(new MyPDU((byte) 06, currentPlayer.getClientID().toString(), currentPlayer.getUsername()));
-                            gameSession.endSession();
+                            gameSession.endSession(currentPlayer.getUsername());
                         }
                     }
                 }

@@ -196,7 +196,8 @@ public class GameSession {
         });
     }
 
-    public void endSession(){
+    public void endSession(String winnerName){
+        System.out.println(String.format("%s has won", winnerName));
         System.out.println("Session end, terminating ...");
         System.exit(0);
     }

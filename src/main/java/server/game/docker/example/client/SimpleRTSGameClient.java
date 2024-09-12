@@ -132,7 +132,7 @@ class SimpleRTSGameClient {
             })
             .withActionEntry((byte) 05, p -> clientID = Long.valueOf(p.decode().get(0)))
             .withActionEntry((byte) 06, p -> {
-                System.out.println(String.format("%s! %s has won", Long.parseLong(p.decode().get(0)) == clientID? "Victory" : "Defeat", p.decode().get(1)));
+                System.out.println(String.format(/*"%s! %s has won"*/"%s!", Long.parseLong(p.decode().get(0)) == clientID? "Victory" : "Defeat"/*, p.decode().get(1)*/));
                 System.exit(0);
             })
             .withActionEntry((byte) 07, p -> System.out.println(String.format("Gold update: %s", p.decode().get(0))));
