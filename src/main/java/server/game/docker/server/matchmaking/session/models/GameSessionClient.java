@@ -1,14 +1,14 @@
-package server.game.docker.server;
+package server.game.docker.server.matchmaking.session.models;
 
 import java.net.InetAddress;
 
 /**
  * Server side player client representation
  */
-public class GameClientPlayer {
+public class GameSessionClient {
     private InetAddress iPAddress;
     private Integer port;
-    private String username;
+    private Long clientID;
     public InetAddress getiPAddress() {
         return iPAddress;
     }
@@ -21,15 +21,15 @@ public class GameClientPlayer {
     public void setPort(Integer port) {
         this.port = port;
     }
-    public String getUsername() {
-        return username;
+    public Long getClientID() {
+        return clientID;
     }
-    public void setUsername(String username) {
-        this.username = username;
+    public void setClientID(Long clientID) {
+        this.clientID = clientID;
     }
-    public GameClientPlayer(InetAddress iPAddress, Integer port, String username) {
+    public GameSessionClient(InetAddress iPAddress, Integer port, Long clientID) {
         this.iPAddress = iPAddress;
         this.port = port;
-        this.username = username;
+        this.clientID = clientID;
     }
 }
