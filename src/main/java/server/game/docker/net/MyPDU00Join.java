@@ -3,18 +3,23 @@ package server.game.docker.net;
 // import server.game.docker.client.GameClient;
 // import server.game.docker.server.DockerGameServer;
 
-public class Packet00Join extends Packet {
+public class MyPDU00Join extends MyPDU {
+    @Deprecated
     private String username;
 
-    public Packet00Join(byte [] data) {
-        super(00);
-        username = readData(data);
-        //TODO Auto-generated constructor stub
-    }
+    // public Packet00Join(byte [] data) {
+    //     super(00);
+    //     username = readData(data);
+    //     //TODO Auto-generated constructor stub
+    // }
     
-    public Packet00Join(String username) {
-        super(00);
-        this.username = username;
+    public MyPDU00Join(/*String username*/) {
+        super((byte) 00/*, username*/);
+        // this.username = username;
+    }
+
+    public MyPDU00Join(String username){
+        super((byte) 00, username);
     }
     
     // @Override
@@ -38,6 +43,7 @@ public class Packet00Join extends Packet {
         return "00".concat(username).getBytes();
     }
 
+    @Deprecated
     public String getUsername() {
         return username;
     }
