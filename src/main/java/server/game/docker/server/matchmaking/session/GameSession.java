@@ -72,14 +72,15 @@ public class GameSession {
             DatagramPacket packet = new DatagramPacket(data, data.length);
             try {
                 socket.receive(packet);
+                actionRouter.handle(packet);
             } 
             catch (IOException e) {
                 e.printStackTrace();
+                break;
             }
             catch (Exception e) {
                 e.printStackTrace();
             }
-            actionRouter.handle(packet);
         }
     }
 

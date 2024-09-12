@@ -111,27 +111,29 @@ public class SimpleRTSGameServerSideLogic {
                                 gameSession.sendUnicast(serverGoldTickInfo);
                             });
                         }
-                    }, 0, 10000);
+                    }, 0, 5000);
                 }
             })
-            .withActionEntry(MyPDUTypes.PLAYERMOVE.getPacketID(), p -> {
-                Vector<String> packetData = p.decode();
-                GameClientPlayer currentPlayer = players.stream().filter(player -> Long.valueOf(packetData.get(0)).equals(player.getClientID())).findAny().orElse(null);
-                switch(packetData.get(1)){
-                    case "0" -> {
-                        //todo: e.g. mine E 4 (Client / Player serlectable position)
-                        if((currentPlayer.getGold() - 1000) >= 0 && currentPlayer.getMaximumOwnableArea()[1] <= 4? !availableGoldMinesPool1.isEmpty() : !availableGoldMinesPool2.isEmpty()){
-                            currentPlayer.setGold(currentPlayer.getGold() - 1000);
-                            byte [] boughtMine = currentPlayer.getMaximumOwnableArea()[1] <= 4? availableGoldMinesPool1.removeLast() : availableGoldMinesPool2.removeLast();
-                            gameMap[boughtMine[0]][boughtMine[1]] = TileType.GOLDMINE.tileID;
-                            gameSession.sendMulticast(new MyPDU02WorldInfo(boughtMine[0], boughtMine[1], TileType.GOLDMINE.tileID));
-                            System.out.println(String.format("Player %s just bought a mine %d %d", currentPlayer.getUsername(), boughtMine[0], boughtMine[1]));
+            .withActionEntry(MyPDUTypes.PLAYERMOVE.getPacketID(), new MyPDUActionHandler.MyPDUAction() {
+                public synchronized void perform(MyPDU p){
+                    Vector<String> packetData = p.decode();
+                    GameClientPlayer currentPlayer = players.stream().filter(player -> Long.valueOf(packetData.get(0)).equals(player.getClientID())).findAny().orElse(null);
+                    switch(packetData.get(1)){
+                        case "0" -> {
+                            //todo: e.g. mine E 4 (Client / Player serlectable position)
+                            if((currentPlayer.getGold() - 1000) >= 0 && currentPlayer.getMaximumOwnableArea()[1] <= 4? !availableGoldMinesPool1.isEmpty() : !availableGoldMinesPool2.isEmpty()){
+                                currentPlayer.setGold(currentPlayer.getGold() - 1000);
+                                byte [] boughtMine = currentPlayer.getMaximumOwnableArea()[1] <= 4? availableGoldMinesPool1.removeLast() : availableGoldMinesPool2.removeLast();
+                                gameMap[boughtMine[0]][boughtMine[1]] = TileType.GOLDMINE.tileID;
+                                gameSession.sendMulticast(new MyPDU02WorldInfo(boughtMine[0], boughtMine[1], TileType.GOLDMINE.tileID));
+                                System.out.println(String.format("Player %s just bought a mine %d %d", currentPlayer.getUsername(), boughtMine[0], boughtMine[1]));
+                            }
                         }
-                    }
-                    case "1" -> {
-                        if(currentPlayer.getGold() >= 10000){
-                            gameSession.sendMulticast(new MyPDU((byte) 06, currentPlayer.getClientID().toString(), currentPlayer.getUsername()));
-                            gameSession.endSession(currentPlayer.getUsername());
+                        case "1" -> {
+                            if(currentPlayer.getGold() >= 10000){
+                                gameSession.sendMulticast(new MyPDU((byte) 06, currentPlayer.getClientID().toString(), currentPlayer.getUsername()));
+                                gameSession.endSession(currentPlayer.getUsername());
+                            }
                         }
                     }
                 }
