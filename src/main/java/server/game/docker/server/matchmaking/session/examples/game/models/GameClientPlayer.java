@@ -8,27 +8,34 @@ public class GameClientPlayer {
     private Boolean winner;
     private Integer gold;
     private Byte [] maximumOwnableArea;
+
     public Boolean getWinner() {
         return winner;
     }
+
     public Byte [] getMaximumOwnableArea() {
         return maximumOwnableArea;
     }
+
     public void setMaximumOwnableArea(Byte [] maximumOwnableArea) {
         this.maximumOwnableArea = maximumOwnableArea;
     }
+
     public void setWinner(Boolean winner) {
         this.winner = winner;
     }
+
     public Integer getGold() {
         return gold;
     }
+
     public void setGold(Integer gold) {
         this.gold = gold;
     }
+
     public GameClientPlayer(final GameSessionClient gameClient){
         clientID = gameClient.getClientID();
-        gold = 1000;
+        gold = 10000;
         setUsername("Player " + gameClient.getClientID().toString());
     }
     public Long getClientID() {
