@@ -25,3 +25,6 @@ replay_pid*
 
 # Anything from the target dir
 target
+
+# .idea dir
+.idea
