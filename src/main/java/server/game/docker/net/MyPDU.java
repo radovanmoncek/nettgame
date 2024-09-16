@@ -48,10 +48,16 @@ public class MyPDU {
         return byteBuffer;
     }
 
+    public MyPDU() {
+        packetType = MyPDUTypes.INVALID;
+        packetID = MyPDUTypes.INVALID.getID();
+        byteBuffer = new byte[0];
+    }
+
     public MyPDU(final Byte packetID){
-        final byte [] encodedPakcetID = packetID < 10? "0".concat(Byte.toString(packetID)).getBytes() : Byte.toString(packetID).getBytes();
-        this.packetID = packetID.byteValue();
-        byteBuffer = encodedPakcetID;
+        final byte [] encodedPacketID = packetID < 10? "0".concat(Byte.toString(packetID)).getBytes() : Byte.toString(packetID).getBytes();
+        this.packetID = packetID;
+        byteBuffer = encodedPacketID;
     }
 
     public MyPDU(final Byte packetID, String ... data){
@@ -72,5 +78,23 @@ public class MyPDU {
                 .substring(2)
                 .split(",")
         ));
+    }
+
+    public MyPDU withIPAndPort(final InetAddress address, final Integer port){
+        this.address = address;
+        this.port = port;
+        return this;
+    }
+
+    public static MyPDU fromDisconnectData(Long clientID){
+            return new MyPDU(MyPDUTypes.DISCONNECT.getID(), clientID.toString());
+    }
+
+    public static MyPDU fromWorldInfoData(Byte i, Byte j, Byte structureByte){
+        return new MyPDU(MyPDUTypes.WORLDINFO.getID(), Byte.toString(i), Byte.toString(j), structureByte.toString());
+    }
+
+    public static MyPDU fromPlayerMoveData(Long clientID, Byte i, Byte j, Byte structureByte){
+        return new MyPDU(MyPDUTypes.PLAYERMOVE.getID(), clientID.toString(), Byte.toString(i), Byte.toString(j), structureByte.toString());
     }
 }

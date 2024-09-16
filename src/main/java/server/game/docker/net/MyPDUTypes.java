@@ -1,14 +1,15 @@
 package server.game.docker.net;
 
 public enum MyPDUTypes {
-    INVALID((byte) -1), JOIN((byte) 00), DISCONNECT((byte) 01), WORLDINFO((byte) 02), PLAYERMOVE((byte) 03);
+    INVALID((byte) -1), JOIN((byte) 0), DISCONNECT((byte) 1), WORLDINFO((byte) 2), PLAYERMOVE((byte) 3), GAMESTART((byte) 4), IDREQUEST((byte) 5), GAMEEND((byte) 6), SERVERTICKUPDATE((byte) 7), CHATMESSAGE((byte) 10);
 
-    Byte packetID;
+    private final Byte iD;
 
-    private MyPDUTypes(Byte packetID){
-        this.packetID = packetID;
+    MyPDUTypes(Byte iD){
+        this.iD = iD;
     }
-    public Byte getPacketID() {
-        return packetID;
+
+    public Byte getID() {
+        return iD;
     }
 }
