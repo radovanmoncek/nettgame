@@ -6,29 +6,20 @@ import java.net.InetAddress;
  * Server side player client representation
  */
 public class GameSessionClient {
-    private InetAddress iPAddress;
+    private InetAddress clientIPAddress;
     private Integer port;
     private Long clientID;
-    public InetAddress getiPAddress() {
-        return iPAddress;
-    }
-    public void setiPAddress(InetAddress iPAddress) {
-        this.iPAddress = iPAddress;
+    public InetAddress getClientIPAddress() {
+        return clientIPAddress;
     }
     public Integer getPort() {
         return port;
     }
-    public void setPort(Integer port) {
-        this.port = port;
-    }
     public Long getClientID() {
         return clientID;
     }
-    public void setClientID(Long clientID) {
-        this.clientID = clientID;
-    }
-    public GameSessionClient(InetAddress iPAddress, Integer port, Long clientID) {
-        this.iPAddress = iPAddress;
+    public GameSessionClient(InetAddress clientIPAddress, Integer port, Long clientID) {
+        this.clientIPAddress = clientIPAddress;
         this.port = port;
         this.clientID = clientID;
     }

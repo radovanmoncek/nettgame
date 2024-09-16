@@ -8,9 +8,9 @@ import java.util.List;
 import java.util.Vector;
 
 import server.game.docker.net.MyPDU;
-import server.game.docker.net.MyPDU00Join;
-import server.game.docker.net.MyPDUActionHandler;
+import server.game.docker.net.MyPDUActionMapper;
 import server.game.docker.net.MyPDUTypes;
+import server.game.docker.server.matchmaking.session.chat.SessionChat;
 import server.game.docker.server.matchmaking.session.examples.game.logic.SimpleRTSGameServerSideLogic;
 import server.game.docker.server.matchmaking.session.models.GameSessionClient;
 
@@ -32,38 +32,41 @@ public class GameSession {
      * The ID of this game session
      */
     private final Long gameSessionID;
-    private final MyPDUActionHandler actionRouter;
+    private final MyPDUActionMapper actionMapper;
+
+    public MyPDUActionMapper getActionMapper() {
+        return actionMapper;
+    }
 
     public GameSession(String [] args){
         gameSessionID = -1L;
         port = 4321;
         connectedClients = new Vector<>();
-        actionRouter = new MyPDUActionHandler()
-            .withActionEntry(MyPDUTypes.INVALID.getPacketID(), p -> System.out.println("Invalid packet received"))
-            .withActionEntry(MyPDUTypes.JOIN.getPacketID(), p -> {
-                System.out.println(String.format("A player (%s / %s) has joined the session", "Player " + (connectedClients.size() + 1), p.getAddress()));
-                addConnection(new GameSessionClient(p.getAddress(), p.getPort(), Long.valueOf((long) connectedClients.size() + 1)), new MyPDU00Join("Player " + (connectedClients.size() + 1)), Long.valueOf((long) connectedClients.size() + 1));
-                MyPDU playerIDInfoPacket = new MyPDU((byte) 05, Integer.toString(connectedClients.size()));
-                playerIDInfoPacket.setAddress(p.getAddress());
-                playerIDInfoPacket.setPort(p.getPort());
-                sendUnicast(playerIDInfoPacket);
+        actionMapper = new MyPDUActionMapper()
+            .withActionMapping(MyPDUTypes.INVALID.getID(), p -> System.out.println("Invalid packet received"))
+            .withActionMapping(MyPDUTypes.JOIN.getID(), p -> {
+                System.out.printf("A player (%s / %s) has joined the session\n", "Player " + (connectedClients.size() + 1), p.getAddress());
+                addConnection(new GameSessionClient(p.getAddress(), p.getPort(), (long) connectedClients.size() + 1), new MyPDU(MyPDUTypes.JOIN.getID(), "Player " + (connectedClients.size() + 1)), (long) connectedClients.size() + 1);
+                sendUnicast(new MyPDU(MyPDUTypes.IDREQUEST.getID(), Integer.toString(connectedClients.size())).withIPAndPort(p.getAddress(), p.getPort()));
             })
-            .withActionEntry(MyPDUTypes.DISCONNECT.getPacketID(), p -> {
+            .withActionMapping(MyPDUTypes.DISCONNECT.getID(), p -> {
                 Vector<String> packetData = p.decode();
-                System.out.println(String.format("A player (%s / %s) has left the session", "Player" + connectedClients.stream().map(GameSessionClient::getClientID).filter(Long.valueOf(packetData.get(0))::equals).findAny().orElse(-1L), p.getAddress()));
+                System.out.printf("A player (%s / %s) has left the session\n", "Player" + connectedClients.stream().map(GameSessionClient::getClientID).filter(Long.valueOf(packetData.get(0))::equals).findAny().orElse(-1L), p.getAddress());
                 sendMulticast(p);
-                connectedClients.remove(connectedClients.indexOf(connectedClients.stream().filter(c -> Long.valueOf(packetData.get(0)).equals(c.getClientID())).findAny().orElse(null)));
+                connectedClients.remove(connectedClients.stream().filter(c -> Long.valueOf(packetData.get(0)).equals(c.getClientID())).findAny().orElse(null));
                 System.out.println("A player has forfeit, terminating session ...");
                 System.exit(0);
             });
-        new SimpleRTSGameServerSideLogic(this).injectPacketActionHandler(actionRouter);
+        new SimpleRTSGameServerSideLogic(this);
+        new SessionChat(this);
         try {
             socket = new DatagramSocket(4321);
         } catch (SocketException e) {
             e.printStackTrace();
+            socket.close();
         }
+        System.out.printf("Session ID: %d port: %d has started\n", gameSessionID, port);
         serve();
-        System.out.println(String.format("Session ID: %d port: %d has started", gameSessionID, port));
     }
     
     private void serve(){
@@ -72,7 +75,7 @@ public class GameSession {
             DatagramPacket packet = new DatagramPacket(data, data.length);
             try {
                 socket.receive(packet);
-                actionRouter.handle(packet);
+                actionMapper.map(packet);
             } 
             catch (IOException e) {
                 e.printStackTrace();
@@ -84,14 +87,12 @@ public class GameSession {
         }
     }
 
-    private void addConnection(GameSessionClient gameClientPlayer, MyPDU00Join joinPacket, Long clientID){
-        if(connectedClients.stream().map(GameSessionClient::getClientID).noneMatch(Long.valueOf(clientID)::equals)){
+    private void addConnection (GameSessionClient gameClientPlayer, MyPDU joinPacket, Long clientID) {
+        if(connectedClients.stream().map(GameSessionClient::getClientID).noneMatch(clientID::equals)) {
             connectedClients.add(gameClientPlayer);
-            connectedClients.stream().filter(c -> !c.getClientID().equals(gameClientPlayer.getClientID())).forEach(c -> {
-                joinPacket.setAddress(c.getiPAddress());
-                joinPacket.setPort(c.getPort());
-                sendUnicast(joinPacket);
-            });
+            connectedClients.stream().filter(c -> !c.getClientID().equals(gameClientPlayer.getClientID())).forEach(c ->
+                    sendUnicast(joinPacket.withIPAndPort(c.getClientIPAddress(), c.getPort()))
+            );
         }
     }
 
@@ -107,14 +108,14 @@ public class GameSession {
     public void sendMulticast(MyPDU sourcePacket) {
         connectedClients.forEach(c -> {
             MyPDU destPacket = new MyPDU(sourcePacket.getPacketID(), sourcePacket.getByteBuffer());
-            destPacket.setAddress(c.getiPAddress());
+            destPacket.setAddress(c.getClientIPAddress());
             destPacket.setPort(c.getPort());
             sendUnicast(destPacket);
         });
     }
 
     public void endSession(String winnerName){
-        System.out.println(String.format("%s has won", winnerName));
+        System.out.printf("%s has won", winnerName); //todo: should be announced by Game Logic
         System.out.println("Session end, terminating ...");
         System.exit(0);
     }
