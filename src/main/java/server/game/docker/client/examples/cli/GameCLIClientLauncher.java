@@ -1,4 +1,4 @@
-package server.game.docker.examples.client.cli;
+package server.game.docker.client.examples.cli;
 
 class GameCLIClientLauncher {
     public static void main(String[] args) {

@@ -14,6 +14,7 @@
     </properties>
 
     <dependencies>
+        <!--JavaFX (framework)-->
         <dependency>
             <groupId>org.openjfx</groupId>
             <artifactId>javafx-controls</artifactId>
@@ -23,6 +24,12 @@
             <groupId>org.openjfx</groupId>
             <artifactId>javafx-fxml</artifactId>
             <version>19</version>
+        </dependency>
+        <!--Netty (framework)-->
+        <dependency>
+            <groupId>io.netty</groupId>
+            <artifactId>netty-all</artifactId>
+            <version>4.1.108.Final</version>
         </dependency>
     </dependencies>
 

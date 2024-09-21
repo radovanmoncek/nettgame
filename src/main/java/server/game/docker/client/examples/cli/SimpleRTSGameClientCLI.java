@@ -1,4 +1,4 @@
-package server.game.docker.examples.client.cli;
+package server.game.docker.client.examples.cli;
 
 import java.io.BufferedReader;
 import java.io.IOException;
@@ -8,11 +8,8 @@ import java.net.DatagramSocket;
 import java.net.InetAddress;
 import java.net.SocketException;
 import java.net.UnknownHostException;
-import java.util.Vector;
 
-import server.game.docker.net.MyPDU;
-import server.game.docker.net.MyPDUActionMapper;
-import server.game.docker.net.MyPDUTypes;
+import server.game.docker.net.pdu.PDU;
 import server.game.docker.server.matchmaking.session.examples.game.logic.TileType;
 
 public class SimpleRTSGameClientCLI {
@@ -46,7 +43,7 @@ public class SimpleRTSGameClientCLI {
     private final byte [][] gameMap;
     private final Thread clientNetworkListener;
     private Long clientID;
-    private final MyPDUActionMapper actionRouter;
+//    private final Handler actionRouter;
     private String player1Name;
     private String player2Name;
 
@@ -71,33 +68,33 @@ public class SimpleRTSGameClientCLI {
         } catch (UnknownHostException | SocketException e) {
             e.printStackTrace();
         }
-        actionRouter = new MyPDUActionMapper()
-            .withActionMapping(MyPDUTypes.INVALID.getID(), p -> System.out.println("Invalid packet received"))
-            .withActionMapping(MyPDUTypes.JOIN.getID(), p -> {
+//        actionRouter = new Handler()
+//            .withMapping(PDUType.INVALID.getID(), p -> System.out.println("Invalid packet received"))
+//            .withMapping(PDUType.JOIN.getID(), p -> {
                 //A second player has joined, game must be starting by now
-                sendUnicast(new MyPDU((MyPDUTypes.IDREQUEST.getID())));
+//                sendUnicast(new PDUBody((PDUType.IDREQUEST.getID())));
                 //todo: speacial MyPDU about successfull connection to a game session
-                System.out.println("Game started");
-            })
-            .withActionMapping(MyPDUTypes.DISCONNECT.getID(), p -> {
-                System.out.println("A player has forfeit, game is over");
-                System.exit(0);
-            })
-            .withActionMapping(MyPDUTypes.WORLDINFO.getID(), p -> {
-                Vector<String> packetData = p.decode();
-                byte
-                    i = Byte.parseByte(packetData.get(0)),
-                    j = Byte.parseByte(packetData.get(1)),
-                    tileID = Byte.parseByte(packetData.get(2));
-                gameMap[i][j] = tileID;
-                drawMap();
-            })
-            .withActionMapping((byte) 5, p -> clientID = Long.valueOf(p.decode().get(0)))
-            .withActionMapping((byte) 6, p -> {
-                System.out.println(String.format("%s!", Long.parseLong(p.decode().get(0)) == clientID? "Victory" : "Defeat"));
-                System.exit(0);
-            })
-            .withActionMapping((byte) 7, p -> System.out.println(String.format("Gold update: %s", p.decode().get(0))));
+//                System.out.println("Game started");
+//            })
+//            .withMapping(PDUType.DISCONNECT.getID(), p -> {
+//                System.out.println("A player has forfeit, game is over");
+//                System.exit(0);
+//            })
+//            .withMapping(PDUType.WORLDINFO.getID(), p -> {
+//                Vector<String> packetData = p.decode();
+//                byte
+//                    i = Byte.parseByte(packetData.get(0)),
+//                    j = Byte.parseByte(packetData.get(1)),
+//                    tileID = Byte.parseByte(packetData.get(2));
+//                gameMap[i][j] = tileID;
+//                drawMap();
+//            })
+//            .withMapping((byte) 5, p -> clientID = Long.valueOf(p.decode().get(0)))
+//            .withMapping((byte) 6, p -> {
+//                System.out.println(String.format("%s!", Long.parseLong(p.decode().get(0)) == clientID? "Victory" : "Defeat"));
+//                System.exit(0);
+//            })
+//            .withMapping((byte) 7, p -> System.out.println(String.format("Gold update: %s", p.decode().get(0))));
         clientNetworkListener = new Thread(){
             @Override
             public void run() {
@@ -109,7 +106,7 @@ public class SimpleRTSGameClientCLI {
                     } catch (IOException e) {
                         e.printStackTrace();
                     }
-                    actionRouter.map(packet);
+//                    actionRouter.map(packet);
                 }
             }
         };
@@ -145,14 +142,14 @@ public class SimpleRTSGameClientCLI {
             switch(awaitPlayerInput()){
                 case "join" -> {
                     System.out.println("Joining a server ...");
-                    sendUnicast(new MyPDU(MyPDUTypes.JOIN.getID()));
+//                    sendUnicast(new PDUBody(PDUType.JOIN.getID()));
                 }
-                case "exit" -> 
-                    sendUnicast(new MyPDU().fromDisconnectData(clientID));
+//                case "exit" ->
+//                    sendUnicast(new PDUBody().fromDisconnectData(clientID));
                 case "mine" -> 
                     buyGoldMine();
-                case "bridge" -> 
-                    sendUnicast(new MyPDU(MyPDUTypes.PLAYERMOVE.getID(), clientID.toString(), "1"));
+//                case "bridge" ->
+//                    sendUnicast(new PDUBody(PDUType.PLAYERMOVE.getID(), clientID.toString(), "1"));
                 default -> 
                     System.out.println("Unrecognised command");
             }
@@ -169,16 +166,16 @@ public class SimpleRTSGameClientCLI {
         }
     }
 
-    public void sendUnicast(MyPDU p){
-        DatagramPacket packet = new DatagramPacket(p.getByteBuffer(), p.getByteBuffer().length, iPAddress, serverPort);
-        try {
-            socket.send(packet);
-        } catch (IOException e) {
-            e.printStackTrace();
-        }
+    public void sendUnicast(PDU p){
+//        DatagramPacket packet = new DatagramPacket(p.getByteBuffer(), p.getByteBuffer().length, iPAddress, serverPort);
+//        try {
+//            socket.send(packet);
+//        } catch (IOException e) {
+//            e.printStackTrace();
+//        }
     }
 
     public void buyGoldMine(){
-        sendUnicast(new MyPDU(MyPDUTypes.PLAYERMOVE.getID(), clientID.toString(), "0"));
+//        sendUnicast(new PDUBody(PDUType.PLAYERMOVE.getID(), clientID.toString(), "0"));
     }
 }
