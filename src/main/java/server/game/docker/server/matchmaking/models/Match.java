@@ -10,4 +10,5 @@ public class Match {
     private Timestamp startTime;
     private Timestamp endTime;
     private Long sessionID;
+    private Long winnerID;
 }

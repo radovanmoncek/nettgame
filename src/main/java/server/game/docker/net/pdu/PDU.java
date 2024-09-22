@@ -1,7 +1,13 @@
 package server.game.docker.net.pdu;
 
+import io.netty.buffer.ByteBuf;
+import io.netty.buffer.Unpooled;
+
 import java.net.SocketAddress;
 
+/**
+ * A POJO DTO class that represents a high level PDU (Protocol Data Unit) for easier processing.
+ */
 public class PDU {
     private PDUType PDUType;
     /**
@@ -22,9 +28,14 @@ public class PDU {
      * The port number from which this packet was sent
      */
     private final Integer port/* = -1*/;
-    private final Object data; //todo: will become generic type no - implementor will define attributes
+    private Object data; //todo: will become generic type no - implementor will define attributes
+    private ByteBuf byteBuf;
 
-//    public byte getPacketID() {
+    public void setByteBuf(ByteBuf byteBuf) {
+        this.byteBuf = byteBuf;
+    }
+
+    //    public byte getPacketID() {
 //        return packetID;
 //    }
 //
@@ -77,6 +88,7 @@ public class PDU {
         this.address = socketAddress;
         this.port = port;
         this.data = data;
+        byteBuf = null;
     }
 
 //    @Deprecated
@@ -114,5 +126,13 @@ public class PDU {
 
     public Object getData() {
         return data;
+    }
+
+    public ByteBuf getByteBuf() {
+        return byteBuf;
+    }
+
+    public void setData(Object data) {
+        this.data = data;
     }
 }

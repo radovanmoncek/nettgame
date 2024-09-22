@@ -5,6 +5,8 @@ import io.netty.channel.*;
 import io.netty.channel.nio.NioEventLoopGroup;
 import io.netty.channel.socket.SocketChannel;
 import io.netty.channel.socket.nio.NioSocketChannel;
+import io.netty.handler.logging.LogLevel;
+import io.netty.handler.logging.LoggingHandler;
 import server.game.docker.net.decoders.GameDataDecoder;
 import server.game.docker.net.encoders.GameDataEncoder;
 import server.game.docker.net.pdu.PDU;
@@ -21,12 +23,12 @@ public class GameClient {
     private final InetAddress gameServerAddress;
     private final int gameServerPort;
     private final EventLoopGroup workerGroup;
-    private final PDUHandler PDUHandler;
+    private final PDUHandler pDUHandler;
     private Channel channel;
 //    private Long clientID;
 
     public GameClient(String [] args) throws Exception {
-        PDUHandler = new PDUHandler();
+        pDUHandler = new PDUHandler();
         gameServerAddress = InetAddress.getByName("127.0.0.1");
         gameServerPort = 4321;
         workerGroup = new NioEventLoopGroup();
@@ -39,7 +41,7 @@ public class GameClient {
                     .handler(new ChannelInitializer<SocketChannel>() {
                         @Override
                         protected void initChannel(SocketChannel socketChannel) {
-                            socketChannel.pipeline().addLast(new GameDataEncoder(PDUHandler), new GameDataDecoder(PDUHandler), new GameClientHandler(PDUHandler));
+                            socketChannel.pipeline().addLast(new LoggingHandler(LogLevel.ERROR), new GameDataEncoder(pDUHandler), new GameDataDecoder(pDUHandler), new GameClientHandler(pDUHandler));
                         }
                     });
 
@@ -69,8 +71,9 @@ public class GameClient {
         }
     }
 
-    public ChannelFuture sendUnicast(PDU pDU) {
-        return channel.writeAndFlush(pDU);
+    public /*ChannelFuture*/void sendUnicast(PDU pDU) {
+//        return channel.writeAndFlush(pDU);
+        pDUHandler.send(channel, pDU);
     }
 
     public void connect() throws Exception {
@@ -117,7 +120,7 @@ public class GameClient {
      * @param p
      * @return {@link PDUHandler} for convenient chaining
      */
-    public PDUHandler withMapping(PDUType t, LocalPipeline p) {
-        return PDUHandler.withMapping(t, p);
+    public PDUHandler registerPDU(PDUType t, LocalPipeline p) {
+        return pDUHandler.registerPDU(t, p);
     }
 }

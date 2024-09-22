@@ -24,7 +24,7 @@ public class GameDataDecoder extends ByteToMessageDecoder {
     protected void decode(ChannelHandlerContext channelHandlerContext, ByteBuf in, List<Object> out) {
         //Await first two bytes for maximum size identification
         //Await first "magic" byte for PDUType identification
-        if(in.readableBytes() >= 1){
+        if(in.readableBytes() >= 1 /*5*/){
 //            byte b1 = in.getByte(0), b2 = in.getByte(1);
 //            byte [] temp = new byte[in.readableBytes()]/*in.asReadOnly().copy().array()*/;
 //            for(int i = 0; i < in.readableBytes(); i++)
@@ -32,18 +32,20 @@ public class GameDataDecoder extends ByteToMessageDecoder {
             in.markReaderIndex();
             PDUType type = PDUType.valueOf((byte) /*(in.getByte(0) + in.getByte(1))*/in.readUnsignedByte());
 
-            if(type.isVariableLen() && (in.readableBytes() < in.readInt())) {
+            if(!type.isEmpty() && (in.readableBytes() >= 5) && (in.readableBytes() < in.readInt())) {
                 in.resetReaderIndex();
                 return;
             }
             //Await transport of the whole PDU body data
-            if(in.readableBytes() >= type.getMinimumTransportSize()) {
+//            if(in.readableBytes() >= type.getMinimumTransportSize()) {
                 //Prepare rest of PDU body data
-                byte [] outBytes = new byte[type.getMinimumTransportSize()];
+                byte [] outBytes = new byte[/*type.getMinimumTransportSize()*/in.readableBytes()];
                 in.readBytes(outBytes);
-                out.add(new PDU(type, channelHandlerContext.channel().remoteAddress(), ((InetSocketAddress) channelHandlerContext.channel().remoteAddress()).getPort(), actionPDUHandler.map(type).decode(Unpooled.wrappedBuffer(outBytes)/*in.skipBytes(2)*/)));
-            }
-            else in.resetReaderIndex();
+                PDU outPDU = new PDU(type, channelHandlerContext.channel().remoteAddress(), ((InetSocketAddress) channelHandlerContext.channel().remoteAddress()).getPort(), null/*actionPDUHandler.map(type).decode((ByteBuf) Unpooled.wrappedBuffer(outBytes)in.skipBytes(2)*//*)*/);
+                outPDU.setByteBuf(Unpooled.wrappedBuffer(outBytes));
+                out.add(outPDU);
+//            }
+//            else in.resetReaderIndex();
         }
 //            out.add(new TimeExampleDTO(in.readUnsignedInt()));
     }

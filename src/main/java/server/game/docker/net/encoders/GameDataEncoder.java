@@ -15,6 +15,19 @@ public class GameDataEncoder extends ChannelOutboundHandlerAdapter {
         this.actionPDUHandler = actionPDUHandler;
     }
 
+    /**
+     * PDU:
+     * <pre>
+     *     ---------------------------------------------------
+     *     | PDUType byte (1B)     |    dataLength int? (4B) |
+     *     ---------------------------------------------------
+     *     |                       data                      |
+     *     ---------------------------------------------------
+     * </pre>
+     * @param ctx
+     * @param msg
+     * @param promise
+     */
     @Override
     public void write(ChannelHandlerContext ctx, Object msg, ChannelPromise promise) {
 //        GameDataDecoder.TimeExampleDTO m = (GameDataDecoder.TimeExampleDTO) msg;
@@ -26,16 +39,22 @@ public class GameDataEncoder extends ChannelOutboundHandlerAdapter {
 //        PDUType type = (PDUType) m.get(0);
 //        Object data = m.get(1);
         PDU p = (PDU) msg; //toto: will inject PDUType bytes and LP will only return byte []
-        byte [] encodedBody = actionPDUHandler.map(p.getGameDataPDUType()).encode(p.getData()).array();
-        ByteBuf buf = Unpooled.buffer(1 + (p.getGameDataPDUType().isVariableLen()? 4 : 0) + p.getGameDataPDUType().getMinimumTransportSize())/*actionHandler.map(body.getGameDataPDUType()).encode(body.getData())*/;
+        byte [] encodedBody = /*actionPDUHandler.map(p.getGameDataPDUType()).encode(p.getData()).array()*/p.getByteBuf().array();
+        ByteBuf buf = Unpooled.buffer(1 + (!p.getGameDataPDUType().isEmpty()/*encodedBody.length != 0*/? 4 : 0) + /*p.getGameDataPDUType().getMinimumTransportSize()*/encodedBody.length)/*actionHandler.map(body.getGameDataPDUType()).encode(body.getData())*/;
+        //Tag traffic with PDUType identifier header part
         buf.writeByte(p.getGameDataPDUType().getID());
-        if(p.getGameDataPDUType().isVariableLen())
+//        if(p.getGameDataPDUType().isVariableLen())
+        //Tag traffic with length info header part
+        if(encodedBody.length != 0)
             buf.writeInt(encodedBody.length);
+
+        //Write the actual data
         buf.writeBytes(encodedBody);
 
-        byte [] temp = new byte[buf.readableBytes()];
-        for(int i = 0; i < buf.readableBytes(); i++)
-            temp[i] = buf.getByte(i);
+//        byte [] temp = new byte[buf.readableBytes()];
+//        for(int i = 0; i < buf.readableBytes(); i++)
+//            temp[i] = buf.getByte(i);
+        //Send data ByteBuff for further processing
         ctx.write(buf, promise);
     }
 }

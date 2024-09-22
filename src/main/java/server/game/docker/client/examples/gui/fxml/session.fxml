@@ -4,7 +4,7 @@
 <?import javafx.scene.layout.*?>
 <BorderPane fx:id="ap_main" xmlns="http://javafx.com/javafx"
             xmlns:fx="http://javafx.com/fxml"
-            fx:controller="server.game.docker.examples.client.gui.IndexController"
+            fx:controller="server.game.docker.client.examples.gui.SessionController"
             prefHeight="400.0" prefWidth="600.0">
 <!--    <BorderPane>-->
         <top>
