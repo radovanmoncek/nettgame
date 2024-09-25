@@ -11,7 +11,7 @@ import server.game.docker.net.pdu.PDU;
 public interface LocalPipeline {
     /**
      * <p>
-     *     Specify a decoding pattern used for transporting a POJO DTO class.
+     *     Specify a decoding pattern / mechanism used for transporting a POJO DTO class.
      * </p>
      * <p>
      *     "Meta-values" in {@link PDU} header like {@link Byte} iD of {@link server.game.docker.net.pdu.PDUType} and {@link Integer} varLen will be automatically injected based on {@link server.game.docker.net.pdu.PDUType} specification.
@@ -29,10 +29,12 @@ public interface LocalPipeline {
 
     /**
      * <p>
-     *     Specify an encoding pattern used for transporting a POJO DTO class.
+     *     Specify an encoding pattern / mechanism used for transporting a POJO DTO class.
      * </p>
      * <p>
-     *     "Meta-values" in {@link PDU} header like {@link Byte} iD of {@link server.game.docker.net.pdu.PDUType} and {@link Integer} varLen will be automatically injected based on {@link server.game.docker.net.pdu.PDUType} specification.
+     *     "Meta-values" in {@link PDU} header like {@link Byte} iD of {@link server.game.docker.net.pdu.PDUType} and {@link Integer}
+     *     varLen will be automatically injected based on {@link server.game.docker.net.pdu.PDUType} specification.
+     *     The output {@link ByteBuf} should therefore contain only the desired payload of data that are to be transmitted.
      * </p>
      * <p>
      *     This operation should perform as a reverse mechanism of the decode method, if an identity transport of data is required.
@@ -46,6 +48,9 @@ public interface LocalPipeline {
     ByteBuf encode(Object in);
 
     /**
+     * <p>
+     *     A handler that is used to perform an action as a result of receiving a given {@link server.game.docker.net.pdu.PDUType} {@link PDU}.
+     * </p>
      * <p>
      *     Specify an action taken after a {@link PDU} has been processed.
      * </p>

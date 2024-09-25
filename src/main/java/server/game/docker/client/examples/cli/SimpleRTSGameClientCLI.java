@@ -12,6 +12,7 @@ import java.net.UnknownHostException;
 import server.game.docker.net.pdu.PDU;
 import server.game.docker.server.matchmaking.session.examples.game.logic.TileType;
 
+@Deprecated
 public class SimpleRTSGameClientCLI {
     //Config
     /**
@@ -120,17 +121,17 @@ public class SimpleRTSGameClientCLI {
         for (int i = 0; i < gameMap.length; i++) {
             for (int j = 0; j < gameMap[i].length; j++) {
                 if(gameMap[i][j] == TileType.NEXUS.getTileID())
-                    System.out.print(String.format("  %sN1%s  ", ANSI_GREEN, ANSI_RESET));
+                    System.out.printf("  %sN1%s  ", ANSI_GREEN, ANSI_RESET);
                 else if(gameMap[i][j] == TileType.NEXUS2.getTileID())
-                    System.out.print(String.format("  %sN2%s  ", ANSI_GREEN, ANSI_RESET));
+                    System.out.printf("  %sN2%s  ", ANSI_GREEN, ANSI_RESET);
                 else if(gameMap[i][j] == TileType.RESOURCENODE.getTileID())
-                    System.out.print(String.format("  %sG(a)%s  ", ANSI_YELLOW, ANSI_RESET));
+                    System.out.printf("  %sG(a)%s  ", ANSI_YELLOW, ANSI_RESET);
                 else if(gameMap[i][j] == TileType.GOLDMINE.getTileID())
-                    System.out.print(String.format("  %sM()%s  ", ANSI_PURPLE, ANSI_RESET));
+                    System.out.printf("  %sM()%s  ", ANSI_PURPLE, ANSI_RESET);
                 else if(gameMap[i][j] == TileType.RIVER.getTileID())
-                    System.out.print(String.format("  %s====%s  ", ANSI_BLUE, ANSI_RESET));
+                    System.out.printf("  %s====%s  ", ANSI_BLUE, ANSI_RESET);
                 else
-                    System.out.print(String.format("  %4d  ", gameMap[i][j]));
+                    System.out.printf("  %4d  ", gameMap[i][j]);
             }
             System.out.println();
         }

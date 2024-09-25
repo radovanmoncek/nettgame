@@ -32,9 +32,6 @@ public class SimpleRTSGameClientGUI extends Application {
     public void stop() throws Exception {
         super.stop();
         gameClient.disconnect();
-//        if(clientID != null)
-//            sendUnicast(new PDUBody(PDUType.DISCONNECT.getID(), clientID.toString()));
-//        listen = false;
         System.out.println("Exited client ...");
     }
 

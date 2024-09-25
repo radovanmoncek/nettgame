@@ -6,9 +6,9 @@ import java.net.InetAddress;
  * Server side player client representation
  */
 public class GameSessionClient {
-    private InetAddress clientIPAddress;
-    private Integer port;
-    private Long clientID;
+    private final InetAddress clientIPAddress;
+    private final Integer port;
+    private final Long clientID;
     public InetAddress getClientIPAddress() {
         return clientIPAddress;
     }

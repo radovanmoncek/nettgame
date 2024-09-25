@@ -18,26 +18,17 @@ public class GameEncoder extends ChannelOutboundHandlerAdapter {
      *     |                       data                      |
      *     ---------------------------------------------------
      * </pre>
-     * @param ctx
-     * @param msg
-     * @param promise
+     * @param ctx {@link ChannelHandlerContext}
+     * @param msg {@link Object}
+     * @param promise {@link ChannelPromise}
      */
     @Override
     public void write(ChannelHandlerContext ctx, Object msg, ChannelPromise promise) {
-//        GameDataDecoder.TimeExampleDTO m = (GameDataDecoder.TimeExampleDTO) msg;
-//        ByteBuf encoded = ctx.alloc().buffer(4);
-//        encoded.writeInt((int) m.getValue());
-//        ctx.write(encoded, promise);
-//        GameDataPDUAction gameDataPDUAction = (GameDataPDUAction) msg;
-//        Vector<Object> m = (Vector<Object>) msg;
-//        PDUType type = (PDUType) m.get(0);
-//        Object data = m.get(1);
-        PDU p = (PDU) msg; //toto: will inject PDUType bytes and LP will only return byte []
-        byte [] encodedBody = /*actionPDUHandler.map(p.getGameDataPDUType()).encode(p.getData()).array()*/p.getByteBuf().array();
-        ByteBuf buf = Unpooled.buffer(1 + (!p.getPDUType().isEmpty()/*encodedBody.length != 0*/? 4 : 0) + /*p.getGameDataPDUType().getMinimumTransportSize()*/encodedBody.length)/*actionHandler.map(body.getGameDataPDUType()).encode(body.getData())*/;
+        PDU p = (PDU) msg; //todo: will inject PDUType bytes and LP will only return byte []
+        byte [] encodedBody = p.getByteBuf().array();
+        ByteBuf buf = Unpooled.buffer(1 + (!p.getPDUType().isEmpty()? 4 : 0) + encodedBody.length);
         //Tag traffic with PDUType identifier header part
         buf.writeByte(p.getPDUType().getID());
-//        if(p.getGameDataPDUType().isVariableLen())
         //Tag traffic with length info header part
         if(encodedBody.length != 0)
             buf.writeInt(encodedBody.length);
@@ -45,9 +36,6 @@ public class GameEncoder extends ChannelOutboundHandlerAdapter {
         //Write the actual data
         buf.writeBytes(encodedBody);
 
-//        byte [] temp = new byte[buf.readableBytes()];
-//        for(int i = 0; i < buf.readableBytes(); i++)
-//            temp[i] = buf.getByte(i);
         //Send data ByteBuff for further processing
         ctx.write(buf, promise);
     }

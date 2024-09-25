@@ -21,12 +21,6 @@ import java.util.*;
 
 public class GameServerHandler extends ChannelInboundHandlerAdapter {
     private final PDUHandler pDUHandler;
-//    @Deprecated
-//    private final List<Long> connectedClients;
-//    @Deprecated
-//    private final List<Lobby> lobbies;
-//    @Deprecated
-//    private final Set<Long> servedClients;
     private static final ChannelGroup unassignedDomain = new DefaultChannelGroup(GlobalEventExecutor.INSTANCE);
     private static final Map<Channel, Long> lobbyDomain = new HashMap<>();
     private static final Map<Channel, Long> sessionDomain = new HashMap<>(); //todo: Docker in phase 4
@@ -34,7 +28,6 @@ public class GameServerHandler extends ChannelInboundHandlerAdapter {
     private static final Map<Long, Lobby> lobbyLookup = new HashMap<>();
     /**
      * GameSession identified by Long Lobby id
-     *
      * Because Session ID = Match ID (for persistence only)
      */
     private static final Map<Long, GameSession> sessionLookup = new HashMap<>();
@@ -47,87 +40,14 @@ public class GameServerHandler extends ChannelInboundHandlerAdapter {
     private static Long lobbyIDAutoIncrement = 1L;
 
     public GameServerHandler(PDUHandler pDUHandler) {
-//        lobbyAssignedChannels = new HashMap<>();
-//        sessionAssignedChannels = new HashMap<>();
-//        connectedClients = new LinkedList<>();
-//        lobbies = new LinkedList<>();
-//        servedClients = new HashSet<>();
-//        lobbyUnassignedChannelGroup = new DefaultChannelGroup(GlobalEventExecutor.INSTANCE);
-//        lobbyLookup = new HashMap<>();
-//        channelIDClientIDLookup = new HashMap<>();
         this.pDUHandler = pDUHandler
-                //Inbound PDU only, incoming buffer payload value is irrelevant
-//                .withMapping(PDUType.IDREQUEST, new LocalPipeline() {
-//                    @Override
-//                    public Object decode(ByteBuf in) {return null;}
-//
-//                    @Override
-//                    public ByteBuf encode(Object in) {return null;}
-//
-//                    @Override
-//                    public void perform(PDUBody body) {
-//                        System.out.println("ID request received");
-//                    }
-//                })
-//                .registerPDU(PDUType.JOIN, new LocalPipeline() {
-//                   @Override
-//                    public Object decode(ByteBuf in) {
-//                        Join out = new Join();
-//                        in = in.slice(2, in.readableBytes());
-//                        out.setClientID(in.readLong());
-//                        return out;
-//                    }
-//
-//                    @Override
-//                    public ByteBuf encode(Object in) {
-//                        Join join = (Join) in;
-//                        ByteBuf out;
-//                        if(Objects.isNull(join.getClientID()))
-//                            out = Unpooled.wrappedBuffer(new byte[]{0, PDUType.JOIN.getID()});
-//                        else
-//                            out = Unpooled.wrappedBuffer(new byte[]{0, PDUType.JOIN.getID(), join.getClientID().byteValue()});
-//                        return out;
-//                    }
-//
-//                    @Override
-//                    public void perform(PDU p) {
-//                        Join joinDTO = (Join) p.getData();
-//                        if(joinDTO.getClientID() == null){
-//                            IDRes idRes = new IDRes();
-//                            long newClientID;
-//                            connectedClients.add(newClientID = connectedClients.size() + 1L);
-//                            idResponse.setNewClientID(newClientID);
-//                                future.channel().writeAndFlush(new Vector<>(List.of(PDUType.IDREQUEST, idResponse))).addListener(ChannelFutureListener.CLOSE);
-//                        }
-//                            if(!servedClients.add(joinDTO.getClientID()))
-//                                return;
-//                            lobbies.add(new Lobby((byte) 2, joinDTO.getClientID(), handler));
-//                    }
-//                })
-//                .registerPDU(PDUType.CHATMESSAGE, new LocalPipeline() {
-//                    @Override
-//                    public Object decode(ByteBuf in) {
-//                        return null;
-//                    }
-
-//                    @Override
-//                    public ByteBuf encode(Object in) {
-//                        return null;
-//                    }
-
-//                    @Override
-//                    public void perform(PDU p) {
-//                        ChatMessage chatMessage = (ChatMessage) p.getData();
-
-//                    }
-//                })
                 //ID - handshake with server
                 //Outbound only PDU containing 64-bit Long clientID
                 .appendPipeline(PDUType.IDRES, new AbstractLocalOutboundPipeline() {
                     @Override
                     public ByteBuf encode(Object in) {
                         IDRes idRes = (IDRes) in;
-                        return Unpooled.buffer(/*8*/Long.BYTES).writeLong(/*wrappedBuffer(new byte[] {0, PDUType.IDRES.getID(), */idRes.getNewClientID()/*.byteValue()}*/);
+                        return Unpooled.buffer(/*8*/Long.BYTES).writeLong(idRes.getNewClientID()/*.byteValue()}*/);
                     }
                 })
                 //LOBBY
@@ -135,7 +55,6 @@ public class GameServerHandler extends ChannelInboundHandlerAdapter {
                 .appendPipeline(PDUType.CREATELOBBYREQ, new AbstractLocalActionPipeline() {
                     @Override
                     public void handle(PDU p) {
-//                        SocketAddress address = p.getAddress();
                         //Client is already connected to a lobby or is in a GameSession
                         if (
                                 lobbyDomain.keySet().stream().map(Channel::remoteAddress).anyMatch(p.getAddress()::equals)
@@ -143,44 +62,18 @@ public class GameServerHandler extends ChannelInboundHandlerAdapter {
                                 sessionDomain.keySet().stream().map(Channel::remoteAddress).anyMatch(p.getAddress()::equals)
                         )
                             return;
-                        Channel lobbyUnassignClientChannel = unassignedDomain.stream().filter(c -> p.getAddress().equals(c.remoteAddress())).findAny().orElse(null)/*.find(channelIDClientIDLookup.get())*/;
-//                        Long clientID = channelIDClientIDLookup.get(address);
-                        /*Integer*/Long lobbyID = /*lobbyAssignedChannels.size() + 1*/lobbyIDAutoIncrement++; //todo: Redis?
+                        Channel lobbyUnassignClientChannel = unassignedDomain.stream().filter(c -> p.getAddress().equals(c.remoteAddress())).findAny().orElse(null);
+                        Long lobbyID = lobbyIDAutoIncrement++; //todo: Redis?
                         //Client is already assigned to a lobby
-//                        if(lobbyLookup.containsKey(/*clientID*/lobbyID))
-//                            return;
                         if(lobbyUnassignClientChannel == null)
                             return;
                         lobbyLookup.put(lobbyID, new Lobby((byte) 2, lobbyUnassignClientChannel.id()));
                         unassignedDomain.remove(lobbyUnassignClientChannel);
                         lobbyDomain.put(lobbyUnassignClientChannel, lobbyID);
-                        System.out.printf(/*"Client %s has joined a lobby %d\n"*/"Client %s has created a lobby %d\n", channelIDClientIDLookup.get(lobbyUnassignClientChannel.id()), lobbyID);
+                        System.out.printf("Client %s has created a lobby %d\n", channelIDClientIDLookup.get(lobbyUnassignClientChannel.id()), lobbyID);
 
-//                        lobbyAssignedChannels.put(lobbyID, new Lobby((byte) 2, clientID));
-//                        lobbyLookup.put(clientID, lobbyID);
                         sendUnicast(new PDU(PDUType.CREATELOBBYRES, p.getAddress(), p.getPort(), lobbyID));
-//                        sendBroadcastLobbyUnassigned(new PDU());
                         refreshLobbyList();
-//                        LobbyBeacon lobbyBeacon = new LobbyBeacon();
-//                        lobbyBeacon.setLobbyID(lobbyID);
-//                        lobbyBeacon.setLobbyCurOccupancy((byte) 1);
-//                        lobbyBeacon.setLobbyMaxOccupancy((byte) 2);
-//                        lobbyBeacon.setLobbyListRefresh(true);
-//                        PDU beaconOutPDU = new PDU(PDUType.LOBBYBEACON, null, null, lobbyBeacon);
-//                        sendBroadcastUnassigned(beaconOutPDU);
-//                        sendBroadcastLobby(beaconOutPDU);
-//                        lobbyLookup.forEach((i, l) -> {
-//                            if(i.equals(lobbyID))
-//                                return;
-//                            LobbyBeacon beacon = new LobbyBeacon();
-//                            beacon.setLobbyListRefresh(false);
-//                            beacon.setLobbyID(i);
-//                            beacon.setLobbyCurOccupancy(l.getCurrentSize());
-//                            beacon.setLobbyMaxOccupancy(l.getMaxSize());
-//                            PDU outherBOPDU = new PDU(PDUType.LOBBYBEACON, null, null, beacon);
-//                            sendBroadcastUnassigned(outherBOPDU);
-//                            sendBroadcastLobby(outherBOPDU);
-//                        });
                     }
                 })
                 //Outbound only PDU 32-bit Integer payload
@@ -188,9 +81,7 @@ public class GameServerHandler extends ChannelInboundHandlerAdapter {
                     @Override
                     public ByteBuf encode(Object in) {
                         Long l = (Long) in;
-//                        ByteBuf out = Unpooled.wrappedBuffer(ByteBuffer.allocate(6).put((byte) 0).put(PDUType.CREATELOBBYRES.getID()).putInt(integer).array());
-//                        byte [] temp = out.array();
-                        return /*out*/Unpooled.buffer(Long.BYTES)/*.writeByte(PDUType.CREATELOBBYRES.getID())*/.writeLong(l);
+                        return Unpooled.buffer(Long.BYTES).writeLong(l);
                     }
                 })
                 //Inbound only PDU with 8B Long data and action
@@ -226,31 +117,6 @@ public class GameServerHandler extends ChannelInboundHandlerAdapter {
                         sendMulticastLobby(new PDU(PDUType.JOINLOBBYRES, unassignLobbyCh.remoteAddress(), ((InetSocketAddress) unassignLobbyCh.remoteAddress()).getPort(), justJoinInfo));
                         //todo: send to lobbyDomain Multicast to notify other lobby members
                         refreshLobbyList();
-//                        boolean sendRefresh = true;
-//                        if(lobbyLookup.isEmpty()){
-//                            LobbyBeacon beacon = new LobbyBeacon();
-//                            beacon.setLobbyListRefresh(sendRefresh);
-//                            beacon.setLobbyID(-1L);
-//                            beacon.setLobbyCurOccupancy((byte) -1);
-//                            beacon.setLobbyMaxOccupancy((byte) -1);
-//                            PDU outherBOPDU = new PDU(PDUType.LOBBYBEACON, null, null, beacon);
-//                            sendBroadcastUnassigned(outherBOPDU);
-//                            sendBroadcastLobby(outherBOPDU);
-//                        }
-//                        for(Map.Entry<Long, Lobby> e : lobbyLookup.entrySet()) {
-////                            if(e.getKey().equals(lobbyID)) //redundant
-////                                return;
-//                            LobbyBeacon beacon = new LobbyBeacon();
-//                            beacon.setLobbyListRefresh(sendRefresh);
-//                            if(sendRefresh)
-//                                sendRefresh = false;
-//                            beacon.setLobbyID(e.getKey());
-//                            beacon.setLobbyCurOccupancy(e.getValue().getCurrentSize());
-//                            beacon.setLobbyMaxOccupancy(e.getValue().getMaxSize());
-//                            PDU outherBOPDU = new PDU(PDUType.LOBBYBEACON, null, null, beacon);
-//                            sendBroadcastUnassigned(outherBOPDU);
-//                            sendBroadcastLobby(outherBOPDU);
-//                        }
                     }
                 })
                 //Outbound only PDU no action with 8B Long data
@@ -302,38 +168,11 @@ public class GameServerHandler extends ChannelInboundHandlerAdapter {
                                 sendUnicast(lobbyLeaveLeaderInfo);
                             }
                         }
-//                        if(lobby.getCurrentSize().equals(0))
-//                            lobbyLookup.remove(lobbyID);
                         LeaveLobbyRes normalLeave = new LeaveLobbyRes();
                         normalLeave.setLeader(false);
                         sendUnicast(new PDU(PDUType.LEAVELOBBYRES, assignedLobbyChannel.remoteAddress(), ((InetSocketAddress) assignedLobbyChannel.remoteAddress()).getPort(), /*null*/normalLeave));
                         System.out.printf("Client %d has left lobby %d\n", channelIDClientIDLookup.get(assignedLobbyChannel.id()), lobbyID);
                         refreshLobbyList();
-//                        boolean sendRefresh = true;
-//                        if(lobbyLookup.isEmpty()){
-//                            LobbyBeacon beacon = new LobbyBeacon();
-//                            beacon.setLobbyListRefresh(sendRefresh);
-//                            beacon.setLobbyID(-1L);
-//                            beacon.setLobbyCurOccupancy((byte) -1);
-//                            beacon.setLobbyMaxOccupancy((byte) -1);
-//                            PDU outherBOPDU = new PDU(PDUType.LOBBYBEACON, null, null, beacon);
-//                            sendBroadcastUnassigned(outherBOPDU);
-//                            sendBroadcastLobby(outherBOPDU);
-//                        }
-//                        for(Map.Entry<Long, Lobby> e : lobbyLookup.entrySet()) {
-////                            if(e.getKey().equals(lobbyID)) //redundant
-////                                return;
-//                            LobbyBeacon beacon = new LobbyBeacon();
-//                            beacon.setLobbyListRefresh(sendRefresh);
-//                            if(sendRefresh)
-//                                sendRefresh = false;
-//                            beacon.setLobbyID(e.getKey());
-//                            beacon.setLobbyCurOccupancy(e.getValue().getCurrentSize());
-//                            beacon.setLobbyMaxOccupancy(e.getValue().getMaxSize());
-//                            PDU outherBOPDU = new PDU(PDUType.LOBBYBEACON, null, null, beacon);
-//                            sendBroadcastUnassigned(outherBOPDU);
-//                            sendBroadcastLobby(outherBOPDU);
-//                        }
                     }
                 })
                 //Outbound PDU with 1B Boolean data or action
@@ -366,22 +205,7 @@ public class GameServerHandler extends ChannelInboundHandlerAdapter {
 
     @Override
     public void channelRead(ChannelHandlerContext ctx, Object msg){
-//        super.channelRead(ctx, msg);
-//        ByteBuf in = (ByteBuf) msg;
-//        try {
-//            System.out.println(msg);
-//            while (in.isReadable()) {
-//                System.out.print((char) in.readByte());
-//                System.out.flush();
-//            }
-//        }
-//        finally {
-//            ReferenceCountUtil.release(msg);
-//        }
-//        ctx.write(msg);
-//        ctx.flush();
         PDU pdu = (PDU) msg;
-//        PDUHandler.map(pdu.getGameDataPDUType()).perform(pdu);
         pDUHandler.receive(pdu);
     }
 
@@ -391,16 +215,14 @@ public class GameServerHandler extends ChannelInboundHandlerAdapter {
         System.out.println("A client has requested an ID");
         //Body data payload is empty for this PDUType
         IDRes idRes = new IDRes();
-        long newClientID = 0L;//Long.parseLong(/*Stream.of(IntStream.of(0, ctx.channel().id().asShortText().getBytes().length).map(i -> ctx.channel().id().asShortText().getBytes()[i]).boxed().map(b -> (int) b).reduce(Integer::sum)*/);//(long) lobbyUnassignedChannelGroup.stream().filter(c -> body.getAddress().equals(c.remoteAddress())).findAny().orElse(null).id().asShortText().length();//(long) lobbyUnassignedChannelGroup.size();
+        long newClientID = 0L;
         for (byte b: ctx.channel().id().asShortText().getBytes())
             newClientID += b;
-//        newClientID = ctx.channel().id().asShortText().getBytes()[0];
         idRes.setNewClientID(newClientID);
-//                        connectedClients.add(newClientID);
-        PDU pdu = new PDU(PDUType.IDRES, /*body.getAddress(), body.getPort(), idResponse*/ctx.channel().remoteAddress(), ((InetSocketAddress) ctx.channel().remoteAddress()).getPort(), idRes);
+        PDU pdu = new PDU(PDUType.IDRES, ctx.channel().remoteAddress(), ((InetSocketAddress) ctx.channel().remoteAddress()).getPort(), idRes);
         sendUnicast(pdu);
-        System.out.printf("A client has connected with assigned ID: %d\n", /*lobbyUnassignedChannelGroup.size()*/idRes.getNewClientID());
-        channelIDClientIDLookup.put(ctx.channel().id()/*.remoteAddress()*/, newClientID);
+        System.out.printf("A client has connected with assigned ID: %d\n", idRes.getNewClientID());
+        channelIDClientIDLookup.put(ctx.channel().id(), newClientID);
     }
 
     @Override
@@ -409,7 +231,6 @@ public class GameServerHandler extends ChannelInboundHandlerAdapter {
         lobbyLookup.remove(lobbyDomain.remove(ctx.channel())); //todo: handle
         sessionDomain.remove(ctx.channel()); //todo: handle
         System.out.printf("Client %d has disconnected\n", channelIDClientIDLookup.remove(ctx.channel().id()));
-//        channelIDClientIDLookup.remove(ctx.channel().id());
     }
 
     @Override
@@ -419,38 +240,26 @@ public class GameServerHandler extends ChannelInboundHandlerAdapter {
     }
 
     @Override
-    public void channelActive(final ChannelHandlerContext ctx) {
-//        final ByteBuf time = ctx.alloc().buffer(4);
-//        time.writeInt((int) (System.currentTimeMillis() / 1000L + 2208988800L));
-//
-//        final ChannelFuture f = ctx.writeAndFlush(time);
-//        f.addListener(future -> {
-//            assert f == future;
-//            ctx.close();
-//        });
-//        ctx.writeAndFlush(/*new GameDataDecoder.TimeExampleDTO()*/new PDUBody(PDUType.IDRESPONSE, /*body.getAddress(), body.getPort(), idResponse*/null, null, null)).addListener(ChannelFutureListener.CLOSE);
-    }
+    public void channelActive(final ChannelHandlerContext ctx) {}
 
     private void sendUnicast(PDU p){
-        unassignedDomain.stream().filter(c -> c.remoteAddress().equals(p.getAddress())).forEach(c -> /*c.writeAndFlush(p)*/pDUHandler.send(c, p));
-        lobbyDomain.keySet().stream().filter(c -> c.remoteAddress().equals(p.getAddress())).forEach(c -> /*c.writeAndFlush(p)*/pDUHandler.send(c, p));
-        sessionDomain.keySet().stream().filter(c -> c.remoteAddress().equals(p.getAddress())).forEach(c -> /*c.writeAndFlush(p)*/pDUHandler.send(c, p));
+        unassignedDomain.stream().filter(c -> c.remoteAddress().equals(p.getAddress())).forEach(c -> pDUHandler.send(c, p));
+        lobbyDomain.keySet().stream().filter(c -> c.remoteAddress().equals(p.getAddress())).forEach(c -> pDUHandler.send(c, p));
+        sessionDomain.keySet().stream().filter(c -> c.remoteAddress().equals(p.getAddress())).forEach(c -> pDUHandler.send(c, p));
     }
 
     private void sendBroadcast(PDU p){
-//        unassignedDomain.stream().filter(c -> !c.remoteAddress().equals(pDU.getAddress())).forEach(c -> c.writeAndFlush(pDU));
         sendBroadcastUnassigned(p);
-//        lobbyDomain.keySet().stream().filter(c -> !c.remoteAddress().equals(p.getAddress())).forEach(c -> /*c.writeAndFlush(p)*/pDUHandler.send(c, p));
         sendBroadcastLobby(p);
-        sessionDomain.keySet().stream().filter(c -> !c.remoteAddress().equals(p.getAddress())).forEach(c -> /*c.writeAndFlush(p)*/pDUHandler.send(c, p));
+        sessionDomain.keySet().stream().filter(c -> !c.remoteAddress().equals(p.getAddress())).forEach(c -> pDUHandler.send(c, p));
     }
 
     private void sendBroadcastUnassigned(PDU pDU){
-        unassignedDomain.stream().filter(c -> !c.remoteAddress().equals(pDU.getAddress())).forEach(c -> /*c.writeAndFlush(pDU)*/pDUHandler.send(c, pDU));
+        unassignedDomain.stream().filter(c -> !c.remoteAddress().equals(pDU.getAddress())).forEach(c -> pDUHandler.send(c, pDU));
     }
 
     private void  sendBroadcastLobby(PDU p){
-        lobbyDomain.keySet().stream().filter(c -> !c.remoteAddress().equals(p.getAddress())).forEach(c -> /*c.writeAndFlush(p)*/pDUHandler.send(c, p));
+        lobbyDomain.keySet().stream().filter(c -> !c.remoteAddress().equals(p.getAddress())).forEach(c -> pDUHandler.send(c, p));
     }
 
     private void sendMulticastLobby(PDU p){
