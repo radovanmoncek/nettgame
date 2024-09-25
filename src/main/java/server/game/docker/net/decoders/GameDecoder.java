@@ -12,14 +12,7 @@ import java.net.InetSocketAddress;
 import java.util.Date;
 import java.util.List;
 
-public class GameDataDecoder extends ByteToMessageDecoder {
-
-    private final PDUHandler actionPDUHandler;
-
-    public GameDataDecoder(PDUHandler actionPDUHandler) {
-        this.actionPDUHandler = actionPDUHandler;
-    }
-
+public class GameDecoder extends ByteToMessageDecoder {
     @Override
     protected void decode(ChannelHandlerContext channelHandlerContext, ByteBuf in, List<Object> out) {
         //Await first two bytes for maximum size identification
@@ -39,35 +32,35 @@ public class GameDataDecoder extends ByteToMessageDecoder {
             //Await transport of the whole PDU body data
 //            if(in.readableBytes() >= type.getMinimumTransportSize()) {
                 //Prepare rest of PDU body data
-                byte [] outBytes = new byte[/*type.getMinimumTransportSize()*/in.readableBytes()];
-                in.readBytes(outBytes);
-                PDU outPDU = new PDU(type, channelHandlerContext.channel().remoteAddress(), ((InetSocketAddress) channelHandlerContext.channel().remoteAddress()).getPort(), null/*actionPDUHandler.map(type).decode((ByteBuf) Unpooled.wrappedBuffer(outBytes)in.skipBytes(2)*//*)*/);
-                outPDU.setByteBuf(Unpooled.wrappedBuffer(outBytes));
-                out.add(outPDU);
+            byte [] outBytes = new byte[/*type.getMinimumTransportSize()*/in.readableBytes()];
+            in.readBytes(outBytes);
+            PDU outPDU = new PDU(type, channelHandlerContext.channel().remoteAddress(), ((InetSocketAddress) channelHandlerContext.channel().remoteAddress()).getPort(), null/*actionPDUHandler.map(type).decode((ByteBuf) Unpooled.wrappedBuffer(outBytes)in.skipBytes(2)*//*)*/);
+            outPDU.setByteBuf(Unpooled.wrappedBuffer(outBytes));
+            out.add(outPDU);
 //            }
 //            else in.resetReaderIndex();
         }
 //            out.add(new TimeExampleDTO(in.readUnsignedInt()));
     }
 
-    public static class TimeExampleDTO {
-        private final long value;
-
-        public TimeExampleDTO(long value) {
-            this.value = value;
-        }
-
-        public TimeExampleDTO() {
-            this(System.currentTimeMillis() / 1000L + 2208988800L);
-        }
-
-        @Override
-        public String toString(){
-            return new Date((value - 2208988800L) * 1000L).toString();
-        }
-
-        public long getValue() {
-            return value;
-        }
-    }
+//    public static class TimeExampleDTO {
+//        private final long value;
+//
+//        public TimeExampleDTO(long value) {
+//            this.value = value;
+//        }
+//
+//        public TimeExampleDTO() {
+//            this(System.currentTimeMillis() / 1000L + 2208988800L);
+//        }
+//
+//        @Override
+//        public String toString(){
+//            return new Date((value - 2208988800L) * 1000L).toString();
+//        }
+//
+//        public long getValue() {
+//            return value;
+//        }
+//    }
 }

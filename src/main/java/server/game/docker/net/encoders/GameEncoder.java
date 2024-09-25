@@ -8,13 +8,7 @@ import io.netty.channel.ChannelPromise;
 import server.game.docker.net.pdu.PDU;
 import server.game.docker.net.PDUHandler;
 
-public class GameDataEncoder extends ChannelOutboundHandlerAdapter {
-    private PDUHandler actionPDUHandler;
-
-    public GameDataEncoder(PDUHandler actionPDUHandler) {
-        this.actionPDUHandler = actionPDUHandler;
-    }
-
+public class GameEncoder extends ChannelOutboundHandlerAdapter {
     /**
      * PDU:
      * <pre>
@@ -40,9 +34,9 @@ public class GameDataEncoder extends ChannelOutboundHandlerAdapter {
 //        Object data = m.get(1);
         PDU p = (PDU) msg; //toto: will inject PDUType bytes and LP will only return byte []
         byte [] encodedBody = /*actionPDUHandler.map(p.getGameDataPDUType()).encode(p.getData()).array()*/p.getByteBuf().array();
-        ByteBuf buf = Unpooled.buffer(1 + (!p.getGameDataPDUType().isEmpty()/*encodedBody.length != 0*/? 4 : 0) + /*p.getGameDataPDUType().getMinimumTransportSize()*/encodedBody.length)/*actionHandler.map(body.getGameDataPDUType()).encode(body.getData())*/;
+        ByteBuf buf = Unpooled.buffer(1 + (!p.getPDUType().isEmpty()/*encodedBody.length != 0*/? 4 : 0) + /*p.getGameDataPDUType().getMinimumTransportSize()*/encodedBody.length)/*actionHandler.map(body.getGameDataPDUType()).encode(body.getData())*/;
         //Tag traffic with PDUType identifier header part
-        buf.writeByte(p.getGameDataPDUType().getID());
+        buf.writeByte(p.getPDUType().getID());
 //        if(p.getGameDataPDUType().isVariableLen())
         //Tag traffic with length info header part
         if(encodedBody.length != 0)

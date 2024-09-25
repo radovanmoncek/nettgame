@@ -1,6 +1,7 @@
 package server.game.docker.net.pdu;
 
 import server.game.docker.net.LocalPipeline;
+import server.game.docker.net.encoders.GameEncoder;
 
 import java.util.stream.Stream;
 
@@ -28,7 +29,7 @@ public enum PDUType {
 //    private final Short minimumTransportSize;
     /**
      * <p>
-     *     PDU size will be read from a special PDU header value, which will be injected in {@link server.game.docker.net.encoders.GameDataEncoder}.
+     *     PDU size will be read from a special PDU header value, which will be injected in {@link GameEncoder}.
      * </p>
      * <p>
      *     For e.g.: PDU body: {}

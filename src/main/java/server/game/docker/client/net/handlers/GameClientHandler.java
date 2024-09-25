@@ -1,23 +1,23 @@
 package server.game.docker.client.net.handlers;
 
-import io.netty.buffer.ByteBuf;
-import io.netty.buffer.Unpooled;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.ChannelInboundHandlerAdapter;
+import server.game.docker.client.ClientAPIEventType;
 import server.game.docker.net.LocalPipeline;
-import server.game.docker.net.dto.JoinLobbyReq;
 import server.game.docker.net.pdu.PDU;
 import server.game.docker.net.PDUHandler;
 import server.game.docker.net.pdu.PDUType;
+
+import java.util.Map;
 
 public class GameClientHandler extends ChannelInboundHandlerAdapter {
 //    private ByteBuf buf;
     private final PDUHandler actionPDUHandler;
 
-    public GameClientHandler(PDUHandler actionPDUHandler) {
+    public GameClientHandler(PDUHandler actionPDUHandler, Map<PDUType, LocalPipeline> localPipelines, Map<ClientAPIEventType, Object> eventMappings) {
         super();
         this.actionPDUHandler = actionPDUHandler
-                .registerPDU(PDUType.JOIN, new LocalPipeline() {
+                /*.registerPDU(PDUType.JOIN, new LocalPipeline() {
                     @Override
                     public Object decode(ByteBuf in) {
                         JoinLobbyReq out = new JoinLobbyReq();
@@ -36,7 +36,7 @@ public class GameClientHandler extends ChannelInboundHandlerAdapter {
                     public void perform(PDU p) {
                         System.out.println(p);
                     }
-                });
+                })*/;
     }
 
 //    @Override

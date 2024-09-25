@@ -1,14 +1,16 @@
 package server.game.docker.net.pdu;
 
 import io.netty.buffer.ByteBuf;
-import io.netty.buffer.Unpooled;
 
 import java.net.SocketAddress;
 
 /**
- * A POJO DTO class that represents a high level PDU (Protocol Data Unit) for easier processing.
+ * A POJO DTO class that represents a high level representation of a PDU (Protocol Data Unit) for easier processing.
  */
 public class PDU {
+    /**
+     * The {@link PDUType} of this PDU POJO DTO.
+     */
     private PDUType PDUType;
     /**
      * A byte value that represents the nature of this Packet
@@ -23,11 +25,14 @@ public class PDU {
     /**
      * The IP address from which this packet was sent
      */
-    private final SocketAddress address/* = null*/;
+    private SocketAddress address/* = null*/;
     /**
      * The port number from which this packet was sent
      */
-    private final Integer port/* = -1*/;
+    private Integer port/* = -1*/;
+    /**
+     * The highest level abstraction of the decoded data transferred by this PDU POJO DTO
+     */
     private Object data; //todo: will become generic type no - implementor will define attributes
     private ByteBuf byteBuf;
 
@@ -91,6 +96,10 @@ public class PDU {
         byteBuf = null;
     }
 
+    public PDU(){
+
+    }
+
 //    @Deprecated
 //    public Vector<String> decode(){
 //        return new Vector<>(
@@ -120,7 +129,7 @@ public class PDU {
 //        return new GameDataPDU(GameDataPDUType.PLAYERMOVE.getID(), clientID.toString(), Byte.toString(i), Byte.toString(j), structureByte.toString());
 //    }
 //
-    public PDUType getGameDataPDUType() {
+    public PDUType getPDUType() {
         return PDUType;
     }
 
@@ -130,6 +139,18 @@ public class PDU {
 
     public ByteBuf getByteBuf() {
         return byteBuf;
+    }
+
+    public void setPDUType(server.game.docker.net.pdu.PDUType PDUType) {
+        this.PDUType = PDUType;
+    }
+
+    public void setAddress(SocketAddress address) {
+        this.address = address;
+    }
+
+    public void setPort(Integer port) {
+        this.port = port;
     }
 
     public void setData(Object data) {

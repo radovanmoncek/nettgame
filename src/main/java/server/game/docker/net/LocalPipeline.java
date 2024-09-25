@@ -3,8 +3,6 @@ package server.game.docker.net;
 import io.netty.buffer.ByteBuf;
 import server.game.docker.net.pdu.PDU;
 
-import java.nio.ByteBuffer;
-
 /**
  * <p>
  *
@@ -56,5 +54,5 @@ public interface LocalPipeline {
      * </p>
      * @param p the resulting constructed {@link PDU} after its transportation occurs and finishes
      */
-    void perform(PDU p); //todo: generify to allow return of implementor defined POJO DTO - mapper will inject with decoded Object (generic?) //todo: GameDataPDU<T>
+    void handle(PDU p); //todo: generify to allow return of implementor defined POJO DTO - mapper will inject with decoded Object (generic?) //todo: GameDataPDU<T>
 }

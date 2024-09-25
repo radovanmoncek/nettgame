@@ -12,5 +12,5 @@ public class DefaultLocalPipeline implements LocalPipeline {
     public ByteBuf encode(Object in) {return Unpooled.buffer(0);}
 
     @Override
-    public void perform(PDU p) {}
+    public void handle(PDU p) {}
 }

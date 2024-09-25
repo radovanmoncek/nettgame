@@ -8,5 +8,5 @@ public abstract class AbstractLocalOutboundPipeline implements LocalPipeline{
     public Object decode(ByteBuf in) {return null;}
 
     @Override
-    public void perform(PDU p) {}
+    public void handle(PDU p) {}
 }

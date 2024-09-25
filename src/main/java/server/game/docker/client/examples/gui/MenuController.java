@@ -82,7 +82,7 @@ public class MenuController {
                     }
 
                     @Override
-                    public void perform(PDU p) {
+                    public void handle(PDU p) {
                         Platform.runLater(() -> {
                             IDRes iDRes = (IDRes) p.getData();
                             lbl_info_con_stat.setText("Connected");
@@ -94,12 +94,12 @@ public class MenuController {
                     }
                 })
                 //Outbound PDU with no payload
-                .registerPDU(PDUType.CREATELOBBYREQ, new AbstractLocalOutboundPipeline() {
+                .appendPipeline(PDUType.CREATELOBBYREQ, new AbstractLocalOutboundPipeline() {
                     @Override
                     public ByteBuf encode(Object in) {return Unpooled.buffer(0)/*nullUnpooled.buffer()wrappedBuffer(new byte[] {0, PDUType.CREATELOBBYREQ.getID()})*/;}
                 })
                 //Inbound PDU with 32-bit Integer payload and required action
-                .registerPDU(PDUType.CREATELOBBYRES, new AbstractLocalInboundActionPipeline() {
+                .appendPipeline(PDUType.CREATELOBBYRES, new AbstractLocalInboundActionPipeline() {
                     @Override
                     public Object decode(ByteBuf in) {
                         CreateLobbyRes out = new CreateLobbyRes();
@@ -108,7 +108,7 @@ public class MenuController {
                     }
 
                     @Override
-                    public void perform(PDU p) {
+                    public void handle(PDU p) {
                         CreateLobbyRes createLobbyRes = (CreateLobbyRes) p.getData();
                         Platform.runLater(() -> {
                             btn_create_lobby.setVisible(false);
@@ -158,7 +158,7 @@ public class MenuController {
                     }
                 })
                 //Outbound only PDU with 8B Long data and no action
-                .registerPDU(PDUType.JOINLOBBYREQ, new AbstractLocalOutboundPipeline() {
+                .appendPipeline(PDUType.JOINLOBBYREQ, new AbstractLocalOutboundPipeline() {
                     @Override
                     public ByteBuf encode(Object in) {
                         JoinLobbyReq joinLobbyReq = (JoinLobbyReq) in;
@@ -166,7 +166,7 @@ public class MenuController {
                     }
                 })
                 //Inbound only PDU with 8B long data and action - a form of ack
-                .registerPDU(PDUType.JOINLOBBYRES, new AbstractLocalInboundActionPipeline() {
+                .appendPipeline(PDUType.JOINLOBBYRES, new AbstractLocalInboundActionPipeline() {
                     @Override
                     public Object decode(ByteBuf in) {
                         JoinLobbyRes out = new JoinLobbyRes();
@@ -175,7 +175,7 @@ public class MenuController {
                     }
 
                     @Override
-                    public void perform(PDU p) {
+                    public void handle(PDU p) {
                         JoinLobbyRes joinLobbyRes = (JoinLobbyRes) p.getData();
                         Platform.runLater(() -> {
                             if(!joinLobbyRes.getLobbyID().equals(-1L)) {
@@ -183,6 +183,7 @@ public class MenuController {
                                 Button leaveLobbyBtn = new Button("Leave lobby");
                                 leaveLobbyBtn.setOnMouseClicked((MouseEvent event) -> gameClient.sendUnicast(new PDU(PDUType.LEAVELOBBYREQ, null, null, null)));
                                 hb_lobby_ui.getChildren().add(1, leaveLobbyBtn);
+                                lbl_lobby_info.setText(String.format("Lobby %d:", joinLobbyRes.getLobbyID()));
                             }
 
                             rtg_lobby_info_p1.setFill(Color.LIGHTGREEN);
@@ -194,37 +195,46 @@ public class MenuController {
                             Text text2 = new Text("P2");
                             text2.setFill(Color.WHITE);
                             sPP2.getChildren().addAll(text2);
-                            lbl_lobby_info.setText(String.format("Lobby %d:", joinLobbyRes.getLobbyID()));
                         });
                     }
                 })
                 //Outbound PDU with no payload and no action (registered only)
-                .registerPDU(PDUType.LEAVELOBBYREQ, new DefaultLocalPipeline())
+                .appendPipeline(PDUType.LEAVELOBBYREQ, new DefaultLocalPipeline())
                 //Inbound PDU with no payload and action
-                .registerPDU(PDUType.LEAVELOBBYRES, new AbstractLocalActionPipeline() {
+                .appendPipeline(PDUType.LEAVELOBBYRES, new AbstractLocalInboundActionPipeline() {
                     @Override
-                    public void perform(PDU p) {
+                    public Object decode(ByteBuf in) {
+                        LeaveLobbyRes out = new LeaveLobbyRes();
+                        out.setLeader(in.readBoolean());
+                        return out;
+                    }
+
+                    @Override
+                    public void handle(PDU p) {
+                        LeaveLobbyRes leaveLobbyRes = (LeaveLobbyRes) p.getData();
                         Platform.runLater(() -> {
-                            btn_create_lobby.setVisible(true);
-                            hb_lobby_ui.getChildren().remove(1);
+                            if(!leaveLobbyRes.isLeader()) {
+                                hb_lobby_ui.getChildren().remove(1);
 //                            hb_lobby_ui.getChildren().remove(2);
 //                            hb_lobby_ui.getChildren().remove(2);
-                            rtg_lobby_info_p1.setFill(Color.DARKGRAY);
-                            sPP1.getChildren().remove(1);
+                                rtg_lobby_info_p1.setFill(Color.DARKGRAY);
+                                sPP1.getChildren().remove(1);
+                                lbl_lobby_info.setText("Lobby:");
+                                btn_create_lobby.setVisible(true);
+                                chat.setVisible(false);
+                            }
+
                             rtg_lobby_info_p2.setFill(Color.DARKGRAY);
                             //Other player didn't have to be connected
                             if(sPP2.getChildren().size() > 1)
                                 sPP2.getChildren().remove(1);
-                            lbl_lobby_info.setText("Lobby:");
 //                            rtg_lobby_info_p1.setText("-");
 //                            rtg_lobby_info_p2.setText("-");
-
-                            chat.setVisible(false);
                         });
                     }
                 })
                 //Inbound only 8B Long + 2 * 1B Byte
-                .registerPDU(PDUType.LOBBYBEACON, new AbstractLocalInboundActionPipeline() {
+                .appendPipeline(PDUType.LOBBYBEACON, new AbstractLocalInboundActionPipeline() {
                     @Override
                     public Object decode(ByteBuf in) {
                         LobbyBeacon out = new LobbyBeacon();
@@ -236,7 +246,7 @@ public class MenuController {
                     }
 
                     @Override
-                    public void perform(PDU p) {
+                    public void handle(PDU p) {
                         LobbyBeacon lobbyBeacon = (LobbyBeacon) p.getData();
                         addLobbyToList(lobbyBeacon.getLobbyID(), lobbyBeacon.getLobbyCurOccupancy(), lobbyBeacon.getLobbyMaxOccupancy(), lobbyBeacon.getLobbyListRefresh());
                     }
@@ -252,6 +262,8 @@ public class MenuController {
         }).start();
 
         btn_create_lobby.setOnMouseClicked((MouseEvent t) -> gameClient.sendUnicast(new PDU(PDUType.CREATELOBBYREQ, null, null, null)));
+
+//        gameClient.setOnLobbyLeave(r -> );
     }
 
     private void addLobbyToList(Long lobbyID, Byte curOcc, Byte maxOcc, Boolean refreshList){
@@ -267,9 +279,10 @@ public class MenuController {
             lobbyIDLabel.setStyle("-fx-text-fill: black;");
             lobbyIDLabel.setPadding(new Insets(10, 20, 10, 40));
            Button btnJoin = new Button("Join");
-           JoinLobbyReq joinLobbyReq = new JoinLobbyReq();
-           joinLobbyReq.setLobbyID(lobbyID);
-           btnJoin.setOnMouseClicked((MouseEvent t) -> gameClient.sendUnicast(new PDU(PDUType.JOINLOBBYREQ, null, null, joinLobbyReq/*new JoinLobbyReq()*/))/*{}*/);
+//           JoinLobbyReq joinLobbyReq = new JoinLobbyReq();
+//           joinLobbyReq.setLobbyID(lobbyID);
+//           btnJoin.setOnMouseClicked((MouseEvent t) -> gameClient.sendUnicast(new PDU(PDUType.JOINLOBBYREQ, null, null, joinLobbyReq/*new JoinLobbyReq()*/))/*{}*/);
+            btnJoin.setOnMouseClicked(t -> gameClient.joinLobby(lobbyID));
            lobby.getChildren().addAll(lobbyIDLabel, btnJoin);
            lobby.setAlignment(Pos.CENTER);
            vb_lobby_list.getChildren().add(lobby);
