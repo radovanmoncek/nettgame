@@ -1,5 +1,5 @@
 package server.game.docker.client;
 
 public enum ClientAPIEventType {
-    MEMBERLEFT
+    CONNECTED, LOBBYCREATED, LOBBYJOINED, LOBBYLEFT, LOBBYBEACON, MEMBERLEFT
 }

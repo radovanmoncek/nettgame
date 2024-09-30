@@ -1,25 +1,25 @@
 package server.game.docker.client;
 
 import io.netty.bootstrap.Bootstrap;
-import io.netty.buffer.ByteBuf;
-import io.netty.channel.*;
+import io.netty.channel.Channel;
+import io.netty.channel.ChannelInitializer;
+import io.netty.channel.ChannelOption;
+import io.netty.channel.EventLoopGroup;
 import io.netty.channel.nio.NioEventLoopGroup;
 import io.netty.channel.socket.SocketChannel;
 import io.netty.channel.socket.nio.NioSocketChannel;
 import io.netty.handler.logging.LogLevel;
 import io.netty.handler.logging.LoggingHandler;
+import server.game.docker.client.net.handlers.GameClientHandler;
+import server.game.docker.net.LocalPipeline;
 import server.game.docker.net.decoders.GameDecoder;
-import server.game.docker.net.dto.JoinLobbyReq;
-import server.game.docker.net.dto.JoinLobbyRes;
-import server.game.docker.net.dto.LeaveLobbyRes;
+import server.game.docker.net.dto.*;
 import server.game.docker.net.encoders.GameEncoder;
 import server.game.docker.net.pdu.PDU;
-import server.game.docker.net.LocalPipeline;
-import server.game.docker.net.PDUHandler;
-import server.game.docker.client.net.handlers.GameClientHandler;
 import server.game.docker.net.pdu.PDUType;
 
 import java.net.InetAddress;
+import java.net.InetSocketAddress;
 import java.util.HashMap;
 import java.util.Map;
 
@@ -28,21 +28,18 @@ public class GameClient {
     private final InetAddress gameServerAddress;
     private final int gameServerPort;
     private final EventLoopGroup workerGroup;
-    @Deprecated
-    private final PDUHandler pDUHandler;
-    private final Map<PDUType, LocalPipeline> localPipelines;
-    private final Map<ClientAPIEventType, Object> eventMappings;
-    private Channel channel;
-//    private Long clientID;
+    private final Map<PDUType, LocalPipeline> localPDUPipelines;
+    private final Map<ClientAPIEventType, ClientAPIEventHandler<?>> eventMappings;
+    private Channel clientChannel;
+//    todo: private Long clientID; ?
 
     public GameClient(String [] args) throws Exception {
-        pDUHandler = new PDUHandler();
         gameServerAddress = InetAddress.getByName("127.0.0.1");
         gameServerPort = 4321;
         workerGroup = new NioEventLoopGroup();
-        localPipelines = new HashMap<>();
+        localPDUPipelines = new HashMap<>();
         eventMappings = new HashMap<>();
-        new ClientAPIInitializer(localPipelines, eventMappings);
+        new ClientInitializer(clientChannel, localPDUPipelines, eventMappings).init();
         try {
             bootstrap = new Bootstrap()
                     .group(workerGroup)
@@ -51,7 +48,11 @@ public class GameClient {
                     .handler(new ChannelInitializer<SocketChannel>() {
                         @Override
                         protected void initChannel(SocketChannel socketChannel) {
-                            socketChannel.pipeline().addLast(new LoggingHandler(LogLevel.ERROR), new GameEncoder(), new GameDecoder(), new GameClientHandler(pDUHandler, localPipelines, eventMappings));
+                            socketChannel.pipeline().addLast(
+                                    new LoggingHandler(LogLevel.ERROR),
+                                    new GameEncoder(),
+                                    new GameDecoder(),
+                                    new GameClientHandler(localPDUPipelines));
                         }
                     });
 
@@ -81,27 +82,25 @@ public class GameClient {
         }
     }
 
-    public /*ChannelFuture*/void sendUnicast(PDU pDU) {
-//        return channel.writeAndFlush(pDU);
-        pDUHandler.send(channel, pDU);
-//        ByteBuf out = mappings.get(p.getPDUType()).encode(p.getData());
-//        p.setByteBuf(out);
-//        c.writeAndFlush(p);
+    private void sendUnicast(PDU p) {
+        p.setData(localPDUPipelines.get(p.getPDUType()).encode(p.getData()));
+        clientChannel.writeAndFlush(p);
     }
 
+    /*--------API methods--------*/
     public void connect() throws Exception {
-        channel = bootstrap.connect(gameServerAddress, gameServerPort).sync().channel();
+        clientChannel = bootstrap.connect(gameServerAddress, gameServerPort).sync().channel();
 
         System.out.println("Connected to the server");
     }
 
     public boolean isConnected(){
-        return channel != null && channel.isActive();
+        return clientChannel != null && clientChannel.isActive();
     }
 
     public void disconnect() throws Exception {
-        channel.close();
-        channel.closeFuture().sync();
+        clientChannel.close();
+        clientChannel.closeFuture().sync();
         workerGroup.shutdownGracefully();
     }
 
@@ -120,29 +119,36 @@ public class GameClient {
 //        return clientID;
 //    }
 
-    /**
-     * <p>
-     *     This method enables the registration of a {@link PDUType} to this {@link GameClient} along with its encoder, decoder, and IoC (Inversion of Control) action,
-     *     which then together form a pipeline process determined by the specific {@link LocalPipeline} implementation.
-     * </p>
-     * <p>
-     *     Since {@link PDUHandler} uses a {@link HashMap} internally, it is not possible to duplicate any existing entry by this method.
-     *     Therefore any added {@link PDUType} handling is unique.
-     * </p>
-     * @param t
-     * @param p
-     * @return {@link PDUHandler} for convenient chaining
-     */
-    @Deprecated
-    public PDUHandler registerPDU(PDUType t, LocalPipeline p) {
-        return pDUHandler.appendPipeline(t, p);
+    public void setOnIDReceived(ClientAPIEventHandler<IDRes> eventHandler){
+        eventMappings.put(ClientAPIEventType.CONNECTED, eventHandler);
     }
 
-    public void setOnLobbyLeave(/*Consumer*/ClientAPIEventHandler<LeaveLobbyRes> eventHandler){
+    public void setOnLobbyCreate(ClientAPIEventHandler<CreateLobbyRes> eventHandler){
+        eventMappings.put(ClientAPIEventType.LOBBYCREATED, eventHandler);
+    }
+
+    public void setOnLobbyJoined(ClientAPIEventHandler<JoinLobbyRes> eventHandler){
+        eventMappings.put(ClientAPIEventType.LOBBYJOINED, eventHandler);
+    }
+
+    public void setOnLobbyLeave(ClientAPIEventHandler<LeaveLobbyRes> eventHandler){
 //        eventHandler.accept();
 
         eventMappings.put(ClientAPIEventType.MEMBERLEFT, eventHandler);
 //        ((ClientAPIEventHandler<JoinLobbyRes>) eventMappings.get(ClientAPIEventType.MEMBERLEFT)).handle(new JoinLobbyRes());
+    }
+
+    public void setOnLobbyBeacon(ClientAPIEventHandler<LobbyBeacon> eventHandler){
+        eventMappings.put(ClientAPIEventType.LOBBYBEACON, eventHandler);
+    }
+
+    /**
+     * Attempts to request creation of a personal lobby.
+     */
+    public void createLobby(){
+        PDU p = new PDU();
+        p.setPDUType(PDUType.CREATELOBBYREQ);
+        sendUnicast(p);
     }
 
     /**
@@ -154,17 +160,18 @@ public class GameClient {
         JoinLobbyReq r = new JoinLobbyReq();
         r.setLobbyID(lobbyID);
         p.setPDUType(PDUType.JOINLOBBYREQ);
-//        p.setAddress(gameServerAddress);
-        p.setPort(gameServerPort);
-        p.setData(r);
-        sendUnicast(p);
+        p.setAddress(new InetSocketAddress(gameServerAddress, gameServerPort));
+        p.setData(localPDUPipelines.get(p.getPDUType()).encode(r));
+        clientChannel.writeAndFlush(p);
     }
 
     /**
      * Attempts to leave current lobby.
      */
     public void leaveLobby(){
-
+        PDU p = new PDU();
+        p.setPDUType(PDUType.LEAVELOBBYREQ);
+        sendUnicast(p);
     }
 
     public void sendLobbyChatMessage(){

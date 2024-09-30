@@ -4,26 +4,48 @@ import javafx.application.Application;
 import javafx.fxml.FXMLLoader;
 import javafx.scene.Scene;
 import javafx.stage.Stage;
+import javafx.util.Builder;
 import server.game.docker.client.GameClient;
 
+import java.lang.reflect.Method;
 import java.nio.file.Path;
+import java.util.stream.Stream;
 
 public class SimpleRTSGameClientGUI extends Application {
-    static GameClient gameClient;
     private Scene menuScene, gameSessionScene;
+    private GameClient gameClient;
 
     @Override
     public void start(Stage primaryStage) throws Exception {
-        try {
-            gameClient = new GameClient(new String[]{});
-        } catch (Exception e) {
-            e.printStackTrace();
-            //Game crash
-            stop();
-        }
         primaryStage.setTitle("Simple RTS Game GUI Client");
-        menuScene = new Scene(new FXMLLoader(Path.of("src/main/java/server/game/docker/client/examples/gui/fxml/menu.fxml").toUri().toURL()).load());
-        gameSessionScene = new Scene(new FXMLLoader(Path.of("src/main/java/server/game/docker/client/examples/gui/fxml/session.fxml").toUri().toURL()).load());
+        FXMLLoader menuLoader = new FXMLLoader(Path.of("src/main/java/server/game/docker/client/examples/gui/fxml/menu.fxml").toUri().toURL());
+        FXMLLoader sessionLoader = new FXMLLoader(Path.of("src/main/java/server/game/docker/client/examples/gui/fxml/session.fxml").toUri().toURL());
+        menuLoader.setControllerFactory(type -> {
+            try {
+                gameClient = new GameClient(new String[]{});
+                return new MenuController(gameClient);
+//                Stream.of(type.getFields()).filter(f -> f.getType().equals(type)).forEach(f -> {
+//                    try {
+//                        f.set(f, gameClient);
+//                    } catch (IllegalAccessException e) {
+//                        e.printStackTrace();
+//                    }
+//                });
+//                return (Builder<?>) type.getConstructor().newInstance();
+            } catch (Exception e) {
+                e.printStackTrace();
+                //Game crash
+                try {
+                    stop();
+                } catch (Exception ex) {
+                    ex.printStackTrace();
+                }
+                throw new RuntimeException(e);
+            }
+        });
+//        sessionLoader.setBuilderFactory();
+        menuScene = new Scene(menuLoader.load());
+        gameSessionScene = new Scene(sessionLoader.load());
         primaryStage.setScene(menuScene);
         primaryStage.show();
     }
