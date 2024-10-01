@@ -143,15 +143,16 @@ public class GameServerInitializer {
             }
         }));
         //Outbound only PDU no action with 8B Long data
-        localPDUPipelines.put(PDUType.JOINLOBBYRES, new PDUInboundHandler() {
+        localPDUPipelines.put(PDUType.JOINLOBBYRES, new LocalPipeline().append(new PDUHandlerEncoder() {
             @Override
-            public ByteBuf encode(Object in) {
-                JoinLobbyRes joinLobbyRes = (JoinLobbyRes) in;
-                return Unpooled.buffer(Long.BYTES).writeLong(joinLobbyRes.getLobbyID());
+            public void encode(PDU in, Channel out) {
+                JoinLobbyRes joinLobbyRes = (JoinLobbyRes) in.getData();
+                in.setData(Unpooled.buffer(Long.BYTES).writeLong(joinLobbyRes.getLobbyID()));
+                out.writeAndFlush(in);
             }
-        });
+        }));
         //Inbound PDU with no payload and with action
-        localPDUPipelines.put(PDUType.LEAVELOBBYREQ, new PDUHandlerEncoder() {
+        localPDUPipelines.put(PDUType.LEAVELOBBYREQ, new LocalPipeline().append(new PDUInboundHandler() {
             @Override
             public void handle(PDU p) {
                 Channel assignedLobbyChannel = lobbyDomain.keySet().stream().map(managedClients::find).filter(c -> p.getAddress().equals(c.remoteAddress())).findAny().orElse(null);
@@ -201,23 +202,25 @@ public class GameServerInitializer {
                 System.out.printf("Client %d has left lobby %d\n", channelIDClientIDLookup.get(assignedLobbyChannel.id()), lobbyID);
                 refreshLobbyList();
             }
-        });
+        }));
         //Outbound PDU with 1B Boolean data or action
-        localPDUPipelines.put(PDUType.LEAVELOBBYRES, new PDUInboundHandler() {
+        localPDUPipelines.put(PDUType.LEAVELOBBYRES, new LocalPipeline().append(new PDUHandlerEncoder() {
             @Override
-            public ByteBuf encode(Object in) {
-                LeaveLobbyRes leaveLobbyRes = (LeaveLobbyRes) in;
-                return Unpooled.buffer(1).writeBoolean(leaveLobbyRes.isLeader());
+            public void encode(PDU in, Channel out) {
+                LeaveLobbyRes leaveLobbyRes = (LeaveLobbyRes) in.getData();
+                in.setData(Unpooled.buffer(1).writeBoolean(leaveLobbyRes.isLeader()));
+                out.writeAndFlush(in);
             }
-        });
+        }));
         //Outbound only PDU with no action, 8B Long, 2 * 1B Byte data and 1B Byte - Boolean Lobby list refresh flag
-        localPDUPipelines.put(PDUType.LOBBYBEACON, new PDUInboundHandler() {
+        localPDUPipelines.put(PDUType.LOBBYBEACON, new LocalPipeline().append(new PDUHandlerEncoder() {
             @Override
-            public ByteBuf encode(Object in) {
-                LobbyBeacon lobbyBeacon = (LobbyBeacon) in;
-                return Unpooled.buffer(Long.BYTES + 3 * Byte.BYTES).writeLong(lobbyBeacon.getLobbyID()).writeByte(lobbyBeacon.getLobbyCurOccupancy()).writeByte(lobbyBeacon.getLobbyMaxOccupancy()).writeBoolean(lobbyBeacon.getLobbyListRefresh());
+            public void encode(PDU in, Channel out) {
+                LobbyBeacon lobbyBeacon = (LobbyBeacon) in.getData();
+                in.setData(Unpooled.buffer(Long.BYTES + 3 * Byte.BYTES).writeLong(lobbyBeacon.getLobbyID()).writeByte(lobbyBeacon.getLobbyCurOccupancy()).writeByte(lobbyBeacon.getLobbyMaxOccupancy()).writeBoolean(lobbyBeacon.getLobbyListRefresh()));
+                out.writeAndFlush(in);
             }
-        });
+        }));
     }
 
     private void joinLobby(PDU p) {
@@ -272,7 +275,7 @@ public class GameServerInitializer {
     }
 
     private void sendBroadcastUnassigned(PDU p) {
-        unassignedDomain.stream().map(managedClients::find).filter(c -> !c.remoteAddress().equals(p.getAddress())).forEach(c -> c.writeAndFlush(p));
+        unassignedDomain.stream().map(managedClients::find).filter(c -> !c.remoteAddress().equals(p.getAddress())).forEach(c -> localPDUPipelines.get(p.getPDUType()).ingest(p, c));
     }
 
     private void sendBroadcastLobby(PDU p) {

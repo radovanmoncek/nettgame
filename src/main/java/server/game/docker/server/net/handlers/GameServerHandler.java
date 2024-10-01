@@ -46,9 +46,7 @@ public class GameServerHandler extends ChannelInboundHandlerAdapter {
     @Override
     public void channelRead(ChannelHandlerContext ctx, Object msg){
         PDU pdu = (PDU) msg;
-        LocalPipeline p = localPDUPipelines.get(pdu.getPDUType());
-        pdu.setData(p.decode(((ByteBuf) pdu.getData())));
-        p.handle(pdu);
+        localPDUPipelines.get(pdu.getPDUType()).ingest(pdu);
     }
 
     @Override
@@ -65,13 +63,13 @@ public class GameServerHandler extends ChannelInboundHandlerAdapter {
         PDU pdu = new PDU();
         pdu.setPDUType(PDUType.IDRES);
         pdu.setAddress(ctx.channel().remoteAddress());
-        pdu.setData(localPDUPipelines.get(pdu.getPDUType()).encode(idRes));
+        pdu.setData(idRes);
 
         System.out.printf("A client has connected with assigned ID: %d\n", idRes.getNewClientID());
 
         channelIDClientIDLookup.put(ctx.channel().id(), idRes.getNewClientID());
 
-        ctx.writeAndFlush(pdu);
+        localPDUPipelines.get(pdu.getPDUType()).ingest(pdu, ctx.channel());
     }
 
     @Override
