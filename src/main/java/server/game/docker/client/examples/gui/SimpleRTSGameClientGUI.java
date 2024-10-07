@@ -4,16 +4,14 @@ import javafx.application.Application;
 import javafx.fxml.FXMLLoader;
 import javafx.scene.Scene;
 import javafx.stage.Stage;
-import javafx.util.Builder;
-import server.game.docker.client.GameClient;
+import server.game.docker.client.GameSessionClient;
+import server.game.docker.client.GameSessionClientAPI;
 
-import java.lang.reflect.Method;
 import java.nio.file.Path;
-import java.util.stream.Stream;
 
 public class SimpleRTSGameClientGUI extends Application {
     private Scene menuScene, gameSessionScene;
-    private GameClient gameClient;
+    private GameSessionClientAPI gameClient;
 
     @Override
     public void start(Stage primaryStage) throws Exception {
@@ -22,7 +20,7 @@ public class SimpleRTSGameClientGUI extends Application {
         FXMLLoader sessionLoader = new FXMLLoader(Path.of("src/main/java/server/game/docker/client/examples/gui/fxml/session.fxml").toUri().toURL());
         menuLoader.setControllerFactory(type -> {
             try {
-                gameClient = new GameClient(new String[]{});
+                gameClient = new GameSessionClientAPI();
                 return new MenuController(gameClient);
 //                Stream.of(type.getFields()).filter(f -> f.getType().equals(type)).forEach(f -> {
 //                    try {

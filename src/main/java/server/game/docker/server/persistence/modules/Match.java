@@ -1,4 +1,4 @@
-package server.game.docker.server.matchmaking.models;
+package server.game.docker.server.persistence.modules;
 
 import java.sql.Timestamp;
 

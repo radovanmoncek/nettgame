@@ -1,8 +1,8 @@
-package server.game.docker.server.matchmaking.session;
+package server.game.docker.server.session;
 
 import java.net.DatagramSocket;
 
-public class GameSession {
+public class DockerGameSession {
     //Config
     /**
      * The server port
@@ -26,7 +26,7 @@ public class GameSession {
 //        return actionHandler;
 //    }
 
-    public GameSession(String [] args){
+    public DockerGameSession(String [] args){
 //        gameSessionID = -1L;
 //        port = 4321;
 //        connectedClients = new Vector<>();
@@ -112,7 +112,7 @@ public class GameSession {
     //    private final GameSession gameSession;
     //    private final List<String> messageHistoryBuffer; //todo: will get replaced by persistence module (Redis)
 
-        public SessionChat(GameSession gameSession) {
+        public SessionChat(DockerGameSession gameSession) {
     //        this.gameSession = gameSession;
     //        gameSession.getActionMapper()
     //                .withMapping(PDUType.CHATMESSAGE.getID(), p -> {

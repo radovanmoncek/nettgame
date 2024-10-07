@@ -11,35 +11,37 @@ import io.netty.channel.socket.nio.NioSocketChannel;
 import io.netty.handler.logging.LogLevel;
 import io.netty.handler.logging.LoggingHandler;
 import server.game.docker.client.net.handlers.GameClientHandler;
-import server.game.docker.net.LocalPipeline;
+import server.game.docker.net.LocalPDUPipeline;
 import server.game.docker.net.decoders.GameDecoder;
 import server.game.docker.net.dto.*;
 import server.game.docker.net.encoders.GameEncoder;
 import server.game.docker.net.pdu.PDU;
 import server.game.docker.net.pdu.PDUType;
 
+import java.lang.reflect.ParameterizedType;
+import java.lang.reflect.Type;
 import java.net.InetAddress;
 import java.net.InetSocketAddress;
 import java.util.HashMap;
 import java.util.Map;
 
-public class GameClient {
+public class GameSessionClient {
     private Bootstrap bootstrap;
     private final InetAddress gameServerAddress;
     private final int gameServerPort;
     private final EventLoopGroup workerGroup;
-    private final Map<PDUType, LocalPipeline> localPDUPipelines;
+    private final Map<PDUType, LocalPDUPipeline> localPDUPipelines;
     private final Map<ClientAPIEventType, ClientAPIEventHandler<?>> eventMappings;
     private Channel clientChannel;
-//    todo: private Long clientID; ?
 
-    public GameClient(String [] args) throws Exception {
+    //    todo: private Long clientID; ?
+    public GameSessionClient(String [] args) throws Exception {
         gameServerAddress = InetAddress.getByName("127.0.0.1");
         gameServerPort = 4321;
         workerGroup = new NioEventLoopGroup();
         localPDUPipelines = new HashMap<>();
         eventMappings = new HashMap<>();
-        new ClientInitializer(clientChannel, localPDUPipelines, eventMappings).init();
+        new ClientInitializer(clientChannel, localPDUPipelines, eventMappings, this).init();
         try {
             bootstrap = new Bootstrap()
                     .group(workerGroup)
@@ -81,100 +83,48 @@ public class GameClient {
             workerGroup.shutdownGracefully();
         }
     }
-
-    private void sendUnicast(PDU p) {
-        p.setData(localPDUPipelines.get(p.getPDUType()).encode(p.getData()));
-        clientChannel.writeAndFlush(p);
-    }
-
-    /*--------API methods--------*/
-    public void connect() throws Exception {
-        clientChannel = bootstrap.connect(gameServerAddress, gameServerPort).sync().channel();
-
-        System.out.println("Connected to the server");
-    }
-
-    public boolean isConnected(){
-        return clientChannel != null && clientChannel.isActive();
-    }
-
-    public void disconnect() throws Exception {
-        clientChannel.close();
-        clientChannel.closeFuture().sync();
-        workerGroup.shutdownGracefully();
-    }
-
-    //todo: temp class, client will be launched from JavaFX gui
-//    public static void main(String[] args) throws Exception {
-//        new GameClient(args);
-//    }
-
-    /**
-     * <p>
-     *     The ClientID value assigned to this GameClient by the server.
-     * </p>
-     * @return Long clientID
-     */
-//    public Long getClientID() {
-//        return clientID;
-//    }
-
-    public void setOnIDReceived(ClientAPIEventHandler<IDRes> eventHandler){
-        eventMappings.put(ClientAPIEventType.CONNECTED, eventHandler);
-    }
-
-    public void setOnLobbyCreate(ClientAPIEventHandler<CreateLobbyRes> eventHandler){
-        eventMappings.put(ClientAPIEventType.LOBBYCREATED, eventHandler);
-    }
-
-    public void setOnLobbyJoined(ClientAPIEventHandler<JoinLobbyRes> eventHandler){
-        eventMappings.put(ClientAPIEventType.LOBBYJOINED, eventHandler);
-    }
-
-    public void setOnLobbyLeave(ClientAPIEventHandler<LeaveLobbyRes> eventHandler){
-//        eventHandler.accept();
-
-        eventMappings.put(ClientAPIEventType.MEMBERLEFT, eventHandler);
-//        ((ClientAPIEventHandler<JoinLobbyRes>) eventMappings.get(ClientAPIEventType.MEMBERLEFT)).handle(new JoinLobbyRes());
-    }
-
-    public void setOnLobbyBeacon(ClientAPIEventHandler<LobbyBeacon> eventHandler){
-        eventMappings.put(ClientAPIEventType.LOBBYBEACON, eventHandler);
-    }
-
-    /**
-     * Attempts to request creation of a personal lobby.
-     */
-    public void createLobby(){
-        PDU p = new PDU();
-        p.setPDUType(PDUType.CREATELOBBYREQ);
-        sendUnicast(p);
-    }
-
-    /**
-     * Attempts to join a specified lobby.
-     * @param lobbyID the ID of the desired lobby
-     */
-    public void joinLobby(Long lobbyID){
-        PDU p = new PDU();
-        JoinLobbyReq r = new JoinLobbyReq();
-        r.setLobbyID(lobbyID);
-        p.setPDUType(PDUType.JOINLOBBYREQ);
+    public void sendUnicast(PDU p) {
         p.setAddress(new InetSocketAddress(gameServerAddress, gameServerPort));
-        p.setData(localPDUPipelines.get(p.getPDUType()).encode(r));
-        clientChannel.writeAndFlush(p);
+        localPDUPipelines.get(p.getPDUType()).ingest(p, clientChannel);
     }
 
-    /**
-     * Attempts to leave current lobby.
-     */
-    public void leaveLobby(){
-        PDU p = new PDU();
-        p.setPDUType(PDUType.LEAVELOBBYREQ);
-        sendUnicast(p);
+    public <T> ClientAPIEventHandler<T> checkAndGetHandler(Class<T> c, ClientAPIEventType eventType) {
+        ClientAPIEventHandler<?> h = eventMappings.get(eventType);
+//        Type t = h.getClass().getGenericInterfaces()[0];
+//        if(((ParameterizedType) h.getClass().getGenericInterfaces()[0]).getActualTypeArguments()[0].equals(((ParameterizedType) c.getGenericSuperclass()).getActualTypeArguments()[0]))
+            return (ClientAPIEventHandler<T>) h;
+//        return null;
     }
 
-    public void sendLobbyChatMessage(){
+    public final Channel getClientChannel() {
+        return clientChannel;
+    }
 
+    public final Bootstrap getBootstrap() {
+        return bootstrap;
+    }
+
+    public final InetAddress getServerAddress() {
+        return gameServerAddress;
+    }
+
+    public int getGameServerPort() {
+        return gameServerPort;
+    }
+
+    public EventLoopGroup getWorkerGroup() {
+        return workerGroup;
+    }
+
+    public Map<PDUType, LocalPDUPipeline> getLocalPDUPipelines() {
+        return localPDUPipelines;
+    }
+
+    public Map<ClientAPIEventType, ClientAPIEventHandler<?>> getEventMappings() {
+        return eventMappings;
+    }
+
+    public void setClientChannel(Channel clientChannel) {
+        this.clientChannel = clientChannel;
     }
 }

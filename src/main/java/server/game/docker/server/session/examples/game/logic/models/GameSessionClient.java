@@ -1,4 +1,4 @@
-package server.game.docker.server.matchmaking.session.models;
+package server.game.docker.server.session.examples.game.logic.models;
 
 import java.net.InetAddress;
 

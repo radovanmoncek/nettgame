@@ -1,6 +1,6 @@
-package server.game.docker.server.matchmaking.session.examples.game.logic;
+package server.game.docker.server.session.examples.game.logic;
 
-import server.game.docker.server.matchmaking.session.GameSession;
+import server.game.docker.server.session.DockerGameSession;
 
 public class SimpleRTSGameServerSideLogic {
 //    private final GameSession gameSession;
@@ -11,7 +11,7 @@ public class SimpleRTSGameServerSideLogic {
     private Long gameStartMills;
     private Long gameSessionID;
 
-    public SimpleRTSGameServerSideLogic(GameSession gameSession){
+    public SimpleRTSGameServerSideLogic(DockerGameSession gameSession){
 //        this.gameSession = gameSession;
 //        registerActionMappings();
 //        players = new Vector<>();

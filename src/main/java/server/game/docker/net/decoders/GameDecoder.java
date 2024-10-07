@@ -13,10 +13,24 @@ import java.util.List;
 public class GameDecoder extends ByteToMessageDecoder {
     @Override
     protected void decode(ChannelHandlerContext channelHandlerContext, ByteBuf in, List<Object> out) {
+        //todo: Check protocol identifier, else drop
+        if(in.readableBytes() >= 3) {
+            in.markReaderIndex();
+            if(
+                    (int) in.readUnsignedByte() != 'F'
+                            || (int) in.readUnsignedByte() != 'E'
+                            || (int) in.readUnsignedByte() != 'D'
+            )
+                return;
+        }
         //Await first "magic" byte for PDUType identification
-        if(in.readableBytes() >= 1){
+        if(in.readableBytes() >= 4){
             in.markReaderIndex();
             PDUType type = PDUType.valueOf((byte) in.readUnsignedByte());
+
+            //If invalid tagged PDU, drop
+            if(type.equals(PDUType.INVALID))
+                return;
 
             //Determine, if any PDU body data are to be transported (their length is based on Integer length identifier which has to be awaited)
             if(!type.isEmpty() && (in.readableBytes() >= 5) && (in.readableBytes() < in.readInt())) {

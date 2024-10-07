@@ -1,6 +1,4 @@
-package server.game.docker.server.matchmaking.session.examples.game.models;
-
-import server.game.docker.server.matchmaking.session.models.GameSessionClient;
+package server.game.docker.server.session.examples.game.logic.models;
 
 public class GameClientPlayer {
     private final Long clientID;

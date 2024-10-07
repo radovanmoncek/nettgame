@@ -1,7 +1,9 @@
-package server.game.docker.net;
+package server.game.docker.net.parents.decoders;
 
 import io.netty.buffer.ByteBuf;
+import server.game.docker.net.parents.handlers.PDUHandler;
 import server.game.docker.net.pdu.PDU;
+import server.game.docker.net.parents.handlers.PDUInboundHandler;
 import server.game.docker.net.pdu.PDUType;
 
 public interface PDUHandlerDecoder extends PDUHandler {

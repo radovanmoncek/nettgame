@@ -1,49 +1,77 @@
 package server.game.docker.net;
 
+import io.netty.buffer.ByteBuf;
 import io.netty.channel.Channel;
-import server.game.docker.net.pdu.PDU;
-import server.game.docker.net.pdu.PDUType;
+import server.game.docker.net.parents.decoders.PDUHandlerDecoder;
+import server.game.docker.net.parents.encoders.PDUHandlerEncoder;
+import server.game.docker.net.parents.handlers.PDUHandler;
+import server.game.docker.net.parents.handlers.PDUInboundHandler;
+import server.game.docker.net.pdu.*;
 
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
-import java.util.Vector;
+import java.util.*;
 
 /**
  * <p>
  *     Represents a container for individual handlers registered to it by the append method.
- *     Such handlers are executed via the ingest method and the sequence of their usage is automatically determined based on their nature.
+ *     Such handlers are executed via the ingest method and the sequence of their usage is automatically determined based on their nature by the ingest method.
  * </p>
  */
-public class LocalPipeline {
+public final class LocalPDUPipeline {
     private final Vector<PDUHandler> handlers;
 
-    public LocalPipeline() {
+    public LocalPDUPipeline() {
         handlers = new Vector<>();
     }
 
-    public LocalPipeline append(PDUHandler... handlers) {
+    public LocalPDUPipeline append(PDUHandler handler) {
+        handlers.add(handler);
+        return this;
+    }
+
+    public LocalPDUPipeline append(PDUHandler... handlers) {
         this.handlers.addAll(List.of(handlers));
         return this;
     }
 
+    /**
+     * This is the pipeline entry point, the PDU given is processed accordingly and sent to the appropriate {@link PDUHandler}.
+     * @param p {@link PDU} the PDU to process
+     */
     public void ingest(PDU p){
+        if(p == null)
+            throw new NullPointerException("PDU cannot be null");
+        if(Objects.isNull(p.getData()) || !(p.getData() instanceof ByteBuf))
+            throw new IllegalArgumentException("PDU data must not be null nor not an instance of ByteBuff");
         if(handlers.stream().noneMatch(h -> h instanceof PDUHandlerDecoder || h instanceof PDUInboundHandler))
             return;
         PDUHandlerDecoder decoder = handlers.stream().filter(h -> h instanceof PDUHandlerDecoder).map(h -> (PDUHandlerDecoder) h).findAny().orElse(null);
         PDUInboundHandler handler = handlers.stream().filter(h -> h instanceof PDUInboundHandler).map(h -> (PDUInboundHandler) h).findAny().orElse(null);
-        if (decoder == null || handler == null)
+        if (decoder == null && handler != null) {
+            handler.handle(p);
+            return;
+        }
+        if(decoder == null || handler == null)
             return;
         decoder.decode(p, handler);
     }
 
     public void ingest(PDU p, Channel ch){
-        if(handlers.stream().noneMatch(h -> h instanceof PDUHandlerEncoder))
+        if(ch == null)
+            throw new NullPointerException("Channel must not be null");
+        final PDU pFinal = new PDU();
+        pFinal.setData(p.getData());
+        pFinal.setAddress(p.getAddress());
+        pFinal.setPDUType(p.getPDUType());
+        if(Objects.isNull(p.getData()) || (pFinal.getData() instanceof ByteBuf)) {
+            throw new IllegalArgumentException("PDU data must not be null or an instance of ByteBuf");
+        }
+        if(handlers.stream().noneMatch(h -> h instanceof PDUHandlerEncoder)) {
             return;
+        }
         PDUHandlerEncoder encoder = handlers.stream().filter(h -> h instanceof PDUHandlerEncoder).map(h -> (PDUHandlerEncoder) h).findAny().orElse(null);
         if(encoder == null)
             return;
-        encoder.encode(p, ch);
+        encoder.encode(pFinal, ch);
     }
 
     /**
@@ -53,7 +81,7 @@ public class LocalPipeline {
      */
     @Deprecated
     public static class PDUHandlerLegacy {
-        private final Map<PDUType, LocalPipeline> mappings;
+        private final Map<PDUType, LocalPDUPipeline> mappings;
 
         public PDUHandlerLegacy() {
             this.mappings = new HashMap<>();
@@ -61,7 +89,7 @@ public class LocalPipeline {
 
         /**
          * <p>
-         *     This method appends a {@link LocalPipeline} to a specific {@link PDUType} to this {@link PDUHandlerLegacy}.
+         *     This method appends a {@link LocalPDUPipeline} to a specific {@link PDUType} to this {@link PDUHandlerLegacy}.
          *     This pipeline process is a high level abstraction of the underlying data transmission over the wire.
          * </p>
          * <p>
@@ -69,16 +97,16 @@ public class LocalPipeline {
          *     Therefore any added {@link PDUType} handling is unique.
          * </p>
          * @param t
-         * @param p encoder, decoder, and IoC (Inversion of Control) action, which then together form a pipeline process determined by the specific {@link LocalPipeline} implementation.
+         * @param p encoder, decoder, and IoC (Inversion of Control) action, which then together form a pipeline process determined by the specific {@link LocalPDUPipeline} implementation.
          * @return {@link PDUHandlerLegacy} for convenient chaining
          */
-        public PDUHandlerLegacy appendPipeline(/*Byte packetID*/PDUType t, LocalPipeline p){
+        public PDUHandlerLegacy appendPipeline(/*Byte packetID*/PDUType t, LocalPDUPipeline p){
             mappings.put(/*packetID*/t, p);
             return this;
         }
 
         @Deprecated
-        public LocalPipeline map(/*DatagramPacket packetToMap*/PDUType twoByteHeader){
+        public LocalPDUPipeline map(/*DatagramPacket packetToMap*/PDUType twoByteHeader){
     //        GameDataPDU routedPacket = new GameDataPDU(Byte.parseByte(new String(packetToMap.getData()).substring(0, 2)), packetToMap.getData());
     //        routedPacket.setAddress(packetToMap.getAddress());
     //        routedPacket.setPort(packetToMap.getPort());

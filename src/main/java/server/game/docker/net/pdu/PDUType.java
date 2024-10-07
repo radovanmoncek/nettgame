@@ -1,13 +1,13 @@
 package server.game.docker.net.pdu;
 
-import server.game.docker.net.LocalPipeline;
+import server.game.docker.net.LocalPDUPipeline;
 import server.game.docker.net.encoders.GameEncoder;
 
 import java.util.stream.Stream;
 
 /**
  * <p>
- * This enumeration represents all the possible prefixes that can mark a given {@link PDU}, and thus its mapped {@link LocalPipeline} also.
+ * This enumeration represents all the possible prefixes that can mark a given {@link PDU}, and thus its mapped {@link LocalPDUPipeline} also.
  * </p>
  * <p>
  * All actions necessary for a successful networked game implementation should be present (it is supplied as-is); therefore, it is not recommended for a DockerGameServer and Client implementor to in any way modify this enumeration as
@@ -15,15 +15,20 @@ import java.util.stream.Stream;
  * </p>
  */
 public enum PDUType {
-    //SPECIAL
-    INVALID((byte) -1, false),
-    //ID
-    IDRES((byte) 11, true),
-    //LOBBY
-    CREATELOBBYREQ((byte) 12, false), CREATELOBBYRES((byte) 13, (short) Long.BYTES), JOINLOBBYREQ((byte) 16, false), JOINLOBBYRES((byte) 17, false), LEAVELOBBYREQ((byte) 14, false), LEAVELOBBYRES((byte) 15, false), LOBBYBEACON((byte) 18, false),
-    //CHAT
-
-    JOIN((byte) 0, false), DISCONNECT((byte) 1, false), WORLDINFO((byte) 2, true), PLAYERMOVE((byte) 3, true), GAMESTART((byte) 4, false), GAMEEND((byte) 6, false), SERVERTICKUPDATE((byte) 7, true), CHATMESSAGE((byte) 10, true);
+    /*--------SPECIAL--------*/
+    /**
+     * Empty fixed length PDU with id {@code -1} meant to signal that this PDU is invalid and not fit for any processing.
+     */
+    INVALID((byte) -1, true, false),
+    /*--------ID--------*/
+    IDRES((byte) 1, true, true),
+    /*--------LOBBY--------*/
+    CREATELOBBYREQ((byte) 2, true, true), CREATELOBBYRES((byte) 3, false, true), JOINLOBBYREQ((byte) 4, false, true), JOINLOBBYRES((byte) 5, false, true), LEAVELOBBYREQ((byte) 6, true, true), LEAVELOBBYRES((byte) 7, false, true), LOBBYBEACON((byte) 8, false, true),
+    /*--------CHAT--------*/
+    /**
+     * Non-empty variable length PDU with id {@code 9} meant for reliable user chat message transportation.
+     */
+    CHATMESSAGE((byte) 9, false, true);
 
     private final Byte iD;
     /**
@@ -37,25 +42,20 @@ public enum PDUType {
     private final boolean empty;
     private final boolean transportedReliably;
 
-    PDUType(Byte iD, boolean empty) {
+    /**
+     *
+     * @param iD the ID which will be assigned to this {@link PDUType}
+     * @param empty Do not expect any data payload in this PDU
+     * @param transportedReliably whether to use reliable transport mechanisms for this {@link PDUType}
+     */
+    PDUType(Byte iD, boolean empty, boolean transportedReliably) {
         this.iD = iD;
-        //Do not expect any data payload in this PDU
         this.empty = empty;
-        this.transportedReliably = false;
-    }
-
-    PDUType(Byte iD, Short minimumTransportSize){
-        this.iD = iD;
-        empty = false;
-        this.transportedReliably = false;
+        this.transportedReliably = transportedReliably;
     }
 
     public Byte getID() {
         return iD;
-    }
-
-    public Short getMinimumTransportSize() {
-        return 0;
     }
 
     public static PDUType valueOf(Byte iD){
@@ -63,6 +63,10 @@ public enum PDUType {
     }
 
     public boolean isEmpty() {
-        return false;
+        return empty;
+    }
+
+    public boolean isTransportedReliably() {
+        return transportedReliably;
     }
 }

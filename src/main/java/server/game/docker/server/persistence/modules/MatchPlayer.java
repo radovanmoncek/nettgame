@@ -1,4 +1,4 @@
-package server.game.docker.server.matchmaking.models;
+package server.game.docker.server.persistence.modules;
 
 public class MatchPlayer {
     private Long iD;
