@@ -1,6 +1,8 @@
-package server.game.docker.net.dto;
+package server.game.docker.net.modules.pdus;
 
-public class LobbyBeacon {
+import server.game.docker.net.parents.pdus.PDU;
+
+public class LobbyBeacon implements PDU {
     private Long lobbyID;
     private Byte lobbyCurOccupancy;
     private Byte lobbyMaxOccupancy;

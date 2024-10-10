@@ -3,10 +3,10 @@ package server.game.docker.client;
 import io.netty.bootstrap.Bootstrap;
 import io.netty.channel.Channel;
 import io.netty.channel.EventLoopGroup;
-import server.game.docker.net.LocalPDUPipeline;
-import server.game.docker.net.dto.*;
-import server.game.docker.net.pdu.PDU;
-import server.game.docker.net.pdu.PDUType;
+import server.game.docker.net.pipelines.PDUMultiPipeline;
+import server.game.docker.net.enums.PDUType;
+import server.game.docker.net.modules.pdus.*;
+import server.game.docker.net.parents.pdus.PDU;
 import server.game.docker.server.GameServer;
 
 import java.net.InetAddress;
@@ -21,7 +21,6 @@ public final class GameSessionClientAPI {
     private final Integer gameServerPort;
     private final EventLoopGroup workerGroup;
     private final Map<ClientAPIEventType, ClientAPIEventHandler<?>> eventMappings;
-    private final Map<PDUType, LocalPDUPipeline> localPDUPipelines;
 
     public GameSessionClientAPI() throws Exception {
         gameSessionClient = new GameSessionClient(new String[]{});
@@ -31,7 +30,6 @@ public final class GameSessionClientAPI {
         gameServerPort = gameSessionClient.getGameServerPort();
         workerGroup = gameSessionClient.getWorkerGroup();
         eventMappings = gameSessionClient.getEventMappings();
-        localPDUPipelines = gameSessionClient.getLocalPDUPipelines();
     }
 
     public GameSessionClientAPI(String [] args) throws Exception {
@@ -42,7 +40,6 @@ public final class GameSessionClientAPI {
         gameServerPort = gameSessionClient.getGameServerPort();
         workerGroup = gameSessionClient.getWorkerGroup();
         eventMappings = gameSessionClient.getEventMappings();
-        localPDUPipelines = gameSessionClient.getLocalPDUPipelines();
     }
 
     /*--------API methods--------*/
@@ -86,30 +83,35 @@ public final class GameSessionClientAPI {
      * <p>
      *     The ClientID value assigned to this GameClient by the server.
      * </p>
-     * @return Long clientID
+     * @return {@link Long} clientID
      */
 //    public Long getClientID() {
 //        return clientID;
 //    }
 
     /*--------IoC Events--------*/
-    public void setOnIDReceived(ClientAPIEventHandler<IDRes> eventHandler){
+    public void setOnIDReceived(ClientAPIEventHandler<ID> eventHandler){
         eventMappings.put(ClientAPIEventType.CONNECTED, eventHandler);
     }
 
-    public void setOnLobbyCreate(ClientAPIEventHandler<CreateLobbyRes> eventHandler){
+    public void setOnLobbyCreate(ClientAPIEventHandler<LobbyUpdate> eventHandler){
         eventMappings.put(ClientAPIEventType.LOBBYCREATED, eventHandler);
     }
 
-    public void setOnLobbyJoined(ClientAPIEventHandler<JoinLobbyRes> eventHandler){
+    public void setOnLobbyJoined(ClientAPIEventHandler<LobbyUpdate> eventHandler){
         eventMappings.put(ClientAPIEventType.LOBBYJOINED, eventHandler);
     }
 
-    public void setOnLobbyLeave(ClientAPIEventHandler<LeaveLobbyRes> eventHandler){
-//        eventHandler.accept();
+    public void setOnLobbyLeave(ClientAPIEventHandler<LobbyUpdate> eventHandler){
+        eventMappings.put(ClientAPIEventType.LOBBYLEFT, eventHandler);
+    }
 
+    public void setOnMemberJoined(ClientAPIEventHandler<LobbyUpdate> eventHandler){
+        eventMappings.put(ClientAPIEventType.MEMBERJOINED, eventHandler);
+    }
+
+    public void setOnMemberLeft(ClientAPIEventHandler<LobbyUpdate> eventHandler){
         eventMappings.put(ClientAPIEventType.MEMBERLEFT, eventHandler);
-//        ((ClientAPIEventHandler<JoinLobbyRes>) eventMappings.get(ClientAPIEventType.MEMBERLEFT)).handle(new JoinLobbyRes());
     }
 
     public void setOnLobbyBeacon(ClientAPIEventHandler<LobbyBeacon> eventHandler){
@@ -125,10 +127,9 @@ public final class GameSessionClientAPI {
      * Attempts to request creation of a personal lobby.
      */
     public void createLobby(){
-        PDU p = new PDU();
-        p.setPDUType(PDUType.CREATELOBBYREQ);
-        p.setData(new Object());
-        gameSessionClient.sendUnicast(p);
+        LobbyReq lobbyReq = new LobbyReq();
+        lobbyReq.setActionFlag((byte) 0);
+        gameSessionClient.sendUnicast(PDUType.LOBBYREQUEST, lobbyReq);
     }
 
     /**
@@ -136,37 +137,30 @@ public final class GameSessionClientAPI {
      * @param lobbyID the ID of the desired lobby
      */
     public void joinLobby(Long lobbyID){
-        PDU p = new PDU();
-        JoinLobbyReq r = new JoinLobbyReq();
-        r.setLobbyID(lobbyID);
-        p.setPDUType(PDUType.JOINLOBBYREQ);
-        p.setAddress(new InetSocketAddress(gameServerAddress, gameServerPort));
-        p.setData(r);
-        localPDUPipelines.get(p.getPDUType()).ingest(p, clientChannel);
+        LobbyReq lobbyReq = new LobbyReq();
+        lobbyReq.setActionFlag((byte) 1);
+        lobbyReq.setLobbyID(lobbyID);
+        gameSessionClient.sendUnicast(PDUType.LOBBYREQUEST, lobbyReq);
     }
 
     /**
      * Attempts to leave current lobby.
      */
     public void leaveLobby(){
-        PDU p = new PDU();
-        p.setPDUType(PDUType.LEAVELOBBYREQ);
-        p.setData(new Object());
-        gameSessionClient.sendUnicast(p);
+        LobbyReq lobbyRequest = new LobbyReq();
+        lobbyRequest.setActionFlag((byte) 2);
+        gameSessionClient.sendUnicast(PDUType.LOBBYREQUEST, lobbyRequest);
     }
 
-    public void sendChatMessage(String message){
-        if(message == null)
+    public void sendChatMessage(String message) {
+        if (message == null)
             throw new NullPointerException("Message cannot be null");
-        if(message.isBlank())
+        if (message.isBlank())
             throw new IllegalArgumentException("Message cannot be blank");
-        if(message.length() > 64)
+        if (message.length() > 64)
             throw new IllegalArgumentException("Message cannot be longer than 64 characters");
-        PDU p = new PDU();
-        ChatMessage chatMessageReq = new ChatMessage();
-        chatMessageReq.setMessage(message);
-        p.setPDUType(PDUType.CHATMESSAGE);
-        p.setData(chatMessageReq);
-        gameSessionClient.sendUnicast(p);
+        ChatMessage chatMessage = new ChatMessage();
+        chatMessage.setMessage(message);
+        gameSessionClient.sendUnicast(PDUType.CHATMESSAGE, chatMessage);
     }
 }

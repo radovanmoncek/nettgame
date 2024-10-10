@@ -10,11 +10,11 @@ import io.netty.channel.socket.nio.NioServerSocketChannel;
 import io.netty.handler.logging.LogLevel;
 import io.netty.handler.logging.LoggingHandler;
 import io.netty.util.concurrent.GlobalEventExecutor;
-import server.game.docker.net.LocalPDUPipeline;
-import server.game.docker.net.decoders.GameDecoder;
-import server.game.docker.net.encoders.GameEncoder;
-import server.game.docker.net.pdu.PDU;
-import server.game.docker.net.pdu.PDUType;
+import server.game.docker.net.pipelines.PDUMultiPipeline;
+import server.game.docker.net.modules.decoders.GameDecoder;
+import server.game.docker.net.modules.encoders.GameEncoder;
+import server.game.docker.net.parents.pdus.PDU;
+import server.game.docker.net.enums.PDUType;
 import server.game.docker.server.net.handlers.LobbyPDUInboundHandler.Lobby;
 import server.game.docker.server.session.DockerGameSession;
 import server.game.docker.server.net.handlers.GameServerHandler;
@@ -26,7 +26,7 @@ import java.util.*;
  */
 public class GameServer {
     private final int port;
-    private final Map<PDUType, LocalPDUPipeline> localPDUPipelines;
+    private final PDUMultiPipeline multiPipeline;
     private final ChannelGroup managedClients;
     private final Set<ChannelId> unassignedDomain;
     private final Map<ChannelId, Long> lobbyDomain;
@@ -53,7 +53,7 @@ public class GameServer {
         lobbyLookup = new HashMap<>();
         sessionLookup = new HashMap<>();
         channelIDClientIDLookup = new HashMap<>();
-        localPDUPipelines = new HashMap<>();
+        multiPipeline = new PDUMultiPipeline();
     }
 
     public GameServer(String [] args) {
@@ -76,7 +76,7 @@ public class GameServer {
                                     new GameEncoder(),
                                     new GameServerHandler(
                                             channelIDClientIDLookup,
-                                            localPDUPipelines,
+                                            multiPipeline,
                                             managedClients,
                                             lobbyDomain,
                                             lobbyLookup,
@@ -91,7 +91,7 @@ public class GameServer {
                     .childOption(ChannelOption.SO_KEEPALIVE, true);
 
             new GameServerInitializer(
-                    localPDUPipelines,
+                    multiPipeline,
                     lobbyDomain,
                     sessionDomain,
                     unassignedDomain,
@@ -113,29 +113,29 @@ public class GameServer {
         }
     }
 
-    public void sendUnicast(PDU p) {
-        unassignedDomain.stream().map(managedClients::find).filter(c -> c.remoteAddress().equals(p.getAddress())).forEach(c -> localPDUPipelines.get(p.getPDUType()).ingest(p, c));
-        lobbyDomain.keySet().stream().map(managedClients::find).filter(c -> c.remoteAddress().equals(p.getAddress())).forEach(c -> localPDUPipelines.get(p.getPDUType()).ingest(p, c));
-        sessionDomain.keySet().stream().map(managedClients::find).filter(c -> c.remoteAddress().equals(p.getAddress())).forEach(c -> localPDUPipelines.get(p.getPDUType()).ingest(p, c));
+    public void sendUnicast(PDUType type, PDU protocolDataUnit, Channel channel) {
+        unassignedDomain.stream().map(managedClients::find).filter(c -> c.remoteAddress().equals(channel.remoteAddress())).forEach(c -> multiPipeline.ingest(type, protocolDataUnit, c));
+        lobbyDomain.keySet().stream().map(managedClients::find).filter(c -> c.remoteAddress().equals(channel.remoteAddress())).forEach(c -> multiPipeline.ingest(type, protocolDataUnit, c));
+        sessionDomain.keySet().stream().map(managedClients::find).filter(c -> c.remoteAddress().equals(channel.remoteAddress())).forEach(c -> multiPipeline.ingest(type ,protocolDataUnit, c));
     }
 
-    private void sendBroadcast(PDU p) {
-        sendBroadcastUnassigned(p);
-        sendBroadcastLobby(p);
-        sessionDomain.keySet().stream().map(managedClients::find).filter(c -> !c.remoteAddress().equals(p.getAddress())).forEach(c -> localPDUPipelines.get(p.getPDUType()).ingest(p, c));
+    private void sendBroadcast(PDUType type, PDU protocolDataUnit, Channel channel) {
+        sendBroadcastUnassigned(protocolDataUnit);
+        sendBroadcastLobby(protocolDataUnit);
+        sessionDomain.keySet().stream().map(managedClients::find).filter(c -> !c.remoteAddress().equals(channel.remoteAddress())).forEach(c -> multiPipeline.ingest(type, protocolDataUnit, c));
     }
 
     public void sendBroadcastUnassigned(PDU p) {
-        unassignedDomain.stream().map(managedClients::find).filter(c -> !c.remoteAddress().equals(p.getAddress())).forEach(c -> localPDUPipelines.get(p.getPDUType()).ingest(p, c));
+        unassignedDomain.stream().map(managedClients::find).filter(c -> !c.remoteAddress().equals(channel.remoteAddress())).forEach(c -> multiPipeline.ingest(type, p, c));
     }
 
     public void sendBroadcastLobby(PDU p) {
-        lobbyDomain.keySet().stream().map(managedClients::find).filter(c -> !c.remoteAddress().equals(p.getAddress())).forEach(c -> localPDUPipelines.get(p.getPDUType()).ingest(p, c));
+        lobbyDomain.keySet().stream().map(managedClients::find).filter(c -> !c.remoteAddress().equals(channel.remoteAddress())).forEach(c -> multiPipeline.ingest(type, p, c));
     }
 
-    public void sendMulticastLobby(PDU p) {
-        lobbyDomain.entrySet().stream().filter(e -> managedClients.find(e.getKey()).remoteAddress().equals(p.getAddress())).map(Map.Entry::getValue).forEach(l ->
-                lobbyDomain.entrySet().stream().filter(e -> !managedClients.find(e.getKey()).remoteAddress().equals(p.getAddress()) && e.getValue().equals(l)).map(Map.Entry::getKey).map(managedClients::find).forEach(c -> localPDUPipelines.get(p.getPDUType()).ingest(p, c))
+    public void sendMulticastLobby(PDUType lobbyupdate, PDU p, Channel channel) {
+        lobbyDomain.entrySet().stream().filter(e -> managedClients.find(e.getKey()).remoteAddress().equals(channel.remoteAddress())).map(Map.Entry::getValue).forEach(l ->
+                lobbyDomain.entrySet().stream().filter(e -> !managedClients.find(e.getKey()).remoteAddress().equals(channel.remoteAddress()) && e.getValue().equals(l)).map(Map.Entry::getKey).map(managedClients::find).forEach(c -> multiPipeline.ingest(type, p, c))
         );
     }
 

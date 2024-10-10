@@ -2,9 +2,9 @@ package server.game.docker.net.parents.decoders;
 
 import io.netty.buffer.ByteBuf;
 import server.game.docker.net.parents.handlers.PDUHandler;
-import server.game.docker.net.pdu.PDU;
+import server.game.docker.net.parents.pdus.PDU;
 import server.game.docker.net.parents.handlers.PDUInboundHandler;
-import server.game.docker.net.pdu.PDUType;
+import server.game.docker.net.enums.PDUType;
 
 public interface PDUHandlerDecoder extends PDUHandler {
     /**
@@ -22,5 +22,5 @@ public interface PDUHandlerDecoder extends PDUHandler {
      * </p>
      * @param in the {@link ByteBuf} passed and processed from the wire to be decoded
      */
-    void decode(PDU in, PDUInboundHandler out);
+    void decode(ByteBuf in, PDUInboundHandler out);
 }

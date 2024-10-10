@@ -1,22 +1,25 @@
 package server.game.docker.server.net.handlers;
 
+import io.netty.buffer.Unpooled;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.ChannelId;
 import io.netty.channel.ChannelInboundHandlerAdapter;
 import io.netty.channel.group.ChannelGroup;
-import server.game.docker.net.LocalPDUPipeline;
-import server.game.docker.net.dto.IDRes;
-import server.game.docker.net.pdu.PDU;
-import server.game.docker.net.pdu.PDUType;
+import server.game.docker.net.modules.pdus.LobbyUpdate;
+import server.game.docker.net.pipelines.PDUMultiPipeline;
+import server.game.docker.net.modules.pdus.ID;
+import server.game.docker.net.parents.pdus.PDU;
+import server.game.docker.net.enums.PDUType;
 import server.game.docker.server.GameServer;
 import server.game.docker.server.net.handlers.LobbyPDUInboundHandler.Lobby;
 
+import java.nio.ByteBuffer;
 import java.util.Map;
 import java.util.Set;
 
 public class GameServerHandler extends ChannelInboundHandlerAdapter {
     private final Map<ChannelId, Long> channelIDClientIDLookup;
-    private final Map<PDUType, LocalPDUPipeline> localPDUPipelines;
+    private final PDUMultiPipeline multiPipeline;
     private final ChannelGroup managedClients;
     private final Map<ChannelId, Long> lobbyDomain;
     private final Map<Long, Lobby> lobbyLookup;
@@ -26,7 +29,7 @@ public class GameServerHandler extends ChannelInboundHandlerAdapter {
 
     public GameServerHandler(
             Map<ChannelId, Long> channelIDClientIDLookup,
-            Map<PDUType, LocalPDUPipeline> localPDUPipelines,
+            PDUMultiPipeline multiPipeline,
             ChannelGroup managedClients,
             Map<ChannelId, Long> lobbyDomain,
             Map<Long, Lobby> lobbyLookup,
@@ -35,7 +38,7 @@ public class GameServerHandler extends ChannelInboundHandlerAdapter {
             GameServer gameServer
     ) {
         this.channelIDClientIDLookup = channelIDClientIDLookup;
-        this.localPDUPipelines = localPDUPipelines;
+        this.multiPipeline = multiPipeline;
         this.managedClients = managedClients;
         this.lobbyDomain = lobbyDomain;
         this.lobbyLookup = lobbyLookup;
@@ -46,8 +49,8 @@ public class GameServerHandler extends ChannelInboundHandlerAdapter {
 
     @Override
     public void channelRead(ChannelHandlerContext ctx, Object msg){
-        PDU pdu = (PDU) msg;
-        localPDUPipelines.get(pdu.getPDUType()).ingest(pdu);
+        ByteBuffer byteBuffer = (ByteBuffer) msg;
+        multiPipeline.ingest(PDUType.valueOf(byteBuffer.get()), Unpooled.wrappedBuffer(byteBuffer));
     }
 
     @Override
@@ -58,19 +61,14 @@ public class GameServerHandler extends ChannelInboundHandlerAdapter {
         System.out.println("A client has requested an ID");
 
         //Body data payload is empty for this PDUType
-        IDRes idRes = new IDRes();
-        idRes.setNewClientID(gameServer.getNextDebugClientID());
+        ID iD = new ID();
+        iD.setNewClientID(gameServer.getNextDebugClientID());
 
-        PDU pdu = new PDU();
-        pdu.setPDUType(PDUType.IDRES);
-        pdu.setAddress(ctx.channel().remoteAddress());
-        pdu.setData(idRes);
+        System.out.printf("A client has connected with assigned ID: %d\n", iD.getNewClientID()); //todo: log4j
 
-        System.out.printf("A client has connected with assigned ID: %d\n", idRes.getNewClientID());
+        channelIDClientIDLookup.put(ctx.channel().id(), iD.getNewClientID());
 
-        channelIDClientIDLookup.put(ctx.channel().id(), idRes.getNewClientID());
-
-        localPDUPipelines.get(pdu.getPDUType()).ingest(pdu, ctx.channel());
+        multiPipeline.ingest(PDUType.ID, iD, ctx.channel());
     }
 
     @Override

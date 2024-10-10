@@ -22,19 +22,19 @@
                 <VBox fx:id="vb_lobby_list" style="-fx-background-color: transparent;">
 <!--                    <HBox style="-fx-background-color: rgb(226, 227, 234, 0.5); -fx-padding: 10; -fx-spacing: 10; -fx-alignment: center; -fx-min-height: 20;">-->
 <!--                        <Label text="Sample lobby"/>-->
-<!--                        <Button text="joinLobbyReq"/>-->
+<!--                        <Button text="lobbyReq"/>-->
 <!--                    </HBox>-->
 <!--                    <HBox style="-fx-background-color: rgb(226, 227, 234, 0.5); -fx-padding: 10; -fx-spacing: 10; -fx-alignment: center;">-->
 <!--                        <Label text="Sample lobby"/>-->
-<!--                        <Button text="joinLobbyReq"/>-->
+<!--                        <Button text="lobbyReq"/>-->
 <!--                    </HBox>-->
 <!--                    <HBox style="-fx-background-color: rgb(226, 227, 234, 0.5); -fx-padding: 10; -fx-spacing: 10; -fx-alignment: center;">-->
 <!--                        <Label text="Sample lobby"/>-->
-<!--                        <Button text="joinLobbyReq"/>-->
+<!--                        <Button text="lobbyReq"/>-->
 <!--                    </HBox>-->
 <!--                    <HBox style="-fx-background-color: rgb(226, 227, 234, 0.5); -fx-padding: 10; -fx-spacing: 10; -fx-alignment: center;">-->
 <!--                        <Label text="Sample lobby"/>-->
-<!--                        <Button text="joinLobbyReq"/>-->
+<!--                        <Button text="lobbyReq"/>-->
 <!--                    </HBox>-->
                 </VBox>
             </ScrollPane>

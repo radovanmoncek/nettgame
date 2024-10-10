@@ -1,6 +1,11 @@
-package server.game.docker.net.dto;
+package server.game.docker.net.modules.pdus;
 
-public class ChatMessage {
+import server.game.docker.net.parents.pdus.PDU;
+
+/**
+ * Reliably transported non-empty variable length PDU (char array max size 64)
+ */
+public class ChatMessage implements PDU {
     private Long authorID;
     private String authorName;
     private String message;

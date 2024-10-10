@@ -9,7 +9,7 @@ import java.net.InetAddress;
 import java.net.SocketException;
 import java.net.UnknownHostException;
 
-import server.game.docker.net.pdu.PDU;
+import server.game.docker.net.parents.pdus.PDU;
 import server.game.docker.server.session.examples.game.logic.TileType;
 
 @Deprecated

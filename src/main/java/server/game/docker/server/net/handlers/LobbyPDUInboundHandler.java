@@ -3,15 +3,17 @@ package server.game.docker.server.net.handlers;
 import io.netty.channel.Channel;
 import io.netty.channel.ChannelId;
 import io.netty.channel.group.ChannelGroup;
-import server.game.docker.net.dto.*;
+import server.game.docker.net.enums.PDUType;
+import server.game.docker.net.modules.pdus.LobbyBeacon;
+import server.game.docker.net.modules.pdus.LobbyReq;
+import server.game.docker.net.modules.pdus.LobbyUpdate;
 import server.game.docker.net.parents.handlers.PDUInboundHandler;
-import server.game.docker.net.pdu.PDU;
-import server.game.docker.net.pdu.PDUType;
+import server.game.docker.net.parents.pdus.PDU;
 import server.game.docker.server.GameServer;
 
 import java.util.*;
 
-public class LobbyPDUInboundHandler implements PDUInboundHandler {
+public class LobbyPDUInboundHandler extends PDUInboundHandler {
     private final GameServer gameServer;
     private final Map<Long, Lobby> lobbyLookup;
     private final Set<ChannelId> unassignedDomain;
@@ -36,23 +38,28 @@ public class LobbyPDUInboundHandler implements PDUInboundHandler {
     }
 
     @Override
-    public void handle(PDU p) {
-        switch (p.getPDUType()){
-            case CREATELOBBYREQ -> createLobby(p);
-            case JOINLOBBYREQ -> joinLobby(p);
-            case LEAVELOBBYREQ -> leaveLobby(p);
+    public void handle(PDU pdu) {
+    }
+
+    @Override
+    public void handle(PDU in, Channel channel) {
+        LobbyReq lobbyReq = (LobbyReq) in;
+        switch (lobbyReq.getActionFlag()){
+            case 0 -> createLobby(lobbyReq, channel);
+            case 1 -> joinLobby(lobbyReq, channel);
+            case 2 -> leaveLobby(lobbyReq, channel);
         }
     }
 
-    private void createLobby(PDU p){
+    private void createLobby(LobbyReq in, Channel channel){
         //Client is already connected to a lobby or is in a GameSession
         if (
-                lobbyDomain.keySet().stream().map(managedClients::find).map(Channel::remoteAddress).anyMatch(p.getAddress()::equals)
+                lobbyDomain.keySet().stream().map(managedClients::find).map(Channel::remoteAddress).anyMatch(channel.remoteAddress()::equals)
                         ||
-                        sessionDomain.keySet().stream().map(managedClients::find).map(Channel::remoteAddress).anyMatch(p.getAddress()::equals)
+                        sessionDomain.keySet().stream().map(managedClients::find).map(Channel::remoteAddress).anyMatch(channel.remoteAddress()::equals)
         )
             return;
-        Channel lobbyUnassignClientChannel = unassignedDomain.stream().map(managedClients::find).filter(c -> p.getAddress().equals(c.remoteAddress())).findAny().orElse(null);
+        Channel lobbyUnassignClientChannel = unassignedDomain.stream().map(managedClients::find).filter(c -> channel.remoteAddress().equals(c.remoteAddress())).findAny().orElse(null);
         Long lobbyID = gameServer.getNextLobbyID(); //todo: Redis?
         //Client is already assigned to a lobby
         if (lobbyUnassignClientChannel == null)
@@ -62,51 +69,45 @@ public class LobbyPDUInboundHandler implements PDUInboundHandler {
         lobbyDomain.put(lobbyUnassignClientChannel.id(), lobbyID);
         System.out.printf("Client %s has created a lobby %d\n", gameServer.transformChID(lobbyUnassignClientChannel.id()), lobbyID);
 
-        PDU outPDU = new PDU();
-        CreateLobbyRes res = new CreateLobbyRes();
-        outPDU.setPDUType(PDUType.CREATELOBBYRES);
-        outPDU.setAddress(lobbyUnassignClientChannel.remoteAddress());
+        LobbyUpdate res = new LobbyUpdate();
         res.setLobbyId(lobbyID);
-        outPDU.setData(res);
-        gameServer.sendUnicast(outPDU);
+        gameServer.sendUnicast(PDUType.LOBBYUPDATE, res, channel);
         refreshLobbyList();
     }
 
-    private void joinLobby(PDU p) {
-        JoinLobbyReq joinLobbyReq = (JoinLobbyReq) p.getData();
-        if (lobbyLookup.get(joinLobbyReq.getLobbyID()) == null || lobbyLookup.get(joinLobbyReq.getLobbyID()).isFull())
+    private void joinLobby(LobbyReq lobbyReq, Channel channel) {
+        if (lobbyLookup.get(lobbyReq.getLobbyID()) == null || lobbyLookup.get(lobbyReq.getLobbyID()).isFull())
             return;
-        Channel unassignLobbyCh = unassignedDomain.stream().map(managedClients::find).filter(c -> p.getAddress().equals(c.remoteAddress())).findAny().orElse(null);
+        Channel unassignLobbyCh = unassignedDomain.stream().map(managedClients::find).filter(c -> channel.remoteAddress().equals(c.remoteAddress())).findAny().orElse(null);
         if (unassignLobbyCh == null) {
-            unassignLobbyCh = lobbyDomain.keySet().stream().map(managedClients::find).filter(c -> p.getAddress().equals(c.remoteAddress())).findAny().orElse(null);
-            if (unassignLobbyCh == null || lobbyLookup.get(joinLobbyReq.getLobbyID()).getClientIDs().contains(unassignLobbyCh.id()))
+            unassignLobbyCh = lobbyDomain.keySet().stream().map(managedClients::find).filter(c -> channel.remoteAddress().equals(c.remoteAddress())).findAny().orElse(null);
+            if (unassignLobbyCh == null || lobbyLookup.get(lobbyReq.getLobbyID()).getClientIDs().contains(unassignLobbyCh.id()))
                 return;
             lobbyLookup.get(lobbyDomain.remove(unassignLobbyCh.id())).leave(unassignLobbyCh.id());
         } else
             unassignedDomain.remove(unassignLobbyCh.id());
-        lobbyDomain.put(unassignLobbyCh.id(), joinLobbyReq.getLobbyID());
-        lobbyLookup.get(joinLobbyReq.getLobbyID()).join(unassignLobbyCh.id());
-        JoinLobbyRes joinLobbyRes = new JoinLobbyRes();
-        joinLobbyRes.setLobbyID(joinLobbyReq.getLobbyID());
-        PDU joinResPDU = new PDU();
-        joinResPDU.setPDUType(PDUType.JOINLOBBYRES);
-        joinResPDU.setAddress(unassignLobbyCh.remoteAddress());
-        joinResPDU.setData(joinLobbyRes);
-        gameServer.sendUnicast(joinResPDU);
-        JoinLobbyRes justJoinInfo = new JoinLobbyRes();
-        justJoinInfo.setLobbyID(-1L);
+        lobbyDomain.put(unassignLobbyCh.id(), lobbyReq.getLobbyID());
+        lobbyLookup.get(lobbyReq.getLobbyID()).join(unassignLobbyCh.id());
 
-        PDU jJIPDU = new PDU();
-        jJIPDU.setPDUType(PDUType.JOINLOBBYRES);
-        jJIPDU.setAddress(unassignLobbyCh.remoteAddress());
-        jJIPDU.setData(justJoinInfo);
-        gameServer.sendMulticastLobby(jJIPDU);
-        //todo: send to lobbyDomain Multicast to notify other lobby members
+        Lobby lobby = lobbyLookup.get(lobbyReq.getLobbyID());
+        LobbyUpdate lobbyUpdate = new LobbyUpdate();
+        lobbyUpdate.setLobbyId(lobbyReq.getLobbyID());
+        //Leader cannot join own lobby
+        lobbyUpdate.setLeader(false);
+        lobbyUpdate.setStateFlag(1);
+        gameServer.sendUnicast(PDUType.LOBBYUPDATE, lobbyUpdate, channel);
+
+        //send to lobbyDomain Multicast to notify other lobby members
+        LobbyUpdate lobbyUpdateMulti = new LobbyUpdate();
+        lobbyUpdateMulti.setLobbyId(lobbyReq.getLobbyID());
+        lobbyUpdateMulti.setLeader(lobby.leaderClientID.compareTo(channel.id()) == 0);
+        lobbyUpdateMulti.setStateFlag(3);
+        gameServer.sendMulticastLobby(PDUType.LOBBYUPDATE, lobbyUpdateMulti, channel);
         refreshLobbyList();
     }
 
-    private void leaveLobby(PDU p) {
-        Channel assignedLobbyChannel = lobbyDomain.keySet().stream().map(managedClients::find).filter(c -> p.getAddress().equals(c.remoteAddress())).findAny().orElse(null);
+    private void leaveLobby(LobbyReq in, Channel channel) {
+        Channel assignedLobbyChannel = lobbyDomain.keySet().stream().map(managedClients::find).filter(c -> in.getAddress().equals(c.remoteAddress())).findAny().orElse(null);
         if (assignedLobbyChannel == null)
             return;
         Lobby lobby = lobbyLookup.get(lobbyDomain.get(assignedLobbyChannel.id()));
@@ -122,10 +123,10 @@ public class LobbyPDUInboundHandler implements PDUInboundHandler {
                 PDU pLeave = new PDU();
                 pLeave.setPDUType(PDUType.LEAVELOBBYRES);
                 pLeave.setAddress(sLMC.remoteAddress());
-                LeaveLobbyRes leaveLobbyRes = new LeaveLobbyRes();
+                LobbyUpdate.LeaveLobbyRes leaveLobbyRes = new LobbyUpdate.LeaveLobbyRes();
                 leaveLobbyRes.setLeader(false);
                 pLeave.setData(leaveLobbyRes);
-                gameServer.sendUnicast(pLeave);
+                gameServer.sendUnicast(PDUType.LOBBYUPDATE, pLeave);
             }
         } else {
             lobbyID = lobbyDomain.remove(assignedLobbyChannel.id());
@@ -136,23 +137,23 @@ public class LobbyPDUInboundHandler implements PDUInboundHandler {
             if (lobbyLeadCh == null) {
                 System.err.printf("Could not find lobby %d leader %d and send disconnect info", lobbyID, gameServer.transformChID(lobby.getLeaderID()));
             } else {
-                LeaveLobbyRes justLeaveInfo = new LeaveLobbyRes();
+                LobbyUpdate.LeaveLobbyRes justLeaveInfo = new LobbyUpdate.LeaveLobbyRes();
                 justLeaveInfo.setLeader(true);
 
                 PDU lobbyLeaveLeaderInfo = new PDU();
                 lobbyLeaveLeaderInfo.setPDUType(PDUType.LEAVELOBBYRES);
                 lobbyLeaveLeaderInfo.setAddress(lobbyLeadCh.remoteAddress());
                 lobbyLeaveLeaderInfo.setData(justLeaveInfo);
-                gameServer.sendUnicast(lobbyLeaveLeaderInfo);
+                gameServer.sendUnicast(PDUType.LOBBYUPDATE, lobbyLeaveLeaderInfo);
             }
         }
-        LeaveLobbyRes normalLeave = new LeaveLobbyRes();
+        LobbyUpdate.LeaveLobbyRes normalLeave = new LobbyUpdate.LeaveLobbyRes();
         normalLeave.setLeader(false);
         PDU pLeave = new PDU();
         pLeave.setPDUType(PDUType.LEAVELOBBYRES);
         pLeave.setAddress(assignedLobbyChannel.remoteAddress());
         pLeave.setData(normalLeave);
-        gameServer.sendUnicast(pLeave);
+        gameServer.sendUnicast(PDUType.LOBBYUPDATE, pLeave);
         System.out.printf("Client %d has left lobby %d\n", gameServer.transformChID(assignedLobbyChannel.id()), lobbyID);
         refreshLobbyList();
     }

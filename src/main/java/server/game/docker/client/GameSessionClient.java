@@ -11,17 +11,13 @@ import io.netty.channel.socket.nio.NioSocketChannel;
 import io.netty.handler.logging.LogLevel;
 import io.netty.handler.logging.LoggingHandler;
 import server.game.docker.client.net.handlers.GameClientHandler;
-import server.game.docker.net.LocalPDUPipeline;
-import server.game.docker.net.decoders.GameDecoder;
-import server.game.docker.net.dto.*;
-import server.game.docker.net.encoders.GameEncoder;
-import server.game.docker.net.pdu.PDU;
-import server.game.docker.net.pdu.PDUType;
+import server.game.docker.net.pipelines.PDUMultiPipeline;
+import server.game.docker.net.modules.decoders.GameDecoder;
+import server.game.docker.net.modules.encoders.GameEncoder;
+import server.game.docker.net.parents.pdus.PDU;
+import server.game.docker.net.enums.PDUType;
 
-import java.lang.reflect.ParameterizedType;
-import java.lang.reflect.Type;
 import java.net.InetAddress;
-import java.net.InetSocketAddress;
 import java.util.HashMap;
 import java.util.Map;
 
@@ -30,8 +26,8 @@ public class GameSessionClient {
     private final InetAddress gameServerAddress;
     private final int gameServerPort;
     private final EventLoopGroup workerGroup;
-    private final Map<PDUType, LocalPDUPipeline> localPDUPipelines;
-    private final Map<ClientAPIEventType, ClientAPIEventHandler<?>> eventMappings;
+    private final PDUMultiPipeline multiPipeline;
+    private final Map<ClientAPIEventType, ClientAPIEventHandler<? extends PDU>> eventMappings;
     private Channel clientChannel;
 
     //    todo: private Long clientID; ?
@@ -39,9 +35,9 @@ public class GameSessionClient {
         gameServerAddress = InetAddress.getByName("127.0.0.1");
         gameServerPort = 4321;
         workerGroup = new NioEventLoopGroup();
-        localPDUPipelines = new HashMap<>();
+        multiPipeline = new PDUMultiPipeline();
         eventMappings = new HashMap<>();
-        new ClientInitializer(clientChannel, localPDUPipelines, eventMappings, this).init();
+        new ClientInitializer(clientChannel, eventMappings, this, multiPipeline).init();
         try {
             bootstrap = new Bootstrap()
                     .group(workerGroup)
@@ -54,45 +50,24 @@ public class GameSessionClient {
                                     new LoggingHandler(LogLevel.ERROR),
                                     new GameEncoder(),
                                     new GameDecoder(),
-                                    new GameClientHandler(localPDUPipelines));
+                                    new GameClientHandler(multiPipeline));
                         }
                     });
-
-                    //Outbound only PDU
-//                    .withMapping(PDUType.IDREQUEST, new LocalPipeline() {
-//                        @Override
-//                        public Object decode(ByteBuf in) {
-//                            return null;
-//                        }
-//
-//                        @Override
-//                        public ByteBuf encode(Object in) {
-//                            return Unpooled.wrappedBuffer(new byte[]{0, PDUType.IDREQUEST.getID()});
-//                        }
-//
-//                        @Override
-//                        public void perform(PDUBody body) {
-//                        }
-//                    });
-
-            //Initiate "ID handshake"
-//            sendUnicast(new PDUBody(/*PDUType.JOIN, new Join()*/PDUType.IDREQUEST, new InetSocketAddress(gameServerAddress, gameServerPort), gameServerPort, null)).sync();
         }
         catch (Exception e) {
             e.printStackTrace();
             workerGroup.shutdownGracefully();
         }
     }
-    public void sendUnicast(PDU p) {
-        p.setAddress(new InetSocketAddress(gameServerAddress, gameServerPort));
-        localPDUPipelines.get(p.getPDUType()).ingest(p, clientChannel);
+    public void sendUnicast(PDUType type, PDU protocolDataUnit) {
+        multiPipeline.ingest(type, protocolDataUnit, clientChannel);
     }
 
-    public <T> ClientAPIEventHandler<T> checkAndGetHandler(Class<T> c, ClientAPIEventType eventType) {
+    public <T extends PDU> void checkAndCallHandler(ClientAPIEventType eventType, T protocolDataUnit) {
         ClientAPIEventHandler<?> h = eventMappings.get(eventType);
 //        Type t = h.getClass().getGenericInterfaces()[0];
 //        if(((ParameterizedType) h.getClass().getGenericInterfaces()[0]).getActualTypeArguments()[0].equals(((ParameterizedType) c.getGenericSuperclass()).getActualTypeArguments()[0]))
-            return (ClientAPIEventHandler<T>) h;
+        ((ClientAPIEventHandler<T>) h).handle(protocolDataUnit);
 //        return null;
     }
 
@@ -116,8 +91,8 @@ public class GameSessionClient {
         return workerGroup;
     }
 
-    public Map<PDUType, LocalPDUPipeline> getLocalPDUPipelines() {
-        return localPDUPipelines;
+    public PDUMultiPipeline getMultiPipeline() {
+        return multiPipeline;
     }
 
     public Map<ClientAPIEventType, ClientAPIEventHandler<?>> getEventMappings() {

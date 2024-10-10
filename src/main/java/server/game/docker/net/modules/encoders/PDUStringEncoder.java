@@ -1,12 +1,12 @@
-package server.game.docker.net.encoders;
+package server.game.docker.net.modules.encoders;
 
 import io.netty.buffer.ByteBuf;
 import io.netty.buffer.ByteBufUtil;
 import io.netty.buffer.Unpooled;
 import io.netty.channel.Channel;
-import server.game.docker.net.dto.ChatMessage;
+import server.game.docker.net.modules.pdus.ChatMessage;
 import server.game.docker.net.parents.encoders.PDUHandlerEncoder;
-import server.game.docker.net.pdu.PDU;
+import server.game.docker.net.parents.pdus.PDU;
 
 import java.nio.CharBuffer;
 import java.nio.charset.Charset;

@@ -1,25 +1,24 @@
 package server.game.docker.client.net.handlers;
 
-import io.netty.buffer.ByteBuf;
+import io.netty.buffer.Unpooled;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.ChannelInboundHandlerAdapter;
-import server.game.docker.net.LocalPDUPipeline;
-import server.game.docker.net.pdu.PDU;
-import server.game.docker.net.pdu.PDUType;
+import server.game.docker.net.enums.PDUType;
+import server.game.docker.net.pipelines.PDUMultiPipeline;
 
-import java.util.Map;
+import java.nio.ByteBuffer;
 
 public class GameClientHandler extends ChannelInboundHandlerAdapter {
-    private final Map<PDUType, LocalPDUPipeline> localPDUPipelines;
+    private final PDUMultiPipeline multiPipeline;
 
-    public GameClientHandler(Map<PDUType, LocalPDUPipeline> localPDUPipelines) {
-        this.localPDUPipelines = localPDUPipelines;
+    public GameClientHandler(PDUMultiPipeline multiPipeline) {
+        this.multiPipeline = multiPipeline;
     }
 
     @Override
     public void channelRead(ChannelHandlerContext ctx, Object msg) {
-        PDU m = (PDU) msg;
-        localPDUPipelines.get(m.getPDUType()).ingest(m);
+        ByteBuffer byteBuffer = (ByteBuffer) msg;
+        multiPipeline.ingest(PDUType.valueOf(byteBuffer.get()), Unpooled.wrappedBuffer(byteBuffer));
     }
 
     @Override
