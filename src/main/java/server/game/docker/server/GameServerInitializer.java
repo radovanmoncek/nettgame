@@ -5,6 +5,7 @@ import io.netty.buffer.Unpooled;
 import io.netty.channel.Channel;
 import io.netty.channel.ChannelId;
 import io.netty.channel.group.ChannelGroup;
+import server.game.docker.net.modules.encoders.PDUStringEncoder;
 import server.game.docker.net.pipelines.PDUMultiPipeline;
 import server.game.docker.net.enums.PDUType;
 import server.game.docker.net.modules.pdus.ID;
@@ -22,17 +23,16 @@ import java.util.Map;
 import java.util.Set;
 
 public class GameServerInitializer {
-    private final Map<PDUType, PDUMultiPipeline> localPDUPipelines;
+    private final PDUMultiPipeline multiPipeline;
     private final Map<ChannelId, Long> lobbyDomain;
     private final Map<ChannelId, Long> sessionDomain;
     private final Set<ChannelId> unassignedDomain;
     private final Map<Long, Lobby> lobbyLookup;
-    private final Map<ChannelId, Long> channelIDClientIDLookup;
     private final ChannelGroup managedClients;
     private final GameServer gameServer;
 
     public GameServerInitializer(
-            PDUMultiPipeline localPDUPipelines,
+            PDUMultiPipeline multiPipeline,
             Map<ChannelId, Long> lobbyDomain,
             Map<ChannelId, Long> sessionDomain,
             Set<ChannelId> unassignedDomain,
@@ -40,12 +40,11 @@ public class GameServerInitializer {
             Map<ChannelId, Long> channelIDClientIDLookup,
             ChannelGroup managedClients, GameServer gameServer
     ) {
-        this.localPDUPipelines = localPDUPipelines;
+        this.multiPipeline = multiPipeline;
         this.lobbyDomain = lobbyDomain;
         this.sessionDomain = sessionDomain;
         this.unassignedDomain = unassignedDomain;
         this.lobbyLookup = lobbyLookup;
-        this.channelIDClientIDLookup = channelIDClientIDLookup;
         this.managedClients = managedClients;
         this.gameServer = gameServer;
     }
@@ -61,63 +60,48 @@ public class GameServerInitializer {
         );
         /*--------ID - handshake with server--------*/
         //Outbound only PDU containing 64-bit Long clientID
-        localPDUPipelines.put(PDUType.ID, new PDUMultiPipeline().append(new PDUHandlerEncoder() {
-            @Override
-            public void encode(PDU in, Channel out) {
-                ID id = (ID) in.getData();
-                in.setData(Unpooled.buffer(Long.BYTES).writeLong(id.getNewClientID()));
-                out.writeAndFlush(in);
-            }
-        }));
+        multiPipeline.append(PDUType.ID, (PDUHandlerEncoder) (in, out) -> {
+            ID id = (ID) in;
+            ByteBuf byteBuf = Unpooled.buffer(1 + 2 * Long.BYTES)
+                    .writeByte(PDUType.ID.ordinal())
+                    .writeLong(Long.BYTES)
+                    .writeLong(id.getNewClientID());
+            out.writeAndFlush(byteBuf);
+        })
         /*--------LOBBY--------*/
         //Inbound PDU no payload and action
-        localPDUPipelines.put(PDUType.CREATELOBBYREQ, new PDUMultiPipeline().append(lobbyPDUInboundHandler));
-        //Outbound only PDU 32-bit Integer payload
-        localPDUPipelines.put(PDUType.CREATELOBBYRES, new PDUMultiPipeline().append(new PDUHandlerEncoder() {
-            @Override
-            public void encode(PDU in, Channel out) {
-                LobbyUpdate lobbyUpdate = (LobbyUpdate) in.getData();
-                in.setData(Unpooled.buffer(Long.BYTES).writeLong(lobbyUpdate.getLobbyId()));
-                out.writeAndFlush(in);
-            }
-        }));
-        //Inbound only PDU with 8B Long data and action
-        localPDUPipelines.put(PDUType.JOINLOBBYREQ, new PDUMultiPipeline().append(new PDUHandlerDecoder() {
-            @Override
-            public void decode(PDU in, PDUInboundHandler out) {
-                LobbyReq lobbyReq = new LobbyReq();
-                lobbyReq.setLobbyID(((ByteBuf) in.getData()).readLong());
-                in.setData(lobbyReq);
-                out.handle(in);
-            }}, lobbyPDUInboundHandler));
-        //Outbound only PDU no action with 8B Long data
-        localPDUPipelines.put(PDUType.JOINLOBBYRES, new PDUMultiPipeline().append(new PDUHandlerEncoder() {
-            @Override
-            public void encode(PDU in, Channel out) {
-                LobbyReq.LobbyRes joinLobbyRes = (LobbyReq.LobbyRes) in.getData();
-                in.setData(Unpooled.buffer(Long.BYTES).writeLong(joinLobbyRes.getLobbyID()));
-                out.writeAndFlush(in);
-            }
-        }));
-        //Inbound PDU with no payload and with action
-        localPDUPipelines.put(PDUType.LEAVELOBBYREQ, new PDUMultiPipeline().append(lobbyPDUInboundHandler));
-        //Outbound PDU with 1B Boolean data or action
-        localPDUPipelines.put(PDUType.LEAVELOBBYRES, new PDUMultiPipeline().append(new PDUHandlerEncoder() {
-            @Override
-            public void encode(PDU in, Channel out) {
-                LobbyUpdate.LeaveLobbyRes leaveLobbyRes = (LobbyUpdate.LeaveLobbyRes) in.getData();
-                in.setData(Unpooled.buffer(1).writeBoolean(leaveLobbyRes.isLeader()));
-                out.writeAndFlush(in);
-            }
-        }));
+        .append(PDUType.LOBBYREQUEST,
+                (PDUHandlerDecoder) (byteBuf, handler) -> {
+            LobbyReq lobbyReq = new LobbyReq();
+            lobbyReq.setActionFlag(byteBuf.readByte());
+            lobbyReq.setLobbyID(byteBuf.readLong());
+            handler.handle(lobbyReq);
+        }, lobbyPDUInboundHandler)
+                .append(PDUType.LOBBYUPDATE,
+                        (PDUHandlerEncoder) (in, channel) -> {
+                            LobbyUpdate lobbyUpdate = (LobbyUpdate) in;
+                            ByteBuf byteBuf = Unpooled.buffer(1 + Long.BYTES)
+                                    .writeByte(PDUType.LOBBYUPDATE.ordinal())
+                                    .writeLong(1 + Long.BYTES + 1 + lobbyUpdate.getMembers().size() * (long) Long.BYTES)
+                                    .writeByte(lobbyUpdate.getStateFlag())
+                                    .writeLong(lobbyUpdate.getLobbyId())
+                                    .writeBoolean(lobbyUpdate.isLeader());
+
+                            lobbyUpdate.getMembers().forEach(byteBuf::writeLong);
+
+                            channel.writeAndFlush(byteBuf);
+                        })
         //Outbound only PDU with no action, 8B Long, 2 * 1B Byte data and 1B Byte - Boolean Lobby list refresh flag
-        localPDUPipelines.put(PDUType.LOBBYBEACON, new PDUMultiPipeline().append(new PDUHandlerEncoder() {
-            @Override
-            public void encode(PDU in, Channel out) {
-                LobbyBeacon lobbyBeacon = (LobbyBeacon) in.getData();
-                in.setData(Unpooled.buffer(Long.BYTES + 3 * Byte.BYTES).writeLong(lobbyBeacon.getLobbyID()).writeByte(lobbyBeacon.getLobbyCurOccupancy()).writeByte(lobbyBeacon.getLobbyMaxOccupancy()).writeBoolean(lobbyBeacon.getLobbyListRefresh()));
-                out.writeAndFlush(in);
-            }
-        }));
+        .append(PDUType.LOBBYBEACON, (PDUHandlerEncoder) (in, out) -> {
+            LobbyBeacon lobbyBeacon = (LobbyBeacon) in;
+            ByteBuf byteBuf = Unpooled.buffer(Long.BYTES + 3 * Byte.BYTES)
+                    .writeLong(lobbyBeacon.getLobbyID())
+                    .writeByte(lobbyBeacon.getLobbyCurOccupancy())
+                    .writeByte(lobbyBeacon.getLobbyMaxOccupancy())
+                    .writeBoolean(lobbyBeacon.getLobbyListRefresh());
+
+            out.writeAndFlush(byteBuf);
+        })
+                .append(PDUType.CHATMESSAGE, new PDUStringEncoder());
     }
 }

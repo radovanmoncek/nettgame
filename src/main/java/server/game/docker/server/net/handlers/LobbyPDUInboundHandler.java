@@ -72,7 +72,7 @@ public class LobbyPDUInboundHandler extends PDUInboundHandler {
         LobbyUpdate res = new LobbyUpdate();
         res.setLobbyId(lobbyID);
         gameServer.sendUnicast(PDUType.LOBBYUPDATE, res, channel);
-        refreshLobbyList();
+        refreshLobbyList(channel);
     }
 
     private void joinLobby(LobbyReq lobbyReq, Channel channel) {
@@ -103,89 +103,74 @@ public class LobbyPDUInboundHandler extends PDUInboundHandler {
         lobbyUpdateMulti.setLeader(lobby.leaderClientID.compareTo(channel.id()) == 0);
         lobbyUpdateMulti.setStateFlag(3);
         gameServer.sendMulticastLobby(PDUType.LOBBYUPDATE, lobbyUpdateMulti, channel);
-        refreshLobbyList();
+        refreshLobbyList(channel);
     }
 
     private void leaveLobby(LobbyReq in, Channel channel) {
-        Channel assignedLobbyChannel = lobbyDomain.keySet().stream().map(managedClients::find).filter(c -> in.getAddress().equals(c.remoteAddress())).findAny().orElse(null);
+        Channel assignedLobbyChannel = lobbyDomain.keySet().stream().map(managedClients::find).filter(c -> channel.remoteAddress().equals(c.remoteAddress())).findAny().orElse(null);
         if (assignedLobbyChannel == null)
             return;
         Lobby lobby = lobbyLookup.get(lobbyDomain.get(assignedLobbyChannel.id()));
         Long lobbyID;
         if (lobby.getLeaderID().compareTo(assignedLobbyChannel.id()) == 0) {
             ChannelId secondLobbyMember = lobbyLookup.remove(lobbyID = lobbyDomain.remove(assignedLobbyChannel.id())).getClientIDs().stream().filter(c -> !c.equals(lobby.getLeaderID())).findAny().orElse(null);
-            Channel sLMC = lobbyDomain.keySet().stream().map(managedClients::find).filter(c -> c.id().equals(secondLobbyMember)).findAny().orElse(null);
+            Channel secondLobbyMemberChannel = lobbyDomain.keySet().stream().map(managedClients::find).filter(c -> c.id().equals(secondLobbyMember)).findAny().orElse(null);
             unassignedDomain.add(assignedLobbyChannel.id());
-            if (sLMC != null) {
-                lobbyDomain.remove(sLMC.id());
-                unassignedDomain.add(sLMC.id());
+            if (secondLobbyMemberChannel != null) {
+                lobbyDomain.remove(secondLobbyMemberChannel.id());
+                unassignedDomain.add(secondLobbyMemberChannel.id());
                 lobby.leave(secondLobbyMember);
-                PDU pLeave = new PDU();
-                pLeave.setPDUType(PDUType.LEAVELOBBYRES);
-                pLeave.setAddress(sLMC.remoteAddress());
-                LobbyUpdate.LeaveLobbyRes leaveLobbyRes = new LobbyUpdate.LeaveLobbyRes();
-                leaveLobbyRes.setLeader(false);
-                pLeave.setData(leaveLobbyRes);
-                gameServer.sendUnicast(PDUType.LOBBYUPDATE, pLeave);
+                LobbyUpdate lobbyUpdate = new LobbyUpdate();
+                lobbyUpdate.setStateFlag(2);
+                gameServer.sendUnicast(PDUType.LOBBYUPDATE, lobbyUpdate, secondLobbyMemberChannel);
             }
         } else {
             lobbyID = lobbyDomain.remove(assignedLobbyChannel.id());
             unassignedDomain.add(assignedLobbyChannel.id());
             lobby.leave(assignedLobbyChannel.id());
 
-            Channel lobbyLeadCh = gameServer.findDomainChannel(lobby.getLeaderID()).orElse(null);
-            if (lobbyLeadCh == null) {
+            Channel lobbyLeaderChannel = gameServer.findDomainChannel(lobby.getLeaderID()).orElse(null);
+            if (lobbyLeaderChannel == null) {
                 System.err.printf("Could not find lobby %d leader %d and send disconnect info", lobbyID, gameServer.transformChID(lobby.getLeaderID()));
             } else {
-                LobbyUpdate.LeaveLobbyRes justLeaveInfo = new LobbyUpdate.LeaveLobbyRes();
-                justLeaveInfo.setLeader(true);
+                LobbyUpdate lobbyUpdate = new LobbyUpdate();
+                lobbyUpdate.setLeader(true);
+                lobbyUpdate.setStateFlag(4);
+                lobbyUpdate.setLobbyId(lobbyID);
+                lobbyUpdate.setMembers(lobby.clientIDs.stream().map(gameServer::transformChID).toList());
 
-                PDU lobbyLeaveLeaderInfo = new PDU();
-                lobbyLeaveLeaderInfo.setPDUType(PDUType.LEAVELOBBYRES);
-                lobbyLeaveLeaderInfo.setAddress(lobbyLeadCh.remoteAddress());
-                lobbyLeaveLeaderInfo.setData(justLeaveInfo);
-                gameServer.sendUnicast(PDUType.LOBBYUPDATE, lobbyLeaveLeaderInfo);
+                gameServer.sendUnicast(PDUType.LOBBYUPDATE, lobbyUpdate, lobbyLeaderChannel);
             }
         }
-        LobbyUpdate.LeaveLobbyRes normalLeave = new LobbyUpdate.LeaveLobbyRes();
-        normalLeave.setLeader(false);
-        PDU pLeave = new PDU();
-        pLeave.setPDUType(PDUType.LEAVELOBBYRES);
-        pLeave.setAddress(assignedLobbyChannel.remoteAddress());
-        pLeave.setData(normalLeave);
-        gameServer.sendUnicast(PDUType.LOBBYUPDATE, pLeave);
+        LobbyUpdate lobbyUpdate = new LobbyUpdate();
+        lobbyUpdate.setStateFlag(2);
+        gameServer.sendUnicast(PDUType.LOBBYUPDATE, lobbyUpdate, channel);
         System.out.printf("Client %d has left lobby %d\n", gameServer.transformChID(assignedLobbyChannel.id()), lobbyID);
-        refreshLobbyList();
+        refreshLobbyList(channel);
     }
 
-    private void refreshLobbyList() {
+    private void refreshLobbyList(Channel contextChannel) {
         if (lobbyLookup.isEmpty()) {
-            LobbyBeacon beacon = new LobbyBeacon();
-            beacon.setLobbyListRefresh(true);
-            beacon.setLobbyID(-1L);
-            beacon.setLobbyCurOccupancy((byte) -1);
-            beacon.setLobbyMaxOccupancy((byte) -1);
-            PDU outherBOPDU = new PDU();
-            outherBOPDU.setPDUType(PDUType.LOBBYBEACON);
-            outherBOPDU.setData(beacon);
-            gameServer.sendBroadcastUnassigned(outherBOPDU);
-            gameServer.sendBroadcastLobby(outherBOPDU);
+            LobbyBeacon lobbyBeacon = new LobbyBeacon();
+            lobbyBeacon.setLobbyListRefresh(true);
+            lobbyBeacon.setLobbyID(-1L);
+            lobbyBeacon.setLobbyCurOccupancy((byte) -1);
+            lobbyBeacon.setLobbyMaxOccupancy((byte) -1);
+            gameServer.sendBroadcastUnassigned(PDUType.LOBBYBEACON, lobbyBeacon, contextChannel);
+            gameServer.sendBroadcastLobby(PDUType.LOBBYBEACON, lobbyBeacon, contextChannel);
             return;
         }
         boolean refFlag = true;
         for (Map.Entry<Long, Lobby> e : lobbyLookup.entrySet()) {
-            LobbyBeacon beacon = new LobbyBeacon();
-            beacon.setLobbyListRefresh(refFlag);
+            LobbyBeacon lobbyBeacon = new LobbyBeacon();
+            lobbyBeacon.setLobbyListRefresh(refFlag);
             if (refFlag)
                 refFlag = false;
-            beacon.setLobbyID(e.getKey());
-            beacon.setLobbyCurOccupancy(e.getValue().getCurrentSize());
-            beacon.setLobbyMaxOccupancy(e.getValue().getMaxSize());
-            PDU outherBOPDU = new PDU();
-            outherBOPDU.setPDUType(PDUType.LOBBYBEACON);
-            outherBOPDU.setData(beacon);
-            gameServer.sendBroadcastUnassigned(outherBOPDU);
-            gameServer.sendBroadcastLobby(outherBOPDU);
+            lobbyBeacon.setLobbyID(e.getKey());
+            lobbyBeacon.setLobbyCurOccupancy(e.getValue().getCurrentSize());
+            lobbyBeacon.setLobbyMaxOccupancy(e.getValue().getMaxSize());
+            gameServer.sendBroadcastUnassigned(PDUType.LOBBYBEACON, lobbyBeacon, contextChannel);
+            gameServer.sendBroadcastLobby(PDUType.LOBBYBEACON, lobbyBeacon, contextChannel);
         }
     }
 
@@ -193,12 +178,14 @@ public class LobbyPDUInboundHandler extends PDUInboundHandler {
         private final Set<ChannelId> clientIDs;
         private final Byte maxSize;
         private final ChannelId leaderClientID;
+        private final List<String> lobbyMessageHistory;
 
         public Lobby(Byte maxSize, ChannelId leaderClientID) {
             clientIDs = new HashSet<>(List.of(leaderClientID));
             this.maxSize = maxSize;
             this.leaderClientID = leaderClientID;
-//      chat exists as only a concept
+            //chat exists as only a concept
+            lobbyMessageHistory = new LinkedList<>();
         }
 
         /**
@@ -220,10 +207,6 @@ public class LobbyPDUInboundHandler extends PDUInboundHandler {
             clientIDs.remove(clientID);
         }
 
-        public void appendLobbyChatMessage(String message) {
-
-        }
-
         public ChannelId getLeaderID() {
             return leaderClientID;
         }
@@ -240,16 +223,8 @@ public class LobbyPDUInboundHandler extends PDUInboundHandler {
             return clientIDs.size() == maxSize;
         }
 
-        public static class LobbyChat {
-            private final List<String> lobbyMessageHistory;
-
-            public LobbyChat() {
-                lobbyMessageHistory = new LinkedList<>();
-            }
-
-            public void appendMessage(String message) {
-                lobbyMessageHistory.add(message);
-            }
+        public void appendLobbyChatMessage(String message) {
+            lobbyMessageHistory.add(message);
         }
     }
 }

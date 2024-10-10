@@ -24,6 +24,12 @@ public final class PDUMultiPipeline {
         handlers = new HashMap<>();
     }
 
+    /**
+     * Appends a {@link PDUHandler} to a pipeline stack associated with the supplied {@link PDUType}.
+     * @param type the {@link PDUType} of the associated pipeline stack
+     * @param handler the {@link PDUHandler} to append
+     * @return This {@link PDUMultiPipeline} for convenient chaining
+     */
     public PDUMultiPipeline append(PDUType type, PDUHandler handler) {
         handlers.computeIfAbsent(type, k -> new Vector<>()).add(handler);
         return this;
