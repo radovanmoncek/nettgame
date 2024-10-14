@@ -16,7 +16,7 @@ import javafx.scene.layout.VBox;
 import javafx.scene.paint.Color;
 import javafx.scene.shape.Rectangle;
 import javafx.scene.text.Text;
-import server.game.docker.client.GameSessionClient;
+import javafx.scene.text.TextFlow;
 import server.game.docker.client.GameSessionClientAPI;
 
 
@@ -44,44 +44,50 @@ public class MenuController {
     public VBox vb_lobby_list;
     private final GameSessionClientAPI gameClient;
     /*--------fields--------*/
-    private VBox chat;
-    private StackPane sPP1;
-    private StackPane sPP2;
+    private VBox vb_chat;
+    private StackPane sp_player1;
+    private StackPane sp_player2;
 
     public MenuController(GameSessionClientAPI gameClient) {
         this.gameClient = gameClient;
     }
 
     public void initialize(){
-        sPP1 = new StackPane();
-        sPP2 = new StackPane();
-        chat = new VBox();
+        sp_player1 = new StackPane();
+        sp_player2 = new StackPane();
+        vb_chat = new VBox();
         ScrollPane chatSP = new ScrollPane();
         HBox chatInputHBox = new HBox();
         TextField chatInputField = new TextField();
         Button btnSend = new Button("Send");
+        btnSend.setStyle("-fx-background-color: #e1e123; -fx-text-fill: black;");
+        btnSend.setOnMouseClicked(evt -> Platform.runLater(() -> {
+            gameClient.sendChatMessage(chatInputField.getText());
+            addMessageToChat(chatInputField.getText(), "You");
+            chatInputField.clear();
+        }));
         chatInputHBox.getChildren().add(chatInputField);
         chatInputHBox.getChildren().add(btnSend);
         chatSP.setFitToHeight(true);
         chatSP.setFitToWidth(true);
-        chat.getChildren().add(chatSP);
-        chat.getChildren().add(chatInputHBox);
-        chat.setMaxSize(200, 150);
+        vb_chat.getChildren().add(chatSP);
+        vb_chat.getChildren().add(chatInputHBox);
+        vb_chat.setMaxSize(200, 150);
         chatSP.setStyle("-fx-background: transparent; -fx-background-color: transparent;");
-        sp_main_content.getChildren().add(chat);
-        StackPane.setAlignment(chat, Pos.BOTTOM_RIGHT);
-        chat.setVisible(false);
+        sp_main_content.getChildren().add(vb_chat);
+        StackPane.setAlignment(vb_chat, Pos.BOTTOM_RIGHT);
+        vb_chat.setVisible(false);
 
         rtg_lobby_info_p1 = new Rectangle(30, 30);
         rtg_lobby_info_p1.setFill(Color.DARKGRAY); //todo: profile pic of player
-        sPP1.getChildren().addAll(rtg_lobby_info_p1);
-        sPP1.setAlignment(Pos.CENTER);
+        sp_player1.getChildren().addAll(rtg_lobby_info_p1);
+        sp_player1.setAlignment(Pos.CENTER);
 
         rtg_lobby_info_p2 = new Rectangle(30, 30);
         rtg_lobby_info_p2.setFill(Color.DARKGRAY);
-        sPP2.getChildren().addAll(rtg_lobby_info_p2);
-        sPP2.setAlignment(Pos.CENTER);
-        hb_lobby_ui.getChildren().addAll(sPP1, sPP2);
+        sp_player2.getChildren().addAll(rtg_lobby_info_p2);
+        sp_player2.setAlignment(Pos.CENTER);
+        hb_lobby_ui.getChildren().addAll(sp_player1, sp_player2);
 
         sp_lobby_list.heightProperty().addListener((observable, oldValue, newValue) -> sp_lobby_list.setVvalue(newValue.doubleValue()));
         //todo: only in GameClientHandler and through API IoC ... send -> joinLobby(), setOnJoinLobby() ... | examples -> game logic ... | user action handler, game logic handler (or maybe allow PDU registration?) and inject into GameClientHandler with PDUHandler
@@ -106,7 +112,7 @@ public class MenuController {
 
         gameClient.setOnIDReceived(res -> Platform.runLater(() -> {
             lbl_info_con_stat.setText("Connected");
-            lbl_info_con_stat.setStyle("-fx-text-fill: green;");
+            lbl_info_con_stat.setStyle("-fx-text-fill: #e1e123;");
             lbl_info_client_id.setText(String.format("ID: %d", res.getNewClientID()));
         }));
 
@@ -114,72 +120,62 @@ public class MenuController {
             btn_create_lobby.setVisible(false);
             Button leaveLobbyBtn = new Button("Leave lobby");
             leaveLobbyBtn.setOnMouseClicked(event -> gameClient.leaveLobby());
+            leaveLobbyBtn.setStyle("-fx-text-fill: white; -fx-background-color: #ff3333;");
             hb_lobby_ui.getChildren().add(1, leaveLobbyBtn);
             lbl_lobby_info.setText(String.format("Lobby %d:", res.getLobbyId()));
 
             rtg_lobby_info_p1.setFill(Color.LIGHTGREEN); //todo: profile pic of player
-            Text text = new Text("P1");
-            text.setFill(Color.WHITE);
-            sPP1.getChildren().add(text);
-            sPP1.setAlignment(Pos.CENTER);
+            sp_player1.setAlignment(Pos.CENTER);
 
-            chat.setVisible(true);
+            vb_chat.setVisible(true);
         }));
 
         gameClient.setOnLobbyJoined(res -> Platform.runLater(() -> {
-            if (!res.getLobbyID().equals(-1L)) {
-                btn_create_lobby.setVisible(false);
+            if(hb_lobby_ui.getChildren().size() == 4) {
                 Button leaveLobbyBtn = new Button("Leave lobby");
+                leaveLobbyBtn.setStyle("-fx-background-color: #ff3333; -fx-text-fill: white;");
                 leaveLobbyBtn.setOnMouseClicked((MouseEvent event) -> gameClient.leaveLobby());
                 hb_lobby_ui.getChildren().add(1, leaveLobbyBtn);
-                lbl_lobby_info.setText(String.format("Lobby %d:", res.getLobbyID()));
-                rtg_lobby_info_p1.setFill(Color.LIGHTGREEN);
-                Text text1 = new Text("P1");
-                text1.setFill(Color.WHITE);
-                sPP1.getChildren().addAll(text1);
-                rtg_lobby_info_p2.setFill(Color.LIGHTGREEN);
-                Text text2 = new Text("P2");
-                text2.setFill(Color.WHITE);
-                sPP2.getChildren().addAll(text2);
-                chat.setVisible(true);
-                return;
             }
-            rtg_lobby_info_p2.setFill(Color.LIGHTGREEN);
-            Text text2 = new Text("P2");
-            text2.setFill(Color.WHITE);
-            sPP2.getChildren().addAll(text2);
-            chat.setVisible(true);
+            btn_create_lobby.setVisible(false);
+            lbl_lobby_info.setText(String.format("Lobby %d:", res.getLobbyId()));
+            rtg_lobby_info_p1.setFill(Color.LIGHTGREEN);
+            rtg_lobby_info_p2.setFill(Color.LIGHTYELLOW);
+            vb_chat.setVisible(true);
         }));
 
         gameClient.setOnLobbyLeave(r -> Platform.runLater(() -> {
-            if (!r.isLeader()) {
+            if(hb_lobby_ui.getChildren().size() == 5)
                 hb_lobby_ui.getChildren().remove(1);
-                rtg_lobby_info_p1.setFill(Color.DARKGRAY);
-                sPP1.getChildren().remove(1);
-                lbl_lobby_info.setText("Lobby:");
-                btn_create_lobby.setVisible(true);
-                chat.setVisible(false);
-            }
-
+            rtg_lobby_info_p1.setFill(Color.DARKGRAY);
             rtg_lobby_info_p2.setFill(Color.DARKGRAY);
-            //Other player didn't have to be connected
-            if (sPP2.getChildren().size() > 1)
-                sPP2.getChildren().remove(1);
+            lbl_lobby_info.setText("Lobby: ");
+            btn_create_lobby.setVisible(true);
+            vb_chat.setVisible(false);
+        }));
+
+        gameClient.setOnMemberJoined(res -> Platform.runLater(() -> {
+            rtg_lobby_info_p2.setFill(Color.LIGHTYELLOW);
+        }));
+
+        gameClient.setOnMemberLeft(res -> Platform.runLater(() -> {
+            rtg_lobby_info_p2.setFill(Color.DARKGRAY);
         }));
 
         gameClient.setOnLobbyBeacon(res -> addLobbyToList(res.getLobbyID(), res.getLobbyCurOccupancy(), res.getLobbyMaxOccupancy(), res.getLobbyListRefresh()));
+
+        gameClient.setOnLobbyChatMessageReceived(res -> Platform.runLater(() -> {addMessageToChat(res.getMessage(), res.getAuthorName());}));
     }
 
     private void addLobbyToList(Long lobbyID, Byte curOcc, Byte maxOcc, Boolean refreshList){
         Platform.runLater(() -> {
             if(refreshList)
                 vb_lobby_list.getChildren().clear();
-            //Lobby list is empty - "transitive" -1
             if(lobbyID.byteValue() == curOcc && curOcc.equals(maxOcc) && maxOcc == -1)
                 return;
            HBox lobby = new HBox();
             Label lobbyIDLabel = new Label(String.format("Lobby: %d %d/%d", lobbyID, curOcc, maxOcc));
-            lobbyIDLabel.setStyle("-fx-text-fill: black;");
+            lobbyIDLabel.setStyle("-fx-text-fill: white;");
             lobbyIDLabel.setPadding(new Insets(10, 20, 10, 40));
            Button btnJoin = new Button("Join");
             btnJoin.setOnMouseClicked(t -> gameClient.joinLobby(lobbyID));
@@ -189,7 +185,18 @@ public class MenuController {
         });
     }
 
-    private void addMessageToChat(String message){
-
+    private void addMessageToChat(String message, String senderName){
+        System.out.println(message);
+//        Platform.runLater(() -> {
+//            HBox hBox = new HBox();
+//            hBox.setAlignment(Pos.CENTER_LEFT);
+//            hBox.setPadding(new Insets(5, 5, 5, 10));
+//
+//            Text text = new Text(String.format("[%s]: %s", senderName, message));
+//            TextFlow textFlow = new TextFlow(text);
+//            textFlow.setPadding(new Insets(5, 10, 5, 10));
+//            hBox.getChildren().addAll(textFlow);
+//            vb_chat.getChildren().add(hBox);
+//        });
     }
 }

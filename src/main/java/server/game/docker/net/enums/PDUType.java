@@ -1,7 +1,6 @@
 package server.game.docker.net.enums;
 
 import server.game.docker.net.pipelines.PDUMultiPipeline;
-import server.game.docker.net.modules.encoders.GameEncoder;
 import server.game.docker.net.parents.pdus.PDU;
 
 import java.util.stream.Stream;
@@ -39,7 +38,7 @@ public enum PDUType {
 
     /**
      * <p>
-     *     Constructs a new {@link PDUType} ENUM constant with {@link #ordinal() ordinal} as its unique identifier for over-the-wire transport.
+     *     Constructs a new {@link PDUType} ENUM constant with {@link #oneBasedOrdinal() oneBasedOrdinal} as its unique identifier for over-the-wire transport.
      * </p>
      * @param transportedReliably whether to use reliable transport mechanisms for this {@link PDUType}
      */
@@ -52,10 +51,20 @@ public enum PDUType {
     }
 
     public static PDUType valueOf(byte value) {
-        return Stream.of(PDUType.values()).filter(v -> v.ordinal() == value).findFirst().orElse(INVALID);
+        return Stream.of(PDUType.values()).filter(v -> v.oneBasedOrdinal() == value).findAny().orElse(INVALID);
     }
 
     public boolean isTransportedReliably() {
         return transportedReliably;
     }
+
+    /**
+     * <p>
+     *     It is <i>imperative</i> that this method is called instead of {@link #ordinal() ordinal} for byte array representation.
+     * </p>
+     * @return {@code int} {@code this.ordinal() + 1}
+     */
+    public int oneBasedOrdinal(){
+        return ordinal() + 1;
+    };
 }

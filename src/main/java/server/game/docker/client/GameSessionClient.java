@@ -12,8 +12,8 @@ import io.netty.handler.logging.LogLevel;
 import io.netty.handler.logging.LoggingHandler;
 import server.game.docker.client.net.handlers.GameClientHandler;
 import server.game.docker.net.pipelines.PDUMultiPipeline;
-import server.game.docker.net.modules.decoders.GameDecoder;
-import server.game.docker.net.modules.encoders.GameEncoder;
+import server.game.docker.net.modules.decoders.ProtocolDecoder;
+import server.game.docker.net.modules.encoders.ProtocolEncoder;
 import server.game.docker.net.parents.pdus.PDU;
 import server.game.docker.net.enums.PDUType;
 
@@ -48,8 +48,8 @@ public class GameSessionClient {
                         protected void initChannel(SocketChannel socketChannel) {
                             socketChannel.pipeline().addLast(
                                     new LoggingHandler(LogLevel.ERROR),
-                                    new GameEncoder(),
-                                    new GameDecoder(),
+                                    new ProtocolEncoder(),
+                                    new ProtocolDecoder(),
                                     new GameClientHandler(multiPipeline));
                         }
                     });

@@ -5,7 +5,27 @@ import server.game.docker.net.parents.pdus.PDU;
 import java.util.Collection;
 import java.util.Collections;
 
-public class LobbyUpdate implements PDU {
+/**
+ * <p>
+ *     Reliably transmitted variable length {@link PDU} with a length of 10B + 4 * 8B (Long)
+ * </p>
+ * PDU
+ * <pre>
+ *     --------------------------------
+ *     | StateFlag(1B) |  LobbyID(8B) |
+ *     --------------------------------
+ *     |       Leader bool (1B)       |
+ *     --------------------------------
+ *     |        Members(max 4*8B)     |
+ *     --------------------------------
+ * </pre>
+ */
+public class PDULobbyUpdate implements PDU {
+    public static final Byte CREATED = 0;
+    public static final Byte JOINED = 1;
+    public static final Byte LEFT = 2;
+    public static final Byte MEMBERJOINED = 3;
+    public static final Byte MEMBERLEFT = 4;
     /**
      * <ul>
      *     <li>
@@ -25,7 +45,7 @@ public class LobbyUpdate implements PDU {
      *     </li>
      * </ul>
      */
-    private int stateFlag;
+    private Byte stateFlag;
     /**
      * The id of the lobby.
      */
@@ -67,7 +87,7 @@ public class LobbyUpdate implements PDU {
         return stateFlag;
     }
 
-    public void setStateFlag(int stateFlag) {
+    public void setStateFlag(Byte stateFlag) {
         this.stateFlag = stateFlag;
     }
 }

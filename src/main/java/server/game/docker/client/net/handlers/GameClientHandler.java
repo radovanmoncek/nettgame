@@ -17,8 +17,8 @@ public class GameClientHandler extends ChannelInboundHandlerAdapter {
 
     @Override
     public void channelRead(ChannelHandlerContext ctx, Object msg) {
-        ByteBuffer byteBuffer = (ByteBuffer) msg;
-        multiPipeline.ingest(PDUType.valueOf(byteBuffer.get()), Unpooled.wrappedBuffer(byteBuffer));
+        ByteBuffer byteBuffer = ((ByteBuffer) msg).position(0);
+        multiPipeline.ingest(PDUType.valueOf(byteBuffer.get()), Unpooled.wrappedBuffer(byteBuffer), ctx.channel());
     }
 
     @Override

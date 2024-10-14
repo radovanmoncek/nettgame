@@ -45,7 +45,7 @@ public class SessionController {
     static DatagramSocket socket;
     private static InetAddress serverIP;
     private static int serverPort;
-    private PDUMultiPipeline.PDUHandlerLegacy actionPDUHandlerLegacy;
+    private PDUMultiPipeline actionPDUHandlerLegacy;
     static Long clientID;
     static Boolean listen;
 
@@ -75,7 +75,7 @@ public class SessionController {
 //            e.printStackTrace();
 //        }
 
-        actionPDUHandlerLegacy = new PDUMultiPipeline.PDUHandlerLegacy();
+        actionPDUHandlerLegacy = new PDUMultiPipeline();
 
         vb_msg.heightProperty().addListener((obs, oldV, newV) -> sp_chat.setVvalue((Double) newV));
 

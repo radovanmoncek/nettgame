@@ -2,7 +2,20 @@ package server.game.docker.net.modules.pdus;
 
 import server.game.docker.net.parents.pdus.PDU;
 
-public class LobbyBeacon implements PDU {
+/**
+ * <p>
+ *     Reliably transported PDU with a fixed length of 8B + 1B + 1B + 1B ({@link Boolean}).
+ * </p>
+ * PDU
+ * <pre>
+ *     --------------------------------
+ *     |            LobbyID(8B)       |
+ *     --------------------------------
+ *     |           |         |        |
+ *     --------------------------------
+ * </pre>
+ */
+public class PDULobbyBeacon implements PDU {
     private Long lobbyID;
     private Byte lobbyCurOccupancy;
     private Byte lobbyMaxOccupancy;
@@ -38,5 +51,15 @@ public class LobbyBeacon implements PDU {
 
     public void setLobbyListRefresh(Boolean lobbyListRefresh) {
         this.lobbyListRefresh = lobbyListRefresh;
+    }
+
+    @Override
+    public String toString() {
+        return "PDULobbyBeacon{" +
+                "lobbyID=" + lobbyID +
+                ", lobbyCurOccupancy=" + lobbyCurOccupancy +
+                ", lobbyMaxOccupancy=" + lobbyMaxOccupancy +
+                ", lobbyListRefresh=" + lobbyListRefresh +
+                '}';
     }
 }

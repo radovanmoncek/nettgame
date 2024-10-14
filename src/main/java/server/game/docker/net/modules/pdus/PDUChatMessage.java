@@ -3,9 +3,17 @@ package server.game.docker.net.modules.pdus;
 import server.game.docker.net.parents.pdus.PDU;
 
 /**
- * Reliably transported non-empty variable length PDU (char array max size 64)
+ * <p>
+ *     Reliably transported non-empty variable length PDU (char array max size 64)
+ * </p>
+ * PDU:
+ * <pre>
+ *     --------------------------------
+ *     | AuthorID(8B) |   Msg(64B)    |
+ *     --------------------------------
+ * </pre>
  */
-public class ChatMessage implements PDU {
+public class PDUChatMessage implements PDU {
     private Long authorID;
     private String authorName;
     private String message;

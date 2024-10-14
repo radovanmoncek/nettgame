@@ -2,7 +2,7 @@ package server.game.docker.net.modules.pdus;
 
 import server.game.docker.net.parents.pdus.PDU;
 
-public class ID implements PDU {
+public class PDUID implements PDU {
     private Long newClientID;
 
     public Long getNewClientID() {

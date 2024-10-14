@@ -5,9 +5,8 @@ import io.netty.buffer.Unpooled;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.ChannelOutboundHandlerAdapter;
 import io.netty.channel.ChannelPromise;
-import server.game.docker.net.parents.pdus.PDU;
 
-public class GameEncoder extends ChannelOutboundHandlerAdapter {
+public class ProtocolEncoder extends ChannelOutboundHandlerAdapter {
     /**
      * @param ctx {@link ChannelHandlerContext}
      * @param msg {@link Object}
@@ -20,7 +19,7 @@ public class GameEncoder extends ChannelOutboundHandlerAdapter {
 
         /*--------header--------*/
         //Tag PDU with (GD) GameData protocol
-        buf.writeBytes(new byte[]{'F', 'E', 'D'});
+        buf.writeBytes(new byte[]{'G', 'D', 'P'});
 
         /*--------body--------*/
         //Write the actual data

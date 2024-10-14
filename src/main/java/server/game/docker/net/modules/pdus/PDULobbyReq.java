@@ -5,7 +5,10 @@ import server.game.docker.net.parents.pdus.PDU;
 /**
  * Reliably transported PDU with 1B (Byte) + 4B (Long) payload.
  */
-public class LobbyReq implements PDU {
+public class PDULobbyReq implements PDU {
+    public static final Byte CREATE = 0;
+    public static final Byte JOIN = 1;
+    public static final Byte LEAVE = 2;
     /**
      * <ul>
      *     <li>
