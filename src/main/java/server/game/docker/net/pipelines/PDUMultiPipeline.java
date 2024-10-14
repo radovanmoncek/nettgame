@@ -44,7 +44,7 @@ public final class PDUMultiPipeline {
      * This is the pipeline entry point, the PDU given is processed accordingly and sent to the appropriate {@link PDUHandler}.
      * @param in {@link PDU} the PDU to process
      */
-    public void ingest(PDUType type, ByteBuf in){
+    public void ingest(PDUType type, ByteBuf in, Channel channel){
         assert in != null : new NullPointerException("PDU is null");
         if(handlers.get(type).stream().noneMatch(h -> h instanceof PDUHandlerDecoder || h instanceof PDUInboundHandler))
             return;
@@ -56,7 +56,7 @@ public final class PDUMultiPipeline {
         }
         if(decoder == null || handler == null)
             return;
-        decoder.decode(in, handler);
+        decoder.decode(in, channel, handler);
     }
 
     public void ingest(PDUType type, PDU in, Channel channel){

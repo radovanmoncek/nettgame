@@ -5,14 +5,14 @@
 <BorderPane fx:id="bp_main" xmlns="http://javafx.com/javafx"
             xmlns:fx="http://javafx.com/fxml"
             fx:controller="server.game.docker.client.examples.gui.MenuController"
-            prefHeight="400.0" prefWidth="600.0" style="-fx-background-color: lightblue;">
+            prefHeight="640" prefWidth="1280" style="-fx-background-image: url('background_animated1.gif'); -fx-background-repeat: no-repeat; -fx-background-size: contain;">
 <!--            style="-fx-background-color: linear-gradient(to bottom, #dfd3bc, #393736)">-->
     <top>
         <HBox style="-fx-padding: 10; -fx-spacing: 10; -fx-alignment: center-right; -fx-background-color: rgba(64,64,69,0.2); -fx-min-height: 60;" fx:id="hb_lobby_ui">
-            <Button text="Create lobby" fx:id="btn_create_lobby" style="-fx-focus-color: darkgray; -fx-background-color: rgb(111, 76, 30); -fx-text-fill: white;"/>
-            <Label text="Lobby:" fx:id="lbl_lobby_info"/>
-<!--            <Label text="-" fx:id="lbl_lobby_info_p1"/>-->
-<!--            <Label text="-" fx:id="lbl_lobby_info_p2"/>-->
+            <Button text="Create lobby" fx:id="btn_create_lobby" style="-fx-focus-color: #ffffff; -fx-background-color: rgb(230,190,13); -fx-text-fill: #000000;"/>
+            <Label text="Lobby:" fx:id="lbl_lobby_info" style="-fx-text-fill: white;"/>
+<!--            <Label text="-" fx:PDUID="lbl_lobby_info_p1"/>-->
+<!--            <Label text="-" fx:PDUID="lbl_lobby_info_p2"/>-->
         </HBox>
     </top>
     <center>
@@ -22,29 +22,29 @@
                 <VBox fx:id="vb_lobby_list" style="-fx-background-color: transparent;">
 <!--                    <HBox style="-fx-background-color: rgb(226, 227, 234, 0.5); -fx-padding: 10; -fx-spacing: 10; -fx-alignment: center; -fx-min-height: 20;">-->
 <!--                        <Label text="Sample lobby"/>-->
-<!--                        <Button text="lobbyReq"/>-->
+<!--                        <Button text="PDULobbyReq"/>-->
 <!--                    </HBox>-->
 <!--                    <HBox style="-fx-background-color: rgb(226, 227, 234, 0.5); -fx-padding: 10; -fx-spacing: 10; -fx-alignment: center;">-->
 <!--                        <Label text="Sample lobby"/>-->
-<!--                        <Button text="lobbyReq"/>-->
+<!--                        <Button text="PDULobbyReq"/>-->
 <!--                    </HBox>-->
 <!--                    <HBox style="-fx-background-color: rgb(226, 227, 234, 0.5); -fx-padding: 10; -fx-spacing: 10; -fx-alignment: center;">-->
 <!--                        <Label text="Sample lobby"/>-->
-<!--                        <Button text="lobbyReq"/>-->
+<!--                        <Button text="PDULobbyReq"/>-->
 <!--                    </HBox>-->
 <!--                    <HBox style="-fx-background-color: rgb(226, 227, 234, 0.5); -fx-padding: 10; -fx-spacing: 10; -fx-alignment: center;">-->
 <!--                        <Label text="Sample lobby"/>-->
-<!--                        <Button text="lobbyReq"/>-->
+<!--                        <Button text="PDULobbyReq"/>-->
 <!--                    </HBox>-->
                 </VBox>
             </ScrollPane>
 <!--            <VBox maxHeight="300" maxWidth="200">-->
-<!--                <ScrollPane fx:id="sp_chat">-->
-<!--                    <VBox fx:id="vb_msg"/>-->
+<!--                <ScrollPane fx:PDUID="sp_chat">-->
+<!--                    <VBox fx:PDUID="vb_msg"/>-->
 <!--                </ScrollPane>-->
 <!--                <HBox>-->
-<!--                    <TextField fx:id="tf_msg"/>-->
-<!--                    <Button fx:id="btn_send_chat_msg" text="Send"/>-->
+<!--                    <TextField fx:PDUID="tf_msg"/>-->
+<!--                    <Button fx:PDUID="btn_send_chat_msg" text="Send"/>-->
 <!--                </HBox>-->
 <!--            </VBox>-->
         </StackPane>
@@ -53,7 +53,7 @@
     <bottom>
         <HBox style="-fx-spacing:10; -fx-padding: 5; -fx-background-color: rgb(226, 227, 234, 0);">
             <Label fx:id="lbl_info_con_stat" text="Disconnected" style="-fx-text-fill: red"/>
-            <Label fx:id="lbl_info_client_id" text="NULL"/>
+            <Label fx:id="lbl_info_client_id" style="-fx-text-fill: white;" text="NULL"/>
         </HBox>
     </bottom>
 </BorderPane>
