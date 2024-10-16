@@ -10,21 +10,26 @@ import io.netty.channel.socket.nio.NioServerSocketChannel;
 import io.netty.handler.logging.LogLevel;
 import io.netty.handler.logging.LoggingHandler;
 import io.netty.util.concurrent.GlobalEventExecutor;
-import server.game.docker.net.modules.pdus.PDULobbyBeacon;
-import server.game.docker.net.pipelines.PDUMultiPipeline;
+import server.game.docker.net.enums.PDUType;
 import server.game.docker.net.modules.decoders.ProtocolDecoder;
 import server.game.docker.net.modules.encoders.ProtocolEncoder;
 import server.game.docker.net.parents.pdus.PDU;
-import server.game.docker.net.enums.PDUType;
+import server.game.docker.net.pipelines.PDUMultiPipeline;
+import server.game.docker.server.net.handlers.GameServerHandler;
 import server.game.docker.server.net.handlers.LobbyPDUInboundHandler;
 import server.game.docker.server.net.handlers.LobbyPDUInboundHandler.Lobby;
 import server.game.docker.server.session.DockerGameSession;
-import server.game.docker.server.net.handlers.GameServerHandler;
 
 import java.util.*;
 
 /**
- *
+ * <p>
+ *     The root class of the DockerGameServer, it initializes and encapsulates the Netty protocol server and its functionality.
+ * </p>
+ * <p>
+ *     Please make sure to note that because of the multi-threaded nature of {@link EventLoopGroup} workers,
+ *     any methods utilizing their functionality are declared as synchronized.
+ * </p>
  */
 public class GameServer {
     private final int port;
@@ -99,7 +104,6 @@ public class GameServer {
             bossGroup.shutdownGracefully();
         }
     }
-
 
     /*--------Thread safe methods--------*/
 

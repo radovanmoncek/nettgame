@@ -5,7 +5,7 @@
 <BorderPane fx:id="bp_main" xmlns="http://javafx.com/javafx"
             xmlns:fx="http://javafx.com/fxml"
             fx:controller="server.game.docker.client.examples.gui.MenuController"
-            prefHeight="640" prefWidth="1280" style="-fx-background-image: url('background_animated1.gif'); -fx-background-repeat: no-repeat; -fx-background-size: contain;">
+            prefHeight="640" prefWidth="1280" style="-fx-background-image: url('background_animated1.gif'); -fx-background-repeat: no-repeat; -fx-background-size: cover;">
 <!--            style="-fx-background-color: linear-gradient(to bottom, #dfd3bc, #393736)">-->
     <top>
         <HBox style="-fx-padding: 10; -fx-spacing: 10; -fx-alignment: center-right; -fx-background-color: rgba(64,64,69,0.2); -fx-min-height: 60;" fx:id="hb_lobby_ui">

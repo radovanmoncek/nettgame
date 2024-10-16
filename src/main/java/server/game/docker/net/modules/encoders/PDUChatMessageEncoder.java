@@ -22,13 +22,16 @@ public class PDUChatMessageEncoder implements PDUHandlerEncoder {
         ByteBuf authorNameByteBuffer = ByteBufUtil
                 .encodeString(
                         Unpooled.buffer(AUTHOR_NAME_LENGTH).alloc(),
-                        CharBuffer.allocate(AUTHOR_NAME_LENGTH).append(chatMessage.getAuthorName() != null ? chatMessage.getAuthorName() : ""),
+                        CharBuffer
+                                .allocate(AUTHOR_NAME_LENGTH)
+                                .append(chatMessage.getAuthorName() != null ? chatMessage.getAuthorName() : "")
+                                .position(0),
                         Charset.defaultCharset()
                 );
         CharBuffer chatMessageCharBuffer = CharBuffer.allocate(MAX_MESSAGE_LENGTH).append(chatMessage.getMessage());
         ByteBuf encodedChatMessageByteBuf = ByteBufUtil.encodeString(
                 Unpooled.buffer(MAX_MESSAGE_LENGTH).alloc(),
-                chatMessageCharBuffer,
+                chatMessageCharBuffer.position(0),
                 Charset.defaultCharset()
         );
 

@@ -17,8 +17,8 @@ public class PDUChatMessageDecoder implements PDUHandlerDecoder {
         PDUChatMessage chatMessage = new PDUChatMessage();
 
         chatMessage.setAuthorID(in.readLong());
-        chatMessage.setAuthorName(in.toString(in.readerIndex(), AUTHOR_NAME_LENGTH, Charset.defaultCharset()));
-        chatMessage.setMessage(in.toString(in.readerIndex() + AUTHOR_NAME_LENGTH, MAX_MESSAGE_LENGTH, Charset.defaultCharset()));
+        chatMessage.setAuthorName(in.toString(in.readerIndex(), AUTHOR_NAME_LENGTH, Charset.defaultCharset()).trim());
+        chatMessage.setMessage(in.toString(in.readerIndex() + AUTHOR_NAME_LENGTH, MAX_MESSAGE_LENGTH, Charset.defaultCharset()).trim());
 
         out.handle(chatMessage, channel);
     }

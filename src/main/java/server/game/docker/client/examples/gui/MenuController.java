@@ -32,8 +32,6 @@ public class MenuController {
     public BorderPane bp_main;
     @FXML
     public HBox hb_lobby_ui;
-    public Rectangle rtg_lobby_info_p1;
-    public Rectangle rtg_lobby_info_p2;
     @FXML
     public Button btn_create_lobby;
     @FXML
@@ -42,11 +40,14 @@ public class MenuController {
     public ScrollPane sp_lobby_list;
     @FXML
     public VBox vb_lobby_list;
-    private final GameSessionClientAPI gameClient;
     /*--------fields--------*/
+    private final GameSessionClientAPI gameClient;
+    public Rectangle rtg_lobby_info_p1;
+    public Rectangle rtg_lobby_info_p2;
     private VBox vb_chat;
     private StackPane sp_player1;
     private StackPane sp_player2;
+    private ScrollPane sp_chat;
 
     public MenuController(GameSessionClientAPI gameClient) {
         this.gameClient = gameClient;
@@ -55,6 +56,7 @@ public class MenuController {
     public void initialize(){
         sp_player1 = new StackPane();
         sp_player2 = new StackPane();
+        final VBox vb_chat_outer = new VBox();
         vb_chat = new VBox();
         ScrollPane chatSP = new ScrollPane();
         HBox chatInputHBox = new HBox();
@@ -70,12 +72,15 @@ public class MenuController {
         chatInputHBox.getChildren().add(btnSend);
         chatSP.setFitToHeight(true);
         chatSP.setFitToWidth(true);
-        vb_chat.getChildren().add(chatSP);
-        vb_chat.getChildren().add(chatInputHBox);
-        vb_chat.setMaxSize(200, 150);
+        sp_chat = chatSP;
+        vb_chat_outer.getChildren().add(sp_chat);
+        vb_chat_outer.getChildren().add(chatInputHBox);
+        vb_chat_outer.setMaxSize(200, 150);
         chatSP.setStyle("-fx-background: transparent; -fx-background-color: transparent;");
-        sp_main_content.getChildren().add(vb_chat);
-        StackPane.setAlignment(vb_chat, Pos.BOTTOM_RIGHT);
+        sp_chat.setContent(vb_chat);
+        vb_chat.heightProperty().addListener((obs, oldVal, newVal) -> sp_chat.setVvalue((double) newVal));
+        sp_main_content.getChildren().add(vb_chat_outer);
+        StackPane.setAlignment(vb_chat_outer, Pos.BOTTOM_RIGHT);
         vb_chat.setVisible(false);
 
         rtg_lobby_info_p1 = new Rectangle(30, 30);
@@ -186,17 +191,17 @@ public class MenuController {
     }
 
     private void addMessageToChat(String message, String senderName){
-        System.out.println(message);
-//        Platform.runLater(() -> {
-//            HBox hBox = new HBox();
-//            hBox.setAlignment(Pos.CENTER_LEFT);
-//            hBox.setPadding(new Insets(5, 5, 5, 10));
-//
-//            Text text = new Text(String.format("[%s]: %s", senderName, message));
-//            TextFlow textFlow = new TextFlow(text);
-//            textFlow.setPadding(new Insets(5, 10, 5, 10));
-//            hBox.getChildren().addAll(textFlow);
-//            vb_chat.getChildren().add(hBox);
-//        });
+        Platform.runLater(() -> {
+            HBox hBox = new HBox();
+            hBox.setAlignment(Pos.CENTER_LEFT);
+            hBox.setPadding(new Insets(5, 5, 5, 10));
+
+            Text text = new Text(String.format("[%s]: %s", senderName, message));
+            text.setFill(Color.WHITE);
+            TextFlow textFlow = new TextFlow(text);
+            textFlow.setPadding(new Insets(5, 10, 5, 10));
+            hBox.getChildren().addAll(textFlow);
+            vb_chat.getChildren().add(hBox);
+        });
     }
 }
