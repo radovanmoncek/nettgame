@@ -10,7 +10,7 @@ import java.net.SocketException;
 import java.net.UnknownHostException;
 
 import server.game.docker.net.parents.pdus.PDU;
-import server.game.docker.server.session.examples.game.logic.TileType;
+import server.game.docker.server.session.net.handlers.examples.game.TileType;
 
 @Deprecated
 public class SimpleRTSGameClientCLI {

@@ -2,7 +2,7 @@ package server.game.docker.server.net.handlers;
 
 import io.netty.channel.Channel;
 import server.game.docker.net.enums.PDUType;
-import server.game.docker.net.modules.pdus.PDUChatMessage;
+import server.game.docker.net.modules.messages.pdus.PDUChatMessage;
 import server.game.docker.net.parents.handlers.PDUInboundHandler;
 import server.game.docker.net.parents.pdus.PDU;
 import server.game.docker.server.GameServer;

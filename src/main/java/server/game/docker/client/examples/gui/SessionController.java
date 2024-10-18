@@ -15,7 +15,7 @@ import javafx.scene.paint.Color;
 import javafx.scene.shape.Rectangle;
 import javafx.scene.text.Text;
 import javafx.scene.text.TextFlow;
-import server.game.docker.net.pipelines.PDUMultiPipeline;
+import server.game.docker.net.routers.RouterHandler;
 import server.game.docker.net.parents.pdus.PDU;
 
 import java.net.*;
@@ -45,7 +45,7 @@ public class SessionController {
     static DatagramSocket socket;
     private static InetAddress serverIP;
     private static int serverPort;
-    private PDUMultiPipeline actionPDUHandlerLegacy;
+    private RouterHandler actionPDUHandlerLegacy;
     static Long clientID;
     static Boolean listen;
 
@@ -75,7 +75,7 @@ public class SessionController {
 //            e.printStackTrace();
 //        }
 
-        actionPDUHandlerLegacy = new PDUMultiPipeline();
+        actionPDUHandlerLegacy = new RouterHandler();
 
         vb_msg.heightProperty().addListener((obs, oldV, newV) -> sp_chat.setVvalue((Double) newV));
 

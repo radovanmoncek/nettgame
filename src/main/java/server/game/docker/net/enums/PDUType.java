@@ -1,13 +1,13 @@
 package server.game.docker.net.enums;
 
-import server.game.docker.net.pipelines.PDUMultiPipeline;
+import server.game.docker.net.routers.RouterHandler;
 import server.game.docker.net.parents.pdus.PDU;
 
 import java.util.stream.Stream;
 
 /**
  * <p>
- * This enumeration represents all the possible prefixes that can mark a given {@link PDU}, and thus its mapped {@link PDUMultiPipeline} also.
+ * This enumeration represents all the possible prefixes that can mark a given {@link PDU}, and thus its mapped {@link RouterHandler} also.
  * </p>
  * <p>
  * All actions necessary for a successful networked game implementation should be present (it is supplied as-is); therefore, it is not recommended for a DockerGameServer and Client implementor to in any way modify this enumeration as

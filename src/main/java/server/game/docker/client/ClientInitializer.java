@@ -1,75 +1,46 @@
 package server.game.docker.client;
 
-import io.netty.buffer.ByteBuf;
-import io.netty.buffer.Unpooled;
 import io.netty.channel.Channel;
+import server.game.docker.net.modules.beacons.decoders.PDULobbyBeaconHandlerDecoder;
+import server.game.docker.net.modules.ids.decoders.PDUIDHandlerDecoder;
+import server.game.docker.net.modules.requests.encoders.PDULobbyRequestEncoder;
 import server.game.docker.net.enums.PDUType;
-import server.game.docker.net.modules.decoders.PDUChatMessageDecoder;
-import server.game.docker.net.modules.encoders.PDUChatMessageEncoder;
-import server.game.docker.net.modules.pdus.PDUID;
-import server.game.docker.net.modules.pdus.PDULobbyBeacon;
-import server.game.docker.net.modules.pdus.PDULobbyReq;
-import server.game.docker.net.modules.pdus.PDULobbyUpdate;
+import server.game.docker.net.modules.messages.decoders.PDUChatMessageDecoder;
+import server.game.docker.net.modules.messages.encoders.PDUChatMessageEncoder;
+import server.game.docker.net.modules.beacons.pdus.PDULobbyBeacon;
+import server.game.docker.net.modules.updates.decoders.PDULobbyUpdateDecoder;
+import server.game.docker.net.modules.updates.pdus.PDULobbyUpdate;
 import server.game.docker.net.parents.decoders.PDUHandlerDecoder;
-import server.game.docker.net.parents.encoders.PDUHandlerEncoder;
 import server.game.docker.net.parents.handlers.PDUInboundHandler;
 import server.game.docker.net.parents.pdus.PDU;
-import server.game.docker.net.pipelines.PDUMultiPipeline;
+import server.game.docker.net.routers.RouterHandler;
 
-import java.util.ArrayList;
-import java.util.Collection;
 import java.util.Map;
 
 public class ClientInitializer {
     private final GameSessionClient gameSessionClient;
-    private final PDUMultiPipeline multiPipeline;
+    private final RouterHandler multiPipeline;
 
-    public ClientInitializer(Channel clientChannel, Map<ClientAPIEventType, ClientAPIEventHandler<?>> eventMappings, GameSessionClient gameSessionClient, PDUMultiPipeline multiPipeline) {
+    public ClientInitializer(Channel clientChannel, Map<ClientAPIEventType, ClientAPIEventHandler<? extends PDU>> eventMappings, GameSessionClient gameSessionClient, RouterHandler multiPipeline) {
         this.gameSessionClient = gameSessionClient;
         this.multiPipeline = multiPipeline;
     }
 
     public void init() {
-        multiPipeline.append(PDUType.ID,
-                        (PDUHandlerDecoder) (in, channel, out) -> {
-                            PDUID identifier = new PDUID();
-                            identifier.setNewClientID(in.readLong());
-                            out.handle(identifier);
-                        }, new PDUInboundHandler() {
+        multiPipeline.appendRead(PDUType.ID,
+                        new PDUIDHandlerDecoder(),
+                        new PDUInboundHandler() {
                             @Override
                             public void handle(PDU in) {
                                 gameSessionClient.checkAndCallHandler(ClientAPIEventType.CONNECTED, in);
                             }
                         })
-                .append(PDUType.LOBBYREQUEST,
-                        (PDUHandlerEncoder) (in, out) -> {
-                            PDULobbyReq PDULobbyReq = (PDULobbyReq) in;
-                            ByteBuf byteBuf = Unpooled.buffer(Byte.BYTES + Long.BYTES)
-                                    .writeByte(PDUType.LOBBYREQUEST.oneBasedOrdinal())
-                                    .writeLong(Byte.BYTES + Long.BYTES)
-                                    .writeByte(PDULobbyReq.getActionFlag() == 0 ? 0 : PDULobbyReq.getActionFlag() == 1 ? 1 : 2); //Warcrime for the greater good
-                            if (PDULobbyReq.getActionFlag() == 1) {
-                                byteBuf.writeLong(PDULobbyReq.getLobbyID());
-                            }
-
-                            out.writeAndFlush(byteBuf);
-                        })
-                .append(PDUType.LOBBYUPDATE,
-                        (PDUHandlerDecoder) (in, channel, out) -> {
-                            PDULobbyUpdate lobbyUpdate = new PDULobbyUpdate();
-                            lobbyUpdate.setStateFlag((byte) in.readUnsignedByte());
-                            lobbyUpdate.setLobbyId(in.readLong());
-                            lobbyUpdate.setLeader(in.readBoolean());
-                            final Collection<Long> lobbyMembers = new ArrayList<>();
-                            while (in.readableBytes() >= 8) {
-                                if(in.readLong() == 0)
-                                    break;
-                                lobbyMembers.add(in.readLong());
-                            }
-                            lobbyUpdate.setMembers(lobbyMembers);
-
-                            out.handle(lobbyUpdate);
-                        }, new PDUInboundHandler() {
+                .appendRead(PDUType.LOBBYREQUEST,
+                        new PDULobbyRequestEncoder()
+                )
+                .appendRead(PDUType.LOBBYUPDATE,
+                        new PDULobbyUpdateDecoder(),
+                        new PDUInboundHandler() {
                             @Override
                             public void handle(PDU in) {
                                 switch (((PDULobbyUpdate) in).getStateFlag()) {
@@ -82,21 +53,15 @@ public class ClientInitializer {
                                 }
                             }
                         })
-                .append(PDUType.LOBBYBEACON,
-                        (PDUHandlerDecoder) (in, channel, out) -> {
-                            PDULobbyBeacon PDULobbyBeacon = new PDULobbyBeacon();
-                            PDULobbyBeacon.setLobbyID(in.readLong());
-                            PDULobbyBeacon.setLobbyCurOccupancy(in.readByte());
-                            PDULobbyBeacon.setLobbyMaxOccupancy(in.readByte());
-                            PDULobbyBeacon.setLobbyListRefresh(in.readBoolean());
-                            out.handle(PDULobbyBeacon);
-                        }, new PDUInboundHandler() {
+                .appendRead(PDUType.LOBBYBEACON,
+                        new PDULobbyBeaconHandlerDecoder(),
+                        new PDUInboundHandler() {
                             @Override
                             public void handle(PDU in) {
                                 gameSessionClient.checkAndCallHandler(ClientAPIEventType.LOBBYBEACON, in);
                             }
                         })
-                .append(PDUType.CHATMESSAGE,
+                .appendRead(PDUType.CHATMESSAGE,
                         new PDUChatMessageEncoder(),
                         new PDUChatMessageDecoder(),
                         new PDUInboundHandler() {

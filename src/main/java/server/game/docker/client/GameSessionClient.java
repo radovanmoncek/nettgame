@@ -1,19 +1,16 @@
 package server.game.docker.client;
 
 import io.netty.bootstrap.Bootstrap;
-import io.netty.channel.Channel;
-import io.netty.channel.ChannelInitializer;
-import io.netty.channel.ChannelOption;
-import io.netty.channel.EventLoopGroup;
+import io.netty.channel.*;
 import io.netty.channel.nio.NioEventLoopGroup;
 import io.netty.channel.socket.SocketChannel;
 import io.netty.channel.socket.nio.NioSocketChannel;
 import io.netty.handler.logging.LogLevel;
 import io.netty.handler.logging.LoggingHandler;
-import server.game.docker.client.net.handlers.GameClientHandler;
-import server.game.docker.net.pipelines.PDUMultiPipeline;
-import server.game.docker.net.modules.decoders.ProtocolDecoder;
-import server.game.docker.net.modules.encoders.ProtocolEncoder;
+import server.game.docker.net.routers.PDUMultiPipelineClientHandler;
+import server.game.docker.net.routers.RouterHandler;
+import server.game.docker.net.routers.RouterDecoder;
+import server.game.docker.net.routers.RouterEncoder;
 import server.game.docker.net.parents.pdus.PDU;
 import server.game.docker.net.enums.PDUType;
 
@@ -26,7 +23,7 @@ public class GameSessionClient {
     private final InetAddress gameServerAddress;
     private final int gameServerPort;
     private final EventLoopGroup workerGroup;
-    private final PDUMultiPipeline multiPipeline;
+    private final RouterHandler multiPipeline;
     private final Map<ClientAPIEventType, ClientAPIEventHandler<? extends PDU>> eventMappings;
     private Channel clientChannel;
 
@@ -35,7 +32,7 @@ public class GameSessionClient {
         gameServerAddress = InetAddress.getByName("127.0.0.1");
         gameServerPort = 4321;
         workerGroup = new NioEventLoopGroup();
-        multiPipeline = new PDUMultiPipeline();
+        multiPipeline = new RouterHandler();
         eventMappings = new HashMap<>();
         new ClientInitializer(clientChannel, eventMappings, this, multiPipeline).init();
         try {
@@ -48,9 +45,9 @@ public class GameSessionClient {
                         protected void initChannel(SocketChannel socketChannel) {
                             socketChannel.pipeline().addLast(
                                     new LoggingHandler(LogLevel.ERROR),
-                                    new ProtocolEncoder(),
-                                    new ProtocolDecoder(),
-                                    new GameClientHandler(multiPipeline));
+                                    new RouterEncoder(),
+                                    new RouterDecoder(),
+                                    new PDUMultiPipelineClientHandler(multiPipeline));
                         }
                     });
         }
@@ -60,8 +57,12 @@ public class GameSessionClient {
         }
     }
     public void sendUnicast(PDUType type, PDU protocolDataUnit) {
-        multiPipeline.ingest(type, protocolDataUnit, clientChannel);
+        multiPipeline.route(type, protocolDataUnit, clientChannel);
     }
+
+    /*public ChannelFuture sendUnicast() {
+        return clientChannel.writeAndFlush(new Object());
+    }*/
 
     public <T extends PDU> void checkAndCallHandler(ClientAPIEventType eventType, T protocolDataUnit) {
         ClientAPIEventHandler<?> h = eventMappings.get(eventType);
@@ -91,7 +92,7 @@ public class GameSessionClient {
         return workerGroup;
     }
 
-    public PDUMultiPipeline getMultiPipeline() {
+    public RouterHandler getMultiPipeline() {
         return multiPipeline;
     }
 

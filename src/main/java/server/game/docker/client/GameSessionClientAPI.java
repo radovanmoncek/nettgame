@@ -2,9 +2,15 @@ package server.game.docker.client;
 
 import io.netty.bootstrap.Bootstrap;
 import io.netty.channel.Channel;
+import io.netty.channel.ChannelFuture;
+import io.netty.channel.ChannelFutureListener;
 import io.netty.channel.EventLoopGroup;
 import server.game.docker.net.enums.PDUType;
-import server.game.docker.net.modules.pdus.*;
+import server.game.docker.net.modules.beacons.pdus.PDULobbyBeacon;
+import server.game.docker.net.modules.ids.pdus.PDUID;
+import server.game.docker.net.modules.messages.pdus.*;
+import server.game.docker.net.modules.requests.pdus.PDULobbyReq;
+import server.game.docker.net.modules.updates.pdus.PDULobbyUpdate;
 import server.game.docker.server.GameServer;
 
 import java.net.InetAddress;
@@ -147,6 +153,12 @@ public final class GameSessionClientAPI {
         PDULobbyReq PDULobbyRequest = new PDULobbyReq();
         PDULobbyRequest.setActionFlag((byte) 2);
         gameSessionClient.sendUnicast(PDUType.LOBBYREQUEST, PDULobbyRequest);
+    }
+
+    public void requestLobbyList(){
+        PDULobbyReq lobbyReq = new PDULobbyReq();
+        lobbyReq.setActionFlag(PDULobbyReq.INFO);
+        gameSessionClient.sendUnicast(PDUType.LOBBYREQUEST, lobbyReq);
     }
 
     public void sendChatMessage(String message) {

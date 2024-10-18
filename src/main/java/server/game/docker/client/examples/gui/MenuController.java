@@ -73,6 +73,11 @@ public class MenuController {
         chatSP.setFitToHeight(true);
         chatSP.setFitToWidth(true);
         sp_chat = chatSP;
+        sp_chat.setMaxWidth(200);
+        sp_chat.setMinWidth(200);
+        sp_chat.setMaxHeight(150);
+        sp_chat.setMinHeight(150);
+        sp_chat.setFitToWidth(true);
         vb_chat_outer.getChildren().add(sp_chat);
         vb_chat_outer.getChildren().add(chatInputHBox);
         vb_chat_outer.setMaxSize(200, 150);
@@ -119,6 +124,7 @@ public class MenuController {
             lbl_info_con_stat.setText("Connected");
             lbl_info_con_stat.setStyle("-fx-text-fill: #e1e123;");
             lbl_info_client_id.setText(String.format("ID: %d", res.getNewClientID()));
+            gameClient.requestLobbyList();
         }));
 
         gameClient.setOnLobbyCreate(res -> Platform.runLater(() -> {
@@ -157,6 +163,7 @@ public class MenuController {
             lbl_lobby_info.setText("Lobby: ");
             btn_create_lobby.setVisible(true);
             vb_chat.setVisible(false);
+            vb_chat.getChildren().clear();
         }));
 
         gameClient.setOnMemberJoined(res -> Platform.runLater(() -> {

@@ -11,13 +11,13 @@ import io.netty.handler.logging.LogLevel;
 import io.netty.handler.logging.LoggingHandler;
 import io.netty.util.concurrent.GlobalEventExecutor;
 import server.game.docker.net.enums.PDUType;
-import server.game.docker.net.modules.decoders.ProtocolDecoder;
-import server.game.docker.net.modules.encoders.ProtocolEncoder;
+import server.game.docker.net.routers.RouterDecoder;
+import server.game.docker.net.routers.RouterEncoder;
 import server.game.docker.net.parents.pdus.PDU;
-import server.game.docker.net.pipelines.PDUMultiPipeline;
-import server.game.docker.server.net.handlers.GameServerHandler;
-import server.game.docker.server.net.handlers.LobbyPDUInboundHandler;
-import server.game.docker.server.net.handlers.LobbyPDUInboundHandler.Lobby;
+import server.game.docker.net.routers.RouterHandler;
+import server.game.docker.net.routers.PDUMultiPipelineServerHandler;
+import server.game.docker.server.net.handlers.PDULobbyInboundHandler;
+import server.game.docker.server.net.handlers.PDULobbyInboundHandler.Lobby;
 import server.game.docker.server.session.DockerGameSession;
 
 import java.util.*;
@@ -33,7 +33,7 @@ import java.util.*;
  */
 public class GameServer {
     private final int port;
-    private final PDUMultiPipeline multiPipeline;
+    private final RouterHandler multiPipeline;
     private final ChannelGroup managedClients;
     private final Set<ChannelId> unassignedDomain;
     private final Map<ChannelId, Long> lobbyDomain;
@@ -61,7 +61,7 @@ public class GameServer {
         lobbyLookup = new HashMap<>();
         sessionLookup = new HashMap<>();
         channelIDClientIDLookup = new HashMap<>();
-        multiPipeline = new PDUMultiPipeline();
+        multiPipeline = new RouterHandler();
         channelLookup = new HashMap<>();
     }
 
@@ -72,7 +72,7 @@ public class GameServer {
     public void run() throws Exception {
         EventLoopGroup bossGroup = new NioEventLoopGroup();
         EventLoopGroup workerGroup = new NioEventLoopGroup();
-        final LobbyPDUInboundHandler lobbyPDUInboundHandler = new LobbyPDUInboundHandler(this);
+        final PDULobbyInboundHandler PDULobbyInboundHandler = new PDULobbyInboundHandler(this);
         try {
             ServerBootstrap bootstrap = new ServerBootstrap()
                     .group(bossGroup, workerGroup)
@@ -82,16 +82,16 @@ public class GameServer {
                         protected void initChannel(SocketChannel socketChannel) {
                             socketChannel.pipeline().addLast(
                                     new LoggingHandler(LogLevel.ERROR),
-                                    new ProtocolDecoder(),
-                                    new ProtocolEncoder(),
-                                    new GameServerHandler(multiPipeline, GameServer.this, lobbyPDUInboundHandler)
+                                    new RouterDecoder(),
+                                    new RouterEncoder(),
+                                    new PDUMultiPipelineServerHandler(multiPipeline, GameServer.this, PDULobbyInboundHandler)
                             );
                         }
                     })
                     .option(ChannelOption.SO_BACKLOG, 128)
                     .childOption(ChannelOption.SO_KEEPALIVE, true);
 
-            new GameServerInitializer(multiPipeline, this, lobbyPDUInboundHandler).init();
+            new GameServerInitializer(multiPipeline, this, PDULobbyInboundHandler).init();
 
             ChannelFuture future = bootstrap.bind(port).sync();
             System.out.printf("GameServer running on port %d\n", port);
@@ -114,19 +114,19 @@ public class GameServer {
     }
 
     public synchronized void sendUnicast(PDUType type, PDU protocolDataUnit, Channel channel) {
-        unassignedDomain.stream().map(channelLookup::get).filter(c -> c.remoteAddress().equals(channel.remoteAddress())).forEach(c -> multiPipeline.ingest(type, protocolDataUnit, c));
-        lobbyDomain.keySet().stream().map(channelLookup::get).filter(c -> c.remoteAddress().equals(channel.remoteAddress())).forEach(c -> multiPipeline.ingest(type, protocolDataUnit, c));
-        sessionDomain.keySet().stream().map(channelLookup::get).filter(c -> c.remoteAddress().equals(channel.remoteAddress())).forEach(c -> multiPipeline.ingest(type ,protocolDataUnit, c));
+        unassignedDomain.stream().map(channelLookup::get).filter(c -> c.remoteAddress().equals(channel.remoteAddress())).forEach(c -> multiPipeline.route(type, protocolDataUnit, c));
+        lobbyDomain.keySet().stream().map(channelLookup::get).filter(c -> c.remoteAddress().equals(channel.remoteAddress())).forEach(c -> multiPipeline.route(type, protocolDataUnit, c));
+        sessionDomain.keySet().stream().map(channelLookup::get).filter(c -> c.remoteAddress().equals(channel.remoteAddress())).forEach(c -> multiPipeline.route(type ,protocolDataUnit, c));
     }
 
     private synchronized void sendBroadcast(PDUType type, PDU protocolDataUnit, Channel channel) {
         sendBroadcastUnassigned(PDUType.LOBBYBEACON, protocolDataUnit, channel);
         sendBroadcastLobby(type, protocolDataUnit, channel);
-        sessionDomain.keySet().stream().map(channelLookup::get).filter(c -> !c.remoteAddress().equals(channel.remoteAddress())).forEach(c -> multiPipeline.ingest(type, protocolDataUnit, c));
+        sessionDomain.keySet().stream().map(channelLookup::get).filter(c -> !c.remoteAddress().equals(channel.remoteAddress())).forEach(c -> multiPipeline.route(type, protocolDataUnit, c));
     }
 
     public synchronized void sendBroadcastUnassigned(PDUType type, PDU protocolDataUnit, Channel channel) {
-        unassignedDomain.stream().map(channelLookup::get).filter(c -> !c.remoteAddress().equals(channel.remoteAddress())).forEach(c -> multiPipeline.ingest(type, protocolDataUnit, c));
+        unassignedDomain.stream().map(channelLookup::get).filter(c -> !c.remoteAddress().equals(channel.remoteAddress())).forEach(c -> multiPipeline.route(type, protocolDataUnit, c));
     }
 
     public synchronized void sendBroadcastLobby(PDUType type, PDU protocolDataUnit, Channel channel) {
@@ -134,7 +134,7 @@ public class GameServer {
                 .filter(e ->
                         !e.getKey().equals(channel.id()) /*&& (!(protocolDataUnit instanceof PDULobbyBeacon) || ((PDULobbyBeacon) protocolDataUnit).getLobbyID() != lookupLobbyIDForChannelID(channel.id()))*/
                 )
-                .forEach(e -> multiPipeline.ingest(type, protocolDataUnit, channelLookup.get(e.getKey())));
+                .forEach(e -> multiPipeline.route(type, protocolDataUnit, channelLookup.get(e.getKey())));
     }
 
     public synchronized void sendMulticastLobby(PDUType type, PDU protocolDataUnit, Channel channel) {
@@ -142,7 +142,7 @@ public class GameServer {
                 lobbyDomain.entrySet().stream().
                         filter(e -> !managedClients.find(e.getKey()).remoteAddress().equals(channel.remoteAddress()) && e.getValue().equals(l)).map(Map.Entry::getKey)
                         .map(channelLookup::get)
-                        .forEach(c -> multiPipeline.ingest(type, protocolDataUnit, c))
+                        .forEach(c -> multiPipeline.route(type, protocolDataUnit, c))
         );
     }
 
