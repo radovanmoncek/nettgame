@@ -1,0 +1,47 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<?import javafx.scene.control.*?>
+<?import javafx.scene.layout.*?>
+<BorderPane fx:id="ap_main" xmlns="http://javafx.com/javafx"
+            xmlns:fx="http://javafx.com/fxml"
+            fx:controller="server.game.docker.client.examples.gui.SessionController"
+            prefHeight="400.0" prefWidth="600.0">
+<!--    <BorderPane>-->
+        <top>
+            <HBox spacing="10">
+                <Label fx:id="lbl_info_con_stat" text="Disconnected"/>
+                <Label fx:id="lbl_info_sess_id" text="NULL"/>
+                <Label fx:id="lbl_info_client_id" text="NULL"/>
+            </HBox>
+        </top>
+        <right>
+            <VBox>
+                <ScrollPane fx:id="sp_chat" prefWidth="418" prefHeight="128" fitToWidth="true">
+                    <VBox fx:id="vb_msg" prefHeight="124" prefWidth="412"/>
+                </ScrollPane>
+                <HBox>
+                    <TextField fx:id="tf_msg" prefWidth="361" prefHeight="26"/>
+                    <Button fx:id="btn_send_chat_msg" text="Send"/>
+                </HBox>
+            </VBox>
+        </right>
+        <center>
+            <VBox maxHeight="300" maxWidth="500">
+                <GridPane fx:id="game_map">
+<!--                <Label text="test"/>-->
+<!--                <Label text="test"/>-->
+<!--                <Label text="test"/>-->
+<!--                <Label text="test"/>-->
+<!--                <Label text="test"/>-->
+<!--                <Label text="test"/>-->
+<!--                <Label text="test"/>-->
+<!--                <Label text="test"/>-->
+                </GridPane>
+                <HBox spacing="10" style="-fx-padding: 10; -fx-background-color: lightgray; -fx-alignment: center">
+                    <Label fx:id="hud_gold_count" text="0 Gold"/>
+                    <Label fx:id="hud_gold_per_second" text="0 Gold/S"/>
+                </HBox>
+            </VBox>
+        </center>
+<!--    </BorderPane>-->
+</BorderPane>
