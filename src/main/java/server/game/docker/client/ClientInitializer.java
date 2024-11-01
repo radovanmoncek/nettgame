@@ -1,38 +1,35 @@
 package server.game.docker.client;
 
 import io.netty.channel.Channel;
-import server.game.docker.net.modules.beacons.decoders.PDULobbyBeaconHandlerDecoder;
-import server.game.docker.net.modules.ids.decoders.PDUIDHandlerDecoder;
-import server.game.docker.net.modules.requests.encoders.PDULobbyRequestEncoder;
-import server.game.docker.net.enums.PDUType;
-import server.game.docker.net.modules.messages.decoders.PDUChatMessageDecoder;
-import server.game.docker.net.modules.messages.encoders.PDUChatMessageEncoder;
-import server.game.docker.net.modules.beacons.pdus.PDULobbyBeacon;
-import server.game.docker.net.modules.updates.decoders.PDULobbyUpdateDecoder;
-import server.game.docker.net.modules.updates.pdus.PDULobbyUpdate;
-import server.game.docker.net.parents.decoders.PDUHandlerDecoder;
-import server.game.docker.net.parents.handlers.PDUInboundHandler;
-import server.game.docker.net.parents.pdus.PDU;
-import server.game.docker.net.routers.RouterHandler;
+import server.game.docker.GameServerInitializer;
+import server.game.docker.client.modules.beacons.decoders.PDULobbyBeaconHandlerDecoder;
+import server.game.docker.client.modules.ids.decoders.IDDecoder;
+import server.game.docker.client.modules.requests.encoders.PDULobbyRequestEncoder;
+import server.game.docker.ship.enums.PDUType;
+import server.game.docker.modules.messages.decoders.PDUChatMessageDecoder;
+import server.game.docker.modules.messages.encoders.PDUChatMessageEncoder;
+import server.game.docker.client.modules.updates.decoders.PDULobbyUpdateDecoder;
+import server.game.docker.modules.updates.pdus.PDULobbyUpdate;
+import server.game.docker.ship.parents.pdus.PDU;
 
 import java.util.Map;
 
-public class ClientInitializer {
-    private final GameSessionClient gameSessionClient;
-    private final RouterHandler multiPipeline;
+public final class ClientInitializer {
+    private final GameClient gameClient;
+    private final GameServerInitializer.RouterHandler multiPipeline;
 
-    public ClientInitializer(Channel clientChannel, Map<ClientAPIEventType, ClientAPIEventHandler<? extends PDU>> eventMappings, GameSessionClient gameSessionClient, RouterHandler multiPipeline) {
-        this.gameSessionClient = gameSessionClient;
+    public ClientInitializer(Channel clientChannel, Map<GameClient.ClientAPIEventType, GameClient.ClientAPIEventHandler<? extends PDU>> eventMappings, GameClient gameClient, GameServerInitializer.RouterHandler multiPipeline) {
+        this.gameClient = gameClient;
         this.multiPipeline = multiPipeline;
     }
 
     public void init() {
         multiPipeline.appendRead(PDUType.ID,
-                        new PDUIDHandlerDecoder(),
-                        new PDUInboundHandler() {
+                        new IDDecoder.PDUIDHandlerDecoder(),
+                        new GameServerInitializer.PDUInboundHandler() {
                             @Override
                             public void handle(PDU in) {
-                                gameSessionClient.checkAndCallHandler(ClientAPIEventType.CONNECTED, in);
+                                gameClient.checkAndCallHandler(GameClient.ClientAPIEventType.CONNECTED, in);
                             }
                         })
                 .appendRead(PDUType.LOBBYREQUEST,
@@ -40,38 +37,38 @@ public class ClientInitializer {
                 )
                 .appendRead(PDUType.LOBBYUPDATE,
                         new PDULobbyUpdateDecoder(),
-                        new PDUInboundHandler() {
+                        new GameServerInitializer.PDUInboundHandler() {
                             @Override
                             public void handle(PDU in) {
                                 switch (((PDULobbyUpdate) in).getStateFlag()) {
                                     case 0 ->
-                                            gameSessionClient.checkAndCallHandler(ClientAPIEventType.LOBBYCREATED, in);
-                                    case 1 -> gameSessionClient.checkAndCallHandler(ClientAPIEventType.LOBBYJOINED, in);
-                                    case 2 -> gameSessionClient.checkAndCallHandler(ClientAPIEventType.LOBBYLEFT, in);
-                                    case 3 -> gameSessionClient.checkAndCallHandler(ClientAPIEventType.MEMBERJOINED, in);
-                                    case 4 -> gameSessionClient.checkAndCallHandler(ClientAPIEventType.MEMBERLEFT, in);
+                                            gameClient.checkAndCallHandler(GameClient.ClientAPIEventType.LOBBYCREATED, in);
+                                    case 1 -> gameClient.checkAndCallHandler(GameClient.ClientAPIEventType.LOBBYJOINED, in);
+                                    case 2 -> gameClient.checkAndCallHandler(GameClient.ClientAPIEventType.LOBBYLEFT, in);
+                                    case 3 -> gameClient.checkAndCallHandler(GameClient.ClientAPIEventType.MEMBERJOINED, in);
+                                    case 4 -> gameClient.checkAndCallHandler(GameClient.ClientAPIEventType.MEMBERLEFT, in);
                                 }
                             }
                         })
                 .appendRead(PDUType.LOBBYBEACON,
                         new PDULobbyBeaconHandlerDecoder(),
-                        new PDUInboundHandler() {
+                        new GameServerInitializer.PDUInboundHandler() {
                             @Override
                             public void handle(PDU in) {
-                                gameSessionClient.checkAndCallHandler(ClientAPIEventType.LOBBYBEACON, in);
+                                gameClient.checkAndCallHandler(GameClient.ClientAPIEventType.LOBBYBEACON, in);
                             }
                         })
                 .appendRead(PDUType.CHATMESSAGE,
                         new PDUChatMessageEncoder(),
                         new PDUChatMessageDecoder(),
-                        new PDUInboundHandler() {
+                        new GameServerInitializer.PDUInboundHandler() {
                             @Override
                             public void handle(PDU in) {
                             }
 
                             @Override
                             public void handle(PDU in, Channel channel) {
-                                gameSessionClient.checkAndCallHandler(ClientAPIEventType.LOBBYCHATMESSAGERECEIVED, in);
+                                gameClient.checkAndCallHandler(GameClient.ClientAPIEventType.LOBBYCHATMESSAGERECEIVED, in);
                             }
                         }
                 );
