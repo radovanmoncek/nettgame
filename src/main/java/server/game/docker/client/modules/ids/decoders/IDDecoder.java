@@ -1,42 +1,32 @@
 package server.game.docker.client.modules.ids.decoders;
 
 import io.netty.buffer.ByteBuf;
-import io.netty.channel.Channel;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.handler.codec.ByteToMessageDecoder;
 import io.netty.handler.codec.CorruptedFrameException;
-import server.game.docker.GameServerInitializer;
 import server.game.docker.modules.ids.pdus.PDUID;
 import server.game.docker.ship.enums.PDUType;
 
-import java.nio.ByteBuffer;
-import java.util.Arrays;
 import java.util.List;
 
 public final class IDDecoder extends ByteToMessageDecoder {
     @Override
     protected void decode(ChannelHandlerContext channelHandlerContext, ByteBuf in, List<Object> out) {
-        //todo: Check protocol identifier, else drop
-        if (in.readableBytes() < 8) {
+        if (in.readableBytes() < 5) {
             return;
         }
 
         in.markReaderIndex();
 
-        byte [] protocolIdentifier = new byte[3];
-        if (
-                (protocolIdentifier[0] = (byte) in.readUnsignedByte()) != 'G'
-                        || (protocolIdentifier[1] = (byte) in.readUnsignedByte()) != 'D'
-                        || (protocolIdentifier[2] = (byte) in.readUnsignedByte()) != 'P'
-        ) {
-            in.resetReaderIndex();
-            throw new CorruptedFrameException(String.format("Corrupted frame: %s", Arrays.toString(protocolIdentifier)));
-        }
-
-        PDUType type = PDUType.valueOf((byte) in.readUnsignedByte());
+        final var type = PDUType.valueOf((byte) in.readUnsignedByte());
 
         if (type.equals(PDUType.INVALID)) {
+            throw new CorruptedFrameException(String.format("Invalid PDU type received: %s", in));
+        }
+
+        if(!type.equals(PDUType.ID)) {
             in.resetReaderIndex();
+//            channelHandlerContext.pipeline().
             return;
         }
 
@@ -46,17 +36,8 @@ public final class IDDecoder extends ByteToMessageDecoder {
             return;
         }
 
-        byte[] outBytes = new byte[in.readableBytes()];
-        in.readBytes(outBytes);
-        out.add(ByteBuffer.allocate(Byte.BYTES + outBytes.length).put((byte) type.oneBasedOrdinal()).put(outBytes));
-    }
-
-    public static class PDUIDHandlerDecoder implements GameServerInitializer.PDUHandlerDecoder {
-        @Override
-        public void decode(ByteBuf in, Channel channel, GameServerInitializer.PDUInboundHandler out) {
-            PDUID identifier = new PDUID();
-            identifier.setNewClientID(in.readLong());
-            out.handle(identifier);
-        }
+        final var identifier = new PDUID();
+        identifier.setNewClientID(in.readLong());
+        out.add(identifier);
     }
 }

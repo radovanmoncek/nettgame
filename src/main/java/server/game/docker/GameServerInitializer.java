@@ -1,16 +1,19 @@
 package server.game.docker;
 
+import io.netty.bootstrap.ServerBootstrap;
 import io.netty.buffer.ByteBuf;
 import io.netty.channel.Channel;
+import io.netty.channel.ChannelInitializer;
+import io.netty.channel.ChannelOption;
+import io.netty.channel.nio.NioEventLoopGroup;
+import io.netty.channel.socket.SocketChannel;
+import io.netty.channel.socket.nio.NioServerSocketChannel;
+import io.netty.handler.logging.LogLevel;
+import io.netty.handler.logging.LoggingHandler;
 import server.game.docker.modules.ids.encoders.IDEncoder;
+import server.game.docker.modules.ids.handlers.ServerIDHandler;
 import server.game.docker.ship.enums.PDUType;
-import server.game.docker.modules.beacons.encoders.PDULobbyBeaconHandlerEncoder;
-import server.game.docker.modules.messages.decoders.PDUChatMessageDecoder;
-import server.game.docker.modules.messages.encoders.PDUChatMessageEncoder;
-import server.game.docker.modules.requests.decoder.PDULobbyRequestDecoder;
-import server.game.docker.modules.updates.encoders.PDULobbyUpdateEncoder;
 import server.game.docker.ship.parents.pdus.PDU;
-import server.game.docker.modules.messages.handlers.PDUChatInboundHandler;
 
 import java.util.HashMap;
 import java.util.List;
@@ -18,43 +21,37 @@ import java.util.Map;
 import java.util.Vector;
 
 public final class GameServerInitializer {
-    private final RouterHandler multiPipeline;
-    private final GameServer gameServer;
-    private final PDUHandler lobbyPDUInboundHandler;
 
-    public GameServerInitializer(
-            RouterHandler multiPipeline,
-            GameServer gameServer, PDUHandler lobbyPDUInboundHandler
-    ) {
-        this.multiPipeline = multiPipeline;
-        this.gameServer = gameServer;
-        this.lobbyPDUInboundHandler = lobbyPDUInboundHandler;
-    }
+    public void init(final int port, final GameServer gameServer) throws Exception {
+        final var bossGroup = new NioEventLoopGroup();
+        final var workerGroup = new NioEventLoopGroup();
+        try {
+            final var bootstrap = new ServerBootstrap()
+                    .group(bossGroup, workerGroup)
+                    .channel(NioServerSocketChannel.class)
+                    .childHandler(new ChannelInitializer<SocketChannel>() {
+                        @Override
+                        protected void initChannel(SocketChannel socketChannel) {
+                            socketChannel.pipeline().addFirst(
+                                    new LoggingHandler(LogLevel.ERROR),
+                                    new ServerIDHandler(gameServer),
+                                    new IDEncoder()
+                            );
+                        }
+                    })
+                    .option(ChannelOption.SO_BACKLOG, 128)
+                    .childOption(ChannelOption.SO_KEEPALIVE, true);
 
-    public void init() {
-        /*--------ID - handshake with server--------*/
-        //Outbound only PDU containing 64-bit Long clientID
-        multiPipeline.appendRead(PDUType.ID,
-                        new IDEncoder.IDDecoderInner()
-                )
-                /*--------LOBBY--------*/
-                //Inbound PDU no payload and action
-                .appendRead(PDUType.LOBBYREQUEST,
-                        new PDULobbyRequestDecoder(),
-                        lobbyPDUInboundHandler
-                )
-                .appendRead(PDUType.LOBBYUPDATE,
-                        new PDULobbyUpdateEncoder()
-                )
-                //Outbound only PDU with no action, 8B Long, 2 * 1B Byte data and 1B Byte - Boolean Lobby list refresh flag
-                .appendRead(PDUType.LOBBYBEACON,
-                        new PDULobbyBeaconHandlerEncoder()
-                )
-                .appendRead(PDUType.CHATMESSAGE,
-                        new PDUChatMessageEncoder(),
-                        new PDUChatMessageDecoder(),
-                        new PDUChatInboundHandler(gameServer)
-                );
+            final var future = bootstrap.bind(port).sync();
+            System.out.printf("GameServer running on port %d\n", port);
+
+            //Blocking method
+            future.channel().closeFuture().sync();
+        }
+        finally {
+            workerGroup.shutdownGracefully();
+            bossGroup.shutdownGracefully();
+        }
     }
 
     /**

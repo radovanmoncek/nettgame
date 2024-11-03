@@ -1,33 +1,20 @@
 package server.game.docker.client.modules.ids.handlers;
 
-import io.netty.buffer.Unpooled;
 import io.netty.channel.ChannelHandlerContext;
-import io.netty.channel.ChannelInboundHandlerAdapter;
-import server.game.docker.GameServerInitializer;
-import server.game.docker.ship.enums.PDUType;
+import io.netty.channel.SimpleChannelInboundHandler;
+import server.game.docker.client.GameClient;
+import server.game.docker.modules.ids.pdus.PDUID;
 
-import java.nio.ByteBuffer;
+public class ClientIDHandler extends SimpleChannelInboundHandler<PDUID> {
 
-public class ClientIDHandler extends ChannelInboundHandlerAdapter {
-    private final GameServerInitializer.RouterHandler multiPipeline;
+    private final GameClient gameClient;
 
-    public ClientIDHandler(GameServerInitializer.RouterHandler multiPipeline) {
-        this.multiPipeline = multiPipeline;
+    public ClientIDHandler(GameClient gameClient) {
+        this.gameClient = gameClient;
     }
 
     @Override
-    public void channelRead(ChannelHandlerContext ctx, Object msg) {
-        ByteBuffer byteBuffer = ((ByteBuffer) msg).position(0);
-        multiPipeline.route(PDUType.valueOf(byteBuffer.get()), Unpooled.wrappedBuffer(byteBuffer), ctx.channel());
-    }
-
-    @Override
-    public void handlerAdded(ChannelHandlerContext ctx) {
-    }
-
-    @Override
-    public void exceptionCaught(ChannelHandlerContext ctx, Throwable cause) {
-        cause.printStackTrace();
-        ctx.close();
+    protected void channelRead0(ChannelHandlerContext ctx, PDUID msg) {
+        gameClient.setAssignedID(msg.getNewClientID());
     }
 }
