@@ -1,42 +1,38 @@
 package server.game.docker.modules.requests.handlers;
 
 import io.netty.channel.Channel;
+import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.ChannelId;
-import server.game.docker.GameServerInitializer;
+import io.netty.channel.SimpleChannelInboundHandler;
 import server.game.docker.ship.enums.PDUType;
 import server.game.docker.modules.beacons.pdus.PDULobbyBeacon;
 import server.game.docker.modules.requests.pdus.PDULobbyReq;
 import server.game.docker.modules.updates.pdus.PDULobbyUpdate;
-import server.game.docker.ship.parents.pdus.PDU;
 import server.game.docker.GameServer;
 
 import java.util.*;
 
-public class PDULobbyInboundHandler extends GameServerInitializer.PDUInboundHandler {
+public class ServerLobbyRequestHandler extends SimpleChannelInboundHandler<PDULobbyReq> {
     private final GameServer gameServer;
 
-    public PDULobbyInboundHandler(
+    public ServerLobbyRequestHandler(
             GameServer gameServer
     ) {
         this.gameServer = gameServer;
     }
 
     @Override
-    public void handle(PDU pdu) {
-    }
-
-    @Override
-    public void handle(PDU in, Channel channel) {
-        PDULobbyReq PDULobbyReq = (PDULobbyReq) in;
-        switch (PDULobbyReq.getActionFlag()) {
-            case 0 -> createLobby(PDULobbyReq, channel);
-            case 1 -> joinLobby(PDULobbyReq, channel);
-            case 2 -> leaveLobby(PDULobbyReq, channel);
+    public void channelRead0(ChannelHandlerContext channelHandlerContext, PDULobbyReq lobbyReq) {
+        final var channel = channelHandlerContext.channel();
+        switch (lobbyReq.getActionFlag()) {
+            case 0 -> createLobby(channel);
+            case 1 -> joinLobby(lobbyReq, channel);
+            case 2 -> leaveLobby(lobbyReq, channel);
             case 3 -> refreshLobbyList(channel);
         }
     }
 
-    private void createLobby(PDULobbyReq in, Channel channel) {
+    private void createLobby(final Channel channel) {
         if (gameServer.isChannelInLobbyDomain(channel) || gameServer.isChannelInSessionDomain(channel))
             return;
 
@@ -51,7 +47,7 @@ public class PDULobbyInboundHandler extends GameServerInitializer.PDUInboundHand
 
         System.out.printf("Client: %s | has created a lobby: %d | with members: %s\n", gameServer.transformChID(lobbyUnassignedClientChannel.id()), lobbyID, gameServer.getLobbyMembersTransformed(lobbyID)); //todo: log4j
 
-        PDULobbyUpdate lobbyUpdate = new PDULobbyUpdate();
+        final var lobbyUpdate = new PDULobbyUpdate();
         lobbyUpdate.setLobbyId(lobbyID);
         lobbyUpdate.setLeader(true);
         lobbyUpdate.setStateFlag(PDULobbyUpdate.CREATED);
@@ -102,7 +98,7 @@ public class PDULobbyInboundHandler extends GameServerInitializer.PDUInboundHand
         System.out.printf("Client: %d | joined lobby %d\n", gameServer.transformChID(channel.id()), lobbyReq.getLobbyID());
     }
 
-    private void leaveLobby(PDULobbyReq in, Channel channel) {
+    private void leaveLobby(Channel channel) {
         final Channel assignedLobbyChannel = gameServer.findLobbyAssignedChannel(channel);
 
         if (assignedLobbyChannel == null) {

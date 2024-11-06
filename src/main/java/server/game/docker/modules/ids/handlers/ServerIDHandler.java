@@ -1,17 +1,22 @@
 package server.game.docker.modules.ids.handlers;
 
 import io.netty.channel.ChannelHandlerContext;
-import io.netty.channel.ChannelInboundHandlerAdapter;
+import io.netty.channel.SimpleChannelInboundHandler;
 import server.game.docker.GameServer;
 import server.game.docker.modules.ids.pdus.PDUID;
 
-public class ServerIDHandler extends ChannelInboundHandlerAdapter {
+public class ServerIDHandler extends SimpleChannelInboundHandler<PDUID> {
     private final GameServer gameServer;
 
     public ServerIDHandler(
             GameServer gameServer
     ) {
         this.gameServer = gameServer;
+    }
+
+    @Override
+    public void channelRead0(ChannelHandlerContext ctx, PDUID id) {
+
     }
 
     @Override
@@ -40,7 +45,7 @@ public class ServerIDHandler extends ChannelInboundHandlerAdapter {
     }
 
     @Override
-    public void exceptionCaught(ChannelHandlerContext ctx, Throwable cause) throws Exception {
+    public void exceptionCaught(ChannelHandlerContext ctx, Throwable cause) {
         System.err.println(cause.getMessage());
     }
 }

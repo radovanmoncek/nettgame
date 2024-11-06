@@ -1,17 +1,17 @@
 package server.game.docker;
 
-import io.netty.bootstrap.ServerBootstrap;
 import io.netty.buffer.ByteBuf;
 import io.netty.channel.Channel;
 import io.netty.channel.ChannelInitializer;
-import io.netty.channel.ChannelOption;
-import io.netty.channel.nio.NioEventLoopGroup;
 import io.netty.channel.socket.SocketChannel;
-import io.netty.channel.socket.nio.NioServerSocketChannel;
 import io.netty.handler.logging.LogLevel;
 import io.netty.handler.logging.LoggingHandler;
+import server.game.docker.modules.ids.IDServerFacade;
 import server.game.docker.modules.ids.encoders.IDEncoder;
 import server.game.docker.modules.ids.handlers.ServerIDHandler;
+import server.game.docker.modules.requests.LobbyRequestServerFacade;
+import server.game.docker.modules.requests.decoder.LobbyRequestDecoder;
+import server.game.docker.modules.requests.handlers.ServerLobbyRequestHandler;
 import server.game.docker.ship.enums.PDUType;
 import server.game.docker.ship.parents.pdus.PDU;
 
@@ -20,38 +20,24 @@ import java.util.List;
 import java.util.Map;
 import java.util.Vector;
 
-public final class GameServerInitializer {
+public final class GameServerInitializer extends ChannelInitializer<SocketChannel>{
+    private final IDServerFacade iDServerFacade;
+    private final LobbyRequestServerFacade lobbyRequestServerFacade;
 
-    public void init(final int port, final GameServer gameServer) throws Exception {
-        final var bossGroup = new NioEventLoopGroup();
-        final var workerGroup = new NioEventLoopGroup();
-        try {
-            final var bootstrap = new ServerBootstrap()
-                    .group(bossGroup, workerGroup)
-                    .channel(NioServerSocketChannel.class)
-                    .childHandler(new ChannelInitializer<SocketChannel>() {
-                        @Override
-                        protected void initChannel(SocketChannel socketChannel) {
-                            socketChannel.pipeline().addFirst(
-                                    new LoggingHandler(LogLevel.ERROR),
-                                    new ServerIDHandler(gameServer),
-                                    new IDEncoder()
-                            );
-                        }
-                    })
-                    .option(ChannelOption.SO_BACKLOG, 128)
-                    .childOption(ChannelOption.SO_KEEPALIVE, true);
+    public GameServerInitializer(final IDServerFacade iDServerFacade, final LobbyRequestServerFacade lobbyRequestServerFacade) {
+        this.iDServerFacade = iDServerFacade;
+        this.lobbyRequestServerFacade = lobbyRequestServerFacade;
+    }
 
-            final var future = bootstrap.bind(port).sync();
-            System.out.printf("GameServer running on port %d\n", port);
-
-            //Blocking method
-            future.channel().closeFuture().sync();
-        }
-        finally {
-            workerGroup.shutdownGracefully();
-            bossGroup.shutdownGracefully();
-        }
+    @Override
+    public void initChannel(SocketChannel socketChannel) throws Exception {
+        socketChannel.pipeline().addFirst(
+                new LoggingHandler(LogLevel.ERROR),
+                new LobbyRequestDecoder(),
+                new ServerIDHandler(iDServerFacade),
+                new ServerLobbyRequestHandler(lobbyRequestServerFacade),
+                new IDEncoder()
+        );
     }
 
     /**

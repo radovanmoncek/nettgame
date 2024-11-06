@@ -25,7 +25,7 @@ public final class IDDecoder extends ByteToMessageDecoder {
         }
 
         if(!type.equals(PDUType.ID)) {
-            in.resetReaderIndex();
+            in.readerIndex(5);
 //            channelHandlerContext.pipeline().
             return;
         }

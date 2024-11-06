@@ -1,12 +1,16 @@
 package server.game.docker;
 
+import io.netty.bootstrap.ServerBootstrap;
 import io.netty.channel.Channel;
 import io.netty.channel.ChannelId;
+import io.netty.channel.ChannelOption;
 import io.netty.channel.EventLoopGroup;
 import io.netty.channel.group.ChannelGroup;
 import io.netty.channel.group.DefaultChannelGroup;
+import io.netty.channel.nio.NioEventLoopGroup;
+import io.netty.channel.socket.nio.NioServerSocketChannel;
 import io.netty.util.concurrent.GlobalEventExecutor;
-import server.game.docker.modules.requests.handlers.PDULobbyInboundHandler.Lobby;
+import server.game.docker.modules.requests.handlers.ServerLobbyRequestHandler.Lobby;
 import server.game.docker.modules.session.handlers.GameSessionHandler;
 import server.game.docker.ship.enums.PDUType;
 import server.game.docker.ship.parents.pdus.PDU;
@@ -63,7 +67,26 @@ public final class GameServer {
     }
 
     public void run() throws Exception {
-        new GameServerInitializer().init(port, this);
+        final var bossGroup = new NioEventLoopGroup();
+        final var workerGroup = new NioEventLoopGroup();
+        try {
+            final var bootstrap = new ServerBootstrap()
+                    .group(bossGroup, workerGroup)
+                    .channel(NioServerSocketChannel.class)
+                    .childHandler(new GameServerInitializer())
+                    .option(ChannelOption.SO_BACKLOG, 128)
+                    .childOption(ChannelOption.SO_KEEPALIVE, true);
+
+            final var future = bootstrap.bind(port).sync();
+            System.out.printf("GameServer running on port %d\n", port);
+
+            //Blocking method
+            future.channel().closeFuture().sync();
+        }
+        finally {
+            workerGroup.shutdownGracefully();
+            bossGroup.shutdownGracefully();
+        }
     }
 
     /*--------Thread safe methods--------*/

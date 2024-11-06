@@ -15,7 +15,7 @@ import server.game.docker.GameServerInitializer;
 import server.game.docker.client.modules.ids.decoders.IDDecoder;
 import server.game.docker.client.modules.ids.handlers.ClientIDHandler;
 import server.game.docker.client.modules.requests.encoders.LobbyReqEncoder;
-import server.game.docker.client.modules.requests.facades.LobbyReqFacade;
+import server.game.docker.client.modules.requests.facades.LobbyReqClientFacade;
 import server.game.docker.modules.beacons.pdus.PDULobbyBeacon;
 import server.game.docker.modules.ids.pdus.PDUID;
 import server.game.docker.modules.messages.pdus.PDUChatMessage;
@@ -38,7 +38,7 @@ public final class GameClient {
     private final Map<ClientAPIEventType, ClientAPIEventHandler<? extends PDU>> eventMappings;
     private Channel clientChannel;
     private Long assignedID;
-    private LobbyReqFacade lobbyReqFacade;
+    private LobbyReqClientFacade lobbyReqClientFacade;
 
     //    todo: private Long clientID; ?
     private GameClient() throws Exception {
@@ -79,10 +79,10 @@ public final class GameClient {
         return new GameClient();
     }
 
-    public GameClient withLobbyReqFacade(final LobbyReqFacade facade) {
-        if(lobbyReqFacade != null)
+    public GameClient withLobbyReqFacade(final LobbyReqClientFacade facade) {
+        if(lobbyReqClientFacade != null)
             return this;
-        lobbyReqFacade = facade;
+        lobbyReqClientFacade = facade;
         return this;
     }
 
@@ -128,10 +128,10 @@ public final class GameClient {
 
     public void setClientChannel(Channel clientChannel) {
         this.clientChannel = clientChannel;
-        Stream.of(lobbyReqFacade.getClass().getDeclaredFields()).filter(field -> field.getType().equals(Channel.class)).findAny().ifPresent(field -> {
+        Stream.of(lobbyReqClientFacade.getClass().getDeclaredFields()).filter(field -> field.getType().equals(Channel.class)).findAny().ifPresent(field -> {
             field.setAccessible(true);
             try {
-                field.set(lobbyReqFacade, clientChannel);
+                field.set(lobbyReqClientFacade, clientChannel);
             } catch (IllegalAccessException e) {
                 e.printStackTrace();
             }
@@ -146,8 +146,8 @@ public final class GameClient {
         this.assignedID = assignedID;
     }
 
-    public LobbyReqFacade getLobbyReqFacade() {
-        return lobbyReqFacade;
+    public LobbyReqClientFacade getLobbyReqFacade() {
+        return lobbyReqClientFacade;
     }
 
     @FunctionalInterface
