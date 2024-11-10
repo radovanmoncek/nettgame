@@ -21,7 +21,7 @@ public enum PDUType {
      */
     INVALID,
     /*--------ID--------*/
-    ID,
+    USERNAME,
     /*--------LOBBY--------*/
     LOBBYREQUEST, LOBBYUPDATE, LOBBYBEACON,
     /*--------CHAT--------*/

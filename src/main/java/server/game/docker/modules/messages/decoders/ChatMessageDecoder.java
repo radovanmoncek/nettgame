@@ -1,24 +1,25 @@
 package server.game.docker.modules.messages.decoders;
 
 import io.netty.buffer.ByteBuf;
-import io.netty.channel.Channel;
-import server.game.docker.GameServerInitializer;
-import server.game.docker.modules.messages.pdus.PDUChatMessage;
+import io.netty.channel.ChannelHandlerContext;
+import io.netty.handler.codec.ByteToMessageDecoder;
+import server.game.docker.modules.messages.pdus.ChatMessagePDU;
 
 import java.nio.charset.Charset;
+import java.util.List;
 
-public class PDUChatMessageDecoder implements GameServerInitializer.PDUHandlerDecoder {
+public final class ChatMessageDecoder extends ByteToMessageDecoder {
     private static final int AUTHOR_NAME_LENGTH = 8;
     private static final int MAX_MESSAGE_LENGTH = 64;
 
     @Override
-    public void decode(ByteBuf in, Channel channel, GameServerInitializer.PDUInboundHandler out) {
-        PDUChatMessage chatMessage = new PDUChatMessage();
+    public void decode(ChannelHandlerContext channelHandlerContext, ByteBuf in, List<Object> out) {
+        final var chatMessage = new ChatMessagePDU();
 
         chatMessage.setAuthorID(in.readLong());
         chatMessage.setAuthorName(in.toString(in.readerIndex(), AUTHOR_NAME_LENGTH, Charset.defaultCharset()).trim());
         chatMessage.setMessage(in.toString(in.readerIndex() + AUTHOR_NAME_LENGTH, MAX_MESSAGE_LENGTH, Charset.defaultCharset()).trim());
 
-        out.handle(chatMessage, channel);
+        out.add(chatMessage);
     }
 }

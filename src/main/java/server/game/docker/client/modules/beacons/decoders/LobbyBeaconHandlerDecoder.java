@@ -5,7 +5,7 @@ import io.netty.channel.Channel;
 import server.game.docker.GameServerInitializer;
 import server.game.docker.modules.beacons.pdus.PDULobbyBeacon;
 
-public class PDULobbyBeaconHandlerDecoder implements GameServerInitializer.PDUHandlerDecoder {
+public class LobbyBeaconHandlerDecoder implements GameServerInitializer.PDUHandlerDecoder {
     @Override
     public void decode(ByteBuf in, Channel channel, GameServerInitializer.PDUInboundHandler out) {
         PDULobbyBeacon PDULobbyBeacon = new PDULobbyBeacon();

@@ -2,17 +2,15 @@ package server.game.docker.modules.beacons.encoders;
 
 import io.netty.buffer.ByteBuf;
 import io.netty.buffer.Unpooled;
-import io.netty.channel.Channel;
-import server.game.docker.GameServerInitializer;
-import server.game.docker.ship.enums.PDUType;
+import io.netty.channel.ChannelHandlerContext;
+import io.netty.handler.codec.MessageToByteEncoder;
 import server.game.docker.modules.beacons.pdus.PDULobbyBeacon;
-import server.game.docker.ship.parents.pdus.PDU;
+import server.game.docker.ship.enums.PDUType;
 
-public class PDULobbyBeaconHandlerEncoder implements GameServerInitializer.PDUHandlerEncoder {
+public final class LobbyBeaconHandlerEncoder extends MessageToByteEncoder<PDULobbyBeacon> {
     @Override
-    public void encode(PDU in, Channel out) {
-        PDULobbyBeacon lobbyBeacon = (PDULobbyBeacon) in;
-        ByteBuf byteBuf = Unpooled.buffer(2 * Long.BYTES + 4 * Byte.BYTES)
+    public void encode(ChannelHandlerContext channelHandlerContext, PDULobbyBeacon lobbyBeacon, ByteBuf out) {
+        final var byteBuf = Unpooled.buffer(2 * Long.BYTES + 4 * Byte.BYTES)
                 .writeByte(PDUType.LOBBYBEACON.oneBasedOrdinal())
                 .writeLong(Long.BYTES + 2 * Byte.BYTES + 1)
                 .writeLong(lobbyBeacon.getLobbyID())
@@ -20,6 +18,6 @@ public class PDULobbyBeaconHandlerEncoder implements GameServerInitializer.PDUHa
                 .writeByte(lobbyBeacon.getLobbyMaxOccupancy())
                 .writeBoolean(lobbyBeacon.getLobbyListRefresh());
 
-        out.writeAndFlush(byteBuf);
+        channelHandlerContext.writeAndFlush(byteBuf);
     }
 }

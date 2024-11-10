@@ -14,7 +14,7 @@ import server.game.docker.ship.parents.pdus.PDU;
  *     --------------------------------
  * </pre>
  */
-public class PDUChatMessage implements PDU {
+public class ChatMessagePDU implements PDU {
     public static final PDUType type = PDUType.CHATMESSAGE;
     private Long authorID;
     private String authorName;

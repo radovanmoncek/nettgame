@@ -4,12 +4,12 @@ import io.netty.buffer.ByteBuf;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.handler.codec.ByteToMessageDecoder;
 import io.netty.handler.codec.CorruptedFrameException;
-import server.game.docker.modules.requests.pdus.PDULobbyReq;
+import server.game.docker.modules.requests.pdus.LobbyReqPDU;
 import server.game.docker.ship.enums.PDUType;
 
 import java.util.List;
 
-public class LobbyRequestDecoder extends ByteToMessageDecoder {
+public final class LobbyRequestDecoder extends ByteToMessageDecoder {
     @Override
     public void decode(ChannelHandlerContext channelHandlerContext, ByteBuf byteBuf, List<Object> out) {
         if(byteBuf.readableBytes() < 5)
@@ -32,7 +32,7 @@ public class LobbyRequestDecoder extends ByteToMessageDecoder {
             return;
         }
 
-        final var lobbyReq = new PDULobbyReq();
+        final var lobbyReq = new LobbyReqPDU();
         lobbyReq.setActionFlag(byteBuf.readByte());
         if(lobbyReq.getActionFlag() == 1)
             lobbyReq.setLobbyID(byteBuf.readLong());

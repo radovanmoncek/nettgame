@@ -2,18 +2,17 @@ package server.game.docker.modules.updates.encoders;
 
 import io.netty.buffer.ByteBuf;
 import io.netty.buffer.Unpooled;
-import io.netty.channel.Channel;
-import server.game.docker.GameServerInitializer;
-import server.game.docker.ship.enums.PDUType;
+import io.netty.channel.ChannelHandlerContext;
+import io.netty.handler.codec.MessageToMessageEncoder;
 import server.game.docker.modules.updates.pdus.PDULobbyUpdate;
-import server.game.docker.ship.parents.pdus.PDU;
+import server.game.docker.ship.enums.PDUType;
 
 import java.util.ArrayList;
+import java.util.List;
 
-public class PDULobbyUpdateEncoder implements GameServerInitializer.PDUHandlerEncoder {
+public final class LobbyUpdateEncoder extends MessageToMessageEncoder<PDULobbyUpdate> {
     @Override
-    public void encode(PDU in, Channel channel) {
-        PDULobbyUpdate lobbyUpdate = (PDULobbyUpdate) in;
+    public void encode(ChannelHandlerContext channelHandlerContext, PDULobbyUpdate lobbyUpdate, List<Object> out) {
         ByteBuf byteBuf = Unpooled.buffer(Byte.BYTES + Long.BYTES)
                 .writeByte(PDUType.LOBBYUPDATE.oneBasedOrdinal())
                 .writeLong(Long.BYTES + 2 * Byte.BYTES + (lobbyUpdate.getMembers() == null ? 0 : lobbyUpdate.getMembers().size() * (long) Long.BYTES))
@@ -23,6 +22,6 @@ public class PDULobbyUpdateEncoder implements GameServerInitializer.PDUHandlerEn
 
         (lobbyUpdate.getMembers() == null ? new ArrayList<Long>() : lobbyUpdate.getMembers()).forEach(byteBuf::writeLong);
 
-        channel.writeAndFlush(byteBuf);
+        channelHandlerContext.writeAndFlush(byteBuf);
     }
 }

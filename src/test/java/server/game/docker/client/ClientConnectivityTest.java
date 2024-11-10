@@ -3,10 +3,8 @@ package server.game.docker.client;
 import org.junit.jupiter.api.AfterAll;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.Test;
-import server.game.docker.client.modules.requests.facades.LobbyReqClientFacade;
 
-import java.util.Timer;
-import java.util.TimerTask;
+import java.util.concurrent.TimeUnit;
 
 import static org.junit.jupiter.api.Assertions.*;
 
@@ -15,50 +13,39 @@ public class ClientConnectivityTest {
 
     @BeforeAll
     static void setup() throws Exception {
-        gameClient = GameClient.getInstance()
-                .withLobbyReqFacade(new LobbyReqClientFacade());
-        while (gameClient.getClientChannel() == null) {
-            try {
-                final var clientChannel = gameClient.getBootstrap().connect(gameClient.getServerAddress(), gameClient.getGameServerPort()).sync().channel();
-                gameClient.setClientChannel(clientChannel);
-                Thread.sleep(1000);
-            } catch (Exception ignored) {
-            }
-        }
-        while(gameClient.getAssignedID() == null){
-            Thread.sleep(1000);
-        }
+        (
+                gameClient = GameClient
+                .newInstance()
+        ).run(1);
     }
 
     @Test
     void connectionTest() {
-        assertTrue(gameClient.getClientChannel() != null && gameClient.getClientChannel().isActive());
+        assertTrue(gameClient.isConnected());
     }
 
     @Test
-    void iDReceivedTest() {
-        assertNotNull(gameClient.getAssignedID());
+    void usernameRequestAndReceiveTest() throws InterruptedException {
+        assertThrows(IllegalArgumentException.class, () -> gameClient.getUsernameClientFacade().requestUsername("TestThatIsWayOverTheLimitOf8Characters"));
+        gameClient.getUsernameClientFacade().requestUsername("Test");
+
+        for (int i = 0; i < 10 && gameClient.getUsernameClientFacade().getClientUsername() == null; i++) {
+            TimeUnit.SECONDS.sleep(1);
+        }
+        assertEquals("Test", gameClient.getUsernameClientFacade().getClientUsername());
     }
 
     @Test
     void createLobbyTest() throws Exception {
         gameClient.getLobbyReqFacade().createLobby();
-        Long createdLobbyID = null;
-        for (int i = 0; i < 10 && createdLobbyID == null; i++) {
-            Thread.sleep(1000);
+        for (int i = 0; i < 10 && gameClient.getLobbyReqFacade().getLobbyID() == null; i++) {
+            TimeUnit.SECONDS.sleep(1);
         }
-        assertNotNull(createdLobbyID);
+        assertNotNull(gameClient.getLobbyReqFacade().getLobbyID());
     }
 
     @AfterAll
     static void tearDown() throws Exception {
-        new Timer().schedule(new TimerTask() {
-            @Override
-            public void run() {
-                gameClient.getClientChannel().close();
-            }
-        }, 10000);
-        gameClient.getClientChannel().closeFuture().sync();
-        gameClient.getWorkerGroup().shutdownGracefully();
+        gameClient.shutdownGracefullyAfterNSeconds(10);
     }
 }

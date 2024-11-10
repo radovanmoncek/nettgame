@@ -6,12 +6,13 @@ import io.netty.channel.ChannelInitializer;
 import io.netty.channel.socket.SocketChannel;
 import io.netty.handler.logging.LogLevel;
 import io.netty.handler.logging.LoggingHandler;
-import server.game.docker.modules.ids.IDServerFacade;
-import server.game.docker.modules.ids.encoders.IDEncoder;
-import server.game.docker.modules.ids.handlers.ServerIDHandler;
-import server.game.docker.modules.requests.LobbyRequestServerFacade;
+import server.game.docker.modules.usernames.decoders.UsernameDecoder;
+import server.game.docker.modules.usernames.encoders.UsernameEncoder;
+import server.game.docker.modules.usernames.facades.UsernameServerFacade;
+import server.game.docker.modules.usernames.handlers.UsernameServerHandler;
+import server.game.docker.modules.requests.facades.LobbyRequestServerFacade;
 import server.game.docker.modules.requests.decoder.LobbyRequestDecoder;
-import server.game.docker.modules.requests.handlers.ServerLobbyRequestHandler;
+import server.game.docker.modules.requests.handlers.LobbyRequestServerHandler;
 import server.game.docker.ship.enums.PDUType;
 import server.game.docker.ship.parents.pdus.PDU;
 
@@ -21,10 +22,10 @@ import java.util.Map;
 import java.util.Vector;
 
 public final class GameServerInitializer extends ChannelInitializer<SocketChannel>{
-    private final IDServerFacade iDServerFacade;
+    private final UsernameServerFacade iDServerFacade;
     private final LobbyRequestServerFacade lobbyRequestServerFacade;
 
-    public GameServerInitializer(final IDServerFacade iDServerFacade, final LobbyRequestServerFacade lobbyRequestServerFacade) {
+    public GameServerInitializer(final UsernameServerFacade iDServerFacade, final LobbyRequestServerFacade lobbyRequestServerFacade) {
         this.iDServerFacade = iDServerFacade;
         this.lobbyRequestServerFacade = lobbyRequestServerFacade;
     }
@@ -33,10 +34,11 @@ public final class GameServerInitializer extends ChannelInitializer<SocketChanne
     public void initChannel(SocketChannel socketChannel) throws Exception {
         socketChannel.pipeline().addFirst(
                 new LoggingHandler(LogLevel.ERROR),
+                new UsernameDecoder(),
                 new LobbyRequestDecoder(),
-                new ServerIDHandler(iDServerFacade),
-                new ServerLobbyRequestHandler(lobbyRequestServerFacade),
-                new IDEncoder()
+                new UsernameServerHandler(iDServerFacade),
+                new LobbyRequestServerHandler(lobbyRequestServerFacade),
+                new UsernameEncoder()
         );
     }
 

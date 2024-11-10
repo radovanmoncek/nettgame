@@ -7,8 +7,6 @@ package server.game.docker.ship.parents.pdus;
  * PDU:
  * <pre>
  *     ---------------------------------------------------
- *     |                 Protocol ID (3B)                |
- *     ---------------------------------------------------
  *     | PDUType byte (1B)     |    dataLength int? (4B) |
  *     ---------------------------------------------------
  *     |                  data (frame max length)        |
