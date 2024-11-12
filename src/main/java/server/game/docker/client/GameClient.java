@@ -6,13 +6,14 @@ import io.netty.channel.ChannelOption;
 import io.netty.channel.EventLoopGroup;
 import io.netty.channel.nio.NioEventLoopGroup;
 import io.netty.channel.socket.nio.NioSocketChannel;
-import server.game.docker.client.modules.requests.facades.LobbyRequestClientFacade;
-import server.game.docker.client.modules.usernames.facades.UsernameClientFacade;
-import server.game.docker.client.ship.parents.ClientFacade;
+import server.game.docker.client.modules.lobby.facades.LobbyClientFacade;
+import server.game.docker.client.modules.player.facades.PlayerClientFacade;
+import server.game.docker.client.ship.parents.facades.ClientFacade;
 import server.game.docker.ship.parents.pdus.PDU;
 
 import java.lang.reflect.Field;
 import java.net.InetAddress;
+import java.net.UnknownHostException;
 import java.util.Timer;
 import java.util.TimerTask;
 import java.util.concurrent.TimeUnit;
@@ -24,14 +25,18 @@ public final class GameClient {
     private InetAddress gameServerAddress;
     private int gameServerPort;
     private Channel serverChannel;
-    private UsernameClientFacade usernameClientFacade;
-    private LobbyRequestClientFacade lobbyRequestClientFacade;
+    private PlayerClientFacade playerClientFacade;
+    private LobbyClientFacade lobbyClientFacade;
 
-    private GameClient() throws Exception {
-        usernameClientFacade = new UsernameClientFacade();
-        lobbyRequestClientFacade = new LobbyRequestClientFacade();
+    /**
+     * Constructs a new {@link GameClient} instance with an ip address of 127.0.0.1 and port number of 4321.
+     * @throws UnknownHostException if the {@link InetAddress} fails to resolve
+     */
+    private GameClient() throws UnknownHostException {
         gameServerAddress = InetAddress.getByName("127.0.0.1");
         gameServerPort = 4321;
+        lobbyClientFacade = new LobbyClientFacade();
+        playerClientFacade = new PlayerClientFacade();
         workerGroup = new NioEventLoopGroup();
         bootstrap = new Bootstrap();
     }
@@ -47,8 +52,8 @@ public final class GameClient {
                     .channel(NioSocketChannel.class)
                     .option(ChannelOption.SO_KEEPALIVE, true)
                     .handler(new ClientInitializer(
-                            usernameClientFacade,
-                            lobbyRequestClientFacade
+                            playerClientFacade,
+                            lobbyClientFacade
                     ));
         }
         catch (Exception e) {
@@ -62,8 +67,8 @@ public final class GameClient {
             } catch (Exception ignored) {
             }
         }
-        injectServerChannelIntoClientFacade(usernameClientFacade);
-        injectServerChannelIntoClientFacade(lobbyRequestClientFacade);
+        injectServerChannelIntoClientFacade(playerClientFacade);
+        injectServerChannelIntoClientFacade(lobbyClientFacade);
     }
 
     //todo: singleton !!!!
@@ -71,21 +76,21 @@ public final class GameClient {
         return new GameClient();
     }
 
-    public GameClient withUsernameFacade(final UsernameClientFacade usernameClientFacade) {
-        if (this.usernameClientFacade == null)
+    public GameClient withUsernameFacade(final PlayerClientFacade playerClientFacade) {
+        if (this.playerClientFacade == null)
             throw new NullPointerException("usernameClientFacade is null");
 
-        this.usernameClientFacade = usernameClientFacade;
-        injectServerChannelIntoClientFacade(usernameClientFacade);
+        this.playerClientFacade = playerClientFacade;
+        injectServerChannelIntoClientFacade(playerClientFacade);
         return this;
     }
 
-    public GameClient withLobbyReqFacade(final LobbyRequestClientFacade lobbyRequestClientFacade) {
-        if(lobbyRequestClientFacade == null)
+    public GameClient withLobbyReqFacade(final LobbyClientFacade lobbyClientFacade) {
+        if(lobbyClientFacade == null)
             throw new NullPointerException("lobbyRequestClientFacade cannot be null");
 
-        this.lobbyRequestClientFacade = lobbyRequestClientFacade;
-        injectServerChannelIntoClientFacade(lobbyRequestClientFacade);
+        this.lobbyClientFacade = lobbyClientFacade;
+        injectServerChannelIntoClientFacade(lobbyClientFacade);
         return this;
     }
 
@@ -105,16 +110,16 @@ public final class GameClient {
 
     public void setServerChannel(Channel serverChannel) {
         this.serverChannel = serverChannel;
-        injectServerChannelIntoClientFacade(usernameClientFacade);
-        injectServerChannelIntoClientFacade(lobbyRequestClientFacade);
+        injectServerChannelIntoClientFacade(playerClientFacade);
+        injectServerChannelIntoClientFacade(lobbyClientFacade);
     }
 
-    public UsernameClientFacade getUsernameClientFacade() {
-        return usernameClientFacade;
+    public PlayerClientFacade getUsernameClientFacade() {
+        return playerClientFacade;
     }
 
-    public LobbyRequestClientFacade getLobbyReqFacade() {
-        return lobbyRequestClientFacade;
+    public LobbyClientFacade getLobbyReqFacade() {
+        return lobbyClientFacade;
     }
 
     public int getGameServerPort() {

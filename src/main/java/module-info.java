@@ -6,4 +6,5 @@ module server.game.docker {
     requires io.netty.common;
 
     exports server.game.docker;
+    exports server.game.docker.modules.player.facades;
 }

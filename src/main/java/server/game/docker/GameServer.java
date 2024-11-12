@@ -8,8 +8,8 @@ import io.netty.channel.group.DefaultChannelGroup;
 import io.netty.channel.nio.NioEventLoopGroup;
 import io.netty.channel.socket.nio.NioServerSocketChannel;
 import io.netty.util.concurrent.GlobalEventExecutor;
-import server.game.docker.modules.usernames.facades.UsernameServerFacade;
-import server.game.docker.modules.requests.facades.LobbyRequestServerFacade;
+import server.game.docker.modules.player.facades.PlayerServerFacade;
+import server.game.docker.modules.lobby.facades.LobbyServerFacade;
 import server.game.docker.ship.parents.facades.ServerFacade;
 import server.game.docker.ship.parents.pdus.PDU;
 
@@ -40,18 +40,18 @@ public final class GameServer {
     /**
      *
      */
-    private UsernameServerFacade usernameServerFacade;
+    private PlayerServerFacade playerServerFacade;
     /**
      *
      */
-    private LobbyRequestServerFacade lobbyRequestServerFacade;
+    private LobbyServerFacade lobbyServerFacade;
 
     private GameServer() {
         managedClients = new DefaultChannelGroup(GlobalEventExecutor.INSTANCE);
-        usernameServerFacade = new UsernameServerFacade();
-        injectManagedClientsIntoServerFacade(usernameServerFacade);
-        lobbyRequestServerFacade = new LobbyRequestServerFacade();
-        injectManagedClientsIntoServerFacade(lobbyRequestServerFacade);
+        playerServerFacade = new PlayerServerFacade();
+        injectManagedClientsIntoServerFacade(playerServerFacade);
+        lobbyServerFacade = new LobbyServerFacade(playerServerFacade);
+        injectManagedClientsIntoServerFacade(lobbyServerFacade);
     }
 
     public static GameServer getInstance() {
@@ -65,15 +65,15 @@ public final class GameServer {
         return this;
     }
 
-    public GameServer withIDServerFacade(final UsernameServerFacade iDServerFacade) {
-        this.usernameServerFacade = iDServerFacade;
+    public GameServer withIDServerFacade(final PlayerServerFacade iDServerFacade) {
+        this.playerServerFacade = iDServerFacade;
         injectManagedClientsIntoServerFacade(iDServerFacade);
         return this;
     }
 
-    public GameServer withLobbyRequestServerFacade(final LobbyRequestServerFacade lobbyRequestServerFacade) {
-        this.lobbyRequestServerFacade = lobbyRequestServerFacade;
-        injectManagedClientsIntoServerFacade(lobbyRequestServerFacade);
+    public GameServer withLobbyRequestServerFacade(final LobbyServerFacade lobbyServerFacade) {
+        this.lobbyServerFacade = lobbyServerFacade;
+        injectManagedClientsIntoServerFacade(lobbyServerFacade);
         return this;
     }
 
@@ -85,8 +85,8 @@ public final class GameServer {
                     .group(bossGroup, workerGroup)
                     .channel(NioServerSocketChannel.class)
                     .childHandler(new GameServerInitializer(
-                            usernameServerFacade,
-                            lobbyRequestServerFacade
+                            playerServerFacade,
+                            lobbyServerFacade
                     ))
                     .option(ChannelOption.SO_BACKLOG, 128)
                     .childOption(ChannelOption.SO_KEEPALIVE, true);
