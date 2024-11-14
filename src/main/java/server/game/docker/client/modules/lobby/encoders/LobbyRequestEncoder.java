@@ -12,9 +12,9 @@ public final class LobbyRequestEncoder extends MessageToByteEncoder<LobbyRequest
     public void encode(ChannelHandlerContext channelHandlerContext, LobbyRequestPDU in, ByteBuf out) {
         final var byteBuf = Unpooled.buffer(Byte.BYTES + Long.BYTES)
                 .writeByte(PDUType.LOBBYREQUEST.oneBasedOrdinal())
-                .writeLong(Byte.BYTES + (in.getActionFlag() == 1? Long.BYTES : 0))
+                .writeLong(Byte.BYTES + (in.getActionFlag().equals(LobbyRequestPDU.JOIN)? Long.BYTES : 0))
                 .writeByte(in.getActionFlag().intValue());
-        if (in.getActionFlag() == 1) {
+        if (in.getActionFlag().equals(LobbyRequestPDU.JOIN)) {
             byteBuf.writeLong(in.getLeaderId());
         }
 

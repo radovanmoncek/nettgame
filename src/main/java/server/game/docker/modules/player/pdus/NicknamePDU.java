@@ -1,13 +1,11 @@
 package server.game.docker.modules.player.pdus;
 
-import server.game.docker.ship.enums.PDUType;
 import server.game.docker.ship.parents.pdus.PDU;
 
 public class NicknamePDU implements PDU {
-    public static final PDUType type = PDUType.USERNAME;
     private String newClientUsername;
 
-    public String getNewClientUsername() {
+    public String getNewNickname() {
         return newClientUsername;
     }
 

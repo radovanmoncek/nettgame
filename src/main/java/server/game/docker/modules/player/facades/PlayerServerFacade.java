@@ -9,10 +9,10 @@ import java.util.HashMap;
 import java.util.Map;
 
 public class PlayerServerFacade extends ServerFacade<NicknamePDU> {
-    private final Map<ChannelId, String> clientUsernames;
+    private final Map<ChannelId, String> nicknames;
 
     public PlayerServerFacade() {
-        clientUsernames = new HashMap<>();
+        nicknames = new HashMap<>();
     }
 
     /**
@@ -26,22 +26,18 @@ public class PlayerServerFacade extends ServerFacade<NicknamePDU> {
      * @param newClientUsername the requested username
      * @param clientChannel the request initiator
      */
-    public void assignClientUsername(final String newClientUsername, final Channel clientChannel) {
-        clientUsernames.put(clientChannel.id(), newClientUsername);
+    public void receiveNicknameRequest(final String newClientUsername, final Channel clientChannel) {
+        nicknames.put(clientChannel.id(), newClientUsername);
         final var usernamePDU = new NicknamePDU();
         usernamePDU.setNewClientUsername(newClientUsername);
         unicastPDUToClientChannel(usernamePDU, clientChannel);
     }
 
-    public void receiveClientUsernameRequest(){
-        throw new UnsupportedOperationException("This method is not implemented.");
+    public final String getNickname(final ChannelId clientChannelId) {
+        return nicknames.get(clientChannelId);
     }
 
-    public final String getClientUsername(final ChannelId clientChannelId) {
-        return clientUsernames.get(clientChannelId);
-    }
-
-    public void removeClientUsername(final ChannelId id) {
-        clientUsernames.remove(id);
+    public void removeNickname(final ChannelId id) {
+        nicknames.remove(id);
     }
 }

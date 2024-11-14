@@ -16,9 +16,8 @@ public final class PlayerServerHandler extends SimpleChannelInboundHandler<Nickn
 
     @Override
     public void channelRead0(ChannelHandlerContext ctx, NicknamePDU nicknamePDU) {
-        System.out.printf("A client with ChannelId %s has requested a new username: %s\n", ctx.channel().id(), nicknamePDU.getNewClientUsername()); //todo: log4j
-        playerServerFacade.assignClientUsername(nicknamePDU.getNewClientUsername(), ctx.channel());
-        playerServerFacade.receiveClientUsernameRequest();
+        System.out.printf("A client with ChannelId %s has requested a new username: %s\n", ctx.channel().id(), nicknamePDU.getNewNickname()); //todo: log4j
+        playerServerFacade.receiveNicknameRequest(nicknamePDU.getNewNickname(), ctx.channel());
     }
 
     @Override
@@ -30,7 +29,7 @@ public final class PlayerServerHandler extends SimpleChannelInboundHandler<Nickn
     @Override
     public void handlerRemoved(ChannelHandlerContext ctx) {
         System.out.printf("Client with ChannelId %s has disconnected\n", ctx.channel().id()); //todo: log4j
-        playerServerFacade.removeClientUsername(ctx.channel().id());
+        playerServerFacade.removeNickname(ctx.channel().id());
         playerServerFacade.stopManagingClient(ctx.channel());
     }
 

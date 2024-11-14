@@ -14,6 +14,6 @@ public class PlayerClientHandler extends SimpleChannelInboundHandler<NicknamePDU
 
     @Override
     protected void channelRead0(ChannelHandlerContext ctx, NicknamePDU msg) {
-        playerClientFacade.receiveNewNickname(msg.getNewClientUsername());
+        playerClientFacade.receiveNewNickname(msg.getNewNickname());
     }
 }

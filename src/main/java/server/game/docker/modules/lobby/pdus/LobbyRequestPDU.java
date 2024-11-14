@@ -1,6 +1,5 @@
 package server.game.docker.modules.lobby.pdus;
 
-import server.game.docker.ship.enums.PDUType;
 import server.game.docker.ship.parents.pdus.PDU;
 
 /**
@@ -11,7 +10,6 @@ public class LobbyRequestPDU implements PDU {
     public static final Byte JOIN = 1;
     public static final Byte LEAVE = 2;
     public static final Byte INFO = 3;
-    public static final PDUType type = PDUType.LOBBYREQUEST;
     /**
      * <ul>
      *     <li>

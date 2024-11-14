@@ -1,6 +1,5 @@
 package server.game.docker.client.modules.lobby.facades;
 
-import io.netty.channel.ChannelId;
 import server.game.docker.client.ship.parents.facades.ClientFacade;
 import server.game.docker.modules.lobby.pdus.LobbyRequestPDU;
 
@@ -23,10 +22,10 @@ public class LobbyClientFacade extends ClientFacade<LobbyRequestPDU> {
         unicastPDUToServerChannel(lobbyRequest);
     }
 
-    public void joinLobby(final ChannelId leaderChannelId) {
+    public void joinLobby(final Long leaderChannelId) {
         final var lobbyReq = new LobbyRequestPDU();
         lobbyReq.setActionFlag(LobbyRequestPDU.JOIN);
-        lobbyReq.setLeaderId(Long.valueOf(leaderChannelId.asShortText()));
+        lobbyReq.setLeaderId(leaderChannelId);
         unicastPDUToServerChannel(lobbyReq);
     }
 
@@ -38,5 +37,13 @@ public class LobbyClientFacade extends ClientFacade<LobbyRequestPDU> {
 
     public void receiveLobbyCreated(final Long leaderId, final Collection<String> members) {
         throw new UnsupportedOperationException("Method receiveLobbyCreated is not implemented.");
+    }
+
+    public void receiveLobbyLeft(final Long leaderId, final Collection<String> members) {
+        throw new UnsupportedOperationException("Method receiveLobbyLeft is not implemented.");
+    }
+
+    public void receiveLobbyJoined(final Long leaderId, final Collection<String> members) {
+        throw new UnsupportedOperationException("Method receiveLobbyJoined is not implemented.");
     }
 }

@@ -1,6 +1,7 @@
 package server.game.docker;
 
 import io.netty.bootstrap.ServerBootstrap;
+import io.netty.channel.ChannelFuture;
 import io.netty.channel.ChannelOption;
 import io.netty.channel.EventLoopGroup;
 import io.netty.channel.group.ChannelGroup;
@@ -13,6 +14,8 @@ import server.game.docker.modules.lobby.facades.LobbyServerFacade;
 import server.game.docker.ship.parents.facades.ServerFacade;
 import server.game.docker.ship.parents.pdus.PDU;
 
+import java.util.Timer;
+import java.util.TimerTask;
 import java.util.stream.Stream;
 
 /**
@@ -21,7 +24,7 @@ import java.util.stream.Stream;
  * </p>
  * <p>
  * The default port number of the DockerGameServer is TCP 4321.
- * This value may be changed, please refer to {@link #withPort(Integer port)} for further information.
+ * INSTANCE value may be changed, please refer to {@link #withPort(Integer port)} for further information.
  * </p>
  * <p>
  * Please make sure to note that because of the multi-threaded nature of {@link EventLoopGroup} workers,
@@ -30,11 +33,15 @@ import java.util.stream.Stream;
  */
 public final class GameServer {
     /**
+     * Singleton pattern
+     */
+    private static GameServer INSTANCE;
+    /**
      * The server port. Defaults to 4321.
      */
     private Integer port = 4321;
     /**
-     * All the clients connected to this server instance
+     * All the clients connected to INSTANCE server instance
      */
     private final ChannelGroup managedClients;
     /**
@@ -45,6 +52,9 @@ public final class GameServer {
      *
      */
     private LobbyServerFacade lobbyServerFacade;
+    private ChannelFuture future;
+    private NioEventLoopGroup bossGroup;
+    private NioEventLoopGroup workerGroup;
 
     private GameServer() {
         managedClients = new DefaultChannelGroup(GlobalEventExecutor.INSTANCE);
@@ -54,8 +64,11 @@ public final class GameServer {
         injectManagedClientsIntoServerFacade(lobbyServerFacade);
     }
 
-    public static GameServer getInstance() {
-        return new GameServer();
+    public static GameServer newInstance() {
+        if (INSTANCE == null)
+            INSTANCE = new GameServer();
+
+        return INSTANCE;
     }
 
     public GameServer withPort(final Integer port) {
@@ -77,29 +90,45 @@ public final class GameServer {
         return this;
     }
 
-    public void run() throws Exception {
-        final var bossGroup = new NioEventLoopGroup();
-        final var workerGroup = new NioEventLoopGroup();
+    /**
+     * <p>
+     * Runs the DockerGameServer instance and blocks the current thread until the {@link #shutdownGracefullyAfterNSeconds shutdownGracefullyAfterNSeconds(int seconds)} method is called.
+     * </p>
+     *
+     * @throws InterruptedException if the {@link ChannelFuture#sync()} is interrupted
+     */
+    public void run() throws InterruptedException {
+        bossGroup = new NioEventLoopGroup();
+        workerGroup = new NioEventLoopGroup();
+        final var bootstrap = new ServerBootstrap()
+                .group(bossGroup, workerGroup)
+                .channel(NioServerSocketChannel.class)
+                .childHandler(new GameServerInitializer(
+                        playerServerFacade,
+                        lobbyServerFacade
+                ))
+                .option(ChannelOption.SO_BACKLOG, 128)
+                .childOption(ChannelOption.SO_KEEPALIVE, true);
         try {
-            final var bootstrap = new ServerBootstrap()
-                    .group(bossGroup, workerGroup)
-                    .channel(NioServerSocketChannel.class)
-                    .childHandler(new GameServerInitializer(
-                            playerServerFacade,
-                            lobbyServerFacade
-                    ))
-                    .option(ChannelOption.SO_BACKLOG, 128)
-                    .childOption(ChannelOption.SO_KEEPALIVE, true);
-
-            final var future = bootstrap.bind(port).sync();
+            future = bootstrap.bind(port).sync();
             System.out.printf("GameServer running on port %d\n", port);
 
             //Blocking method
             future.channel().closeFuture().sync();
         } finally {
-            workerGroup.shutdownGracefully();
-            bossGroup.shutdownGracefully();
+            shutdownGracefullyAfterNSeconds(0);
         }
+    }
+
+    public void shutdownGracefullyAfterNSeconds(final int seconds) {
+        new Timer().schedule(new TimerTask() {
+            @Override
+            public void run() {
+                future.channel().close();
+                workerGroup.shutdownGracefully();
+                bossGroup.shutdownGracefully();
+            }
+        }, (long) seconds * 1000);
     }
 
     private void injectManagedClientsIntoServerFacade(ServerFacade<? extends PDU> serverFacade) {

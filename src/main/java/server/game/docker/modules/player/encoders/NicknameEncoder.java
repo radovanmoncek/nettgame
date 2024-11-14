@@ -21,7 +21,7 @@ public final class NicknameEncoder extends MessageToMessageEncoder<NicknamePDU> 
                         Unpooled.buffer(MAX_USERNAME_LENGTH).alloc(),
                         CharBuffer
                                 .allocate(MAX_USERNAME_LENGTH)
-                                .append(nicknamePDU.getNewClientUsername())
+                                .append(nicknamePDU.getNewNickname())
                                 .position(0),
                         Charset.defaultCharset()
                 );

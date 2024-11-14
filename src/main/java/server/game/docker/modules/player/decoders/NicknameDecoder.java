@@ -29,6 +29,7 @@ public final class NicknameDecoder extends ByteToMessageDecoder {
 
         if(!type.equals(PDUType.USERNAME)) {
             in.resetReaderIndex();
+            channelHandlerContext.fireChannelRead(in.retain());
             return;
         }
 
@@ -39,6 +40,7 @@ public final class NicknameDecoder extends ByteToMessageDecoder {
 
         final var usernamePDU = new NicknamePDU();
         usernamePDU.setNewClientUsername(in.toString(in.readerIndex(), MAX_USERNAME_LENGTH, Charset.defaultCharset()).trim());
+        in.readerIndex(in.readerIndex() + MAX_USERNAME_LENGTH);
         out.add(usernamePDU);
     }
 }

@@ -4,6 +4,7 @@ import io.netty.channel.ChannelInitializer;
 import io.netty.channel.socket.SocketChannel;
 import io.netty.handler.logging.LogLevel;
 import io.netty.handler.logging.LoggingHandler;
+import server.game.docker.client.modules.lobby.decoders.LobbyUpdateDecoder;
 import server.game.docker.client.modules.lobby.encoders.LobbyRequestEncoder;
 import server.game.docker.client.modules.lobby.facades.LobbyClientFacade;
 import server.game.docker.client.modules.lobby.handlers.LobbyClientHandler;
@@ -26,6 +27,7 @@ public final class ClientInitializer extends ChannelInitializer<SocketChannel> {
         socketChannel.pipeline().addFirst(
                 new LoggingHandler(LogLevel.ERROR),
                 new NicknameDecoder(),
+                new LobbyUpdateDecoder(),
                 new PlayerClientHandler(playerClientFacade),
                 new LobbyClientHandler(lobbyClientFacade),
                 new NicknameEncoder(),
