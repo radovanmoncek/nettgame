@@ -2,9 +2,12 @@ package server.game.docker.modules.session.handlers;
 
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.SimpleChannelInboundHandler;
+import server.game.docker.modules.session.facades.SessionServerFacade;
 import server.game.docker.ship.parents.pdus.PDU;
 
 import java.net.InetAddress;
+import java.util.Queue;
+import java.util.concurrent.TimeUnit;
 
 public class GameSessionHandler extends SimpleChannelInboundHandler<PDU> {
     @Override
@@ -236,6 +239,41 @@ public class GameSessionHandler extends SimpleChannelInboundHandler<PDU> {
 
         public Byte getTileID() {
             return tileID;
+        }
+    }
+
+    public static class SessionTickRunnable implements Runnable {
+        private final SessionServerFacade sessionServerFacade;
+
+        public SessionTickRunnable(SessionServerFacade sessionServerFacade) {
+            this.sessionServerFacade = sessionServerFacade;
+        }
+
+        @Override
+        public void run() {
+            while(!sessionServerFacade.isEnded()){
+                sessionServerFacade.receivedServerTick();
+                try {
+                    TimeUnit.MILLISECONDS.sleep(100/3);
+                } catch (InterruptedException e) {
+                    e.printStackTrace(); //todo: log4j
+                }
+            }
+        }
+
+        public static class SessionMessageBrokerRunnable implements Runnable {
+            private final Queue<PDU> messageQueue;
+            private final SessionServerFacade sessionServerFacade;
+
+            public SessionMessageBrokerRunnable(Queue<PDU> messageQueue, SessionServerFacade sessionServerFacade, SessionServerFacade sessionServerFacade1) {
+                this.messageQueue = messageQueue;
+                this.sessionServerFacade = sessionServerFacade1;
+            }
+
+            @Override
+            public void run() {
+
+            }
         }
     }
 }

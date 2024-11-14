@@ -28,8 +28,7 @@ public class PlayerServerFacade extends ServerFacade<NicknamePDU> {
      */
     public void receiveNicknameRequest(final String newClientUsername, final Channel clientChannel) {
         nicknames.put(clientChannel.id(), newClientUsername);
-        final var usernamePDU = new NicknamePDU();
-        usernamePDU.setNewClientUsername(newClientUsername);
+        final var usernamePDU = new NicknamePDU(newClientUsername);
         unicastPDUToClientChannel(usernamePDU, clientChannel);
     }
 

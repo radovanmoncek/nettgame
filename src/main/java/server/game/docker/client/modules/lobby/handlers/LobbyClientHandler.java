@@ -14,15 +14,18 @@ public class LobbyClientHandler extends SimpleChannelInboundHandler<LobbyUpdateP
 
     @Override
     protected void channelRead0(ChannelHandlerContext ctx, LobbyUpdatePDU lobbyUpdate) {
-        switch (lobbyUpdate.getStateFlag()) {
-            case 0 -> lobbyClientFacade.receiveLobbyCreated(lobbyUpdate.getLeaderId(), lobbyUpdate.getMembers());
+        switch (lobbyUpdate.lobbyUpdateResponseFlag()) {
+            case 0 -> {
+                System.out.printf("Received lobby create response %s from the server\n", lobbyUpdate); // todo: log4j
+                lobbyClientFacade.receiveLobbyCreated(lobbyUpdate.leaderId(), lobbyUpdate.members());
+            }
             case 2 -> {
                 System.out.printf("Received lobby left response %s from the server\n", lobbyUpdate); //todo: log4j
-                lobbyClientFacade.receiveLobbyLeft(lobbyUpdate.getLeaderId(), lobbyUpdate.getMembers());
+                lobbyClientFacade.receiveLobbyLeft(lobbyUpdate.leaderId(), lobbyUpdate.members());
             }
             case 1 -> {
                 System.out.printf("Received lobby join response %s from the server\n", lobbyUpdate); //todo: log4j
-                lobbyClientFacade.receiveLobbyJoined(lobbyUpdate.getLeaderId(), lobbyUpdate.getMembers());
+                lobbyClientFacade.receiveLobbyJoined(lobbyUpdate.leaderId(), lobbyUpdate.members());
             }
         }
     }

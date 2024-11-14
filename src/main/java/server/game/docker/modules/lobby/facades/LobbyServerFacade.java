@@ -22,16 +22,13 @@ public class LobbyServerFacade extends ServerFacade<LobbyUpdatePDU> {
     public synchronized void receiveCreateRequest(final Channel clientChannel) {
         if (lobbyMemberships.containsKey(clientChannel.id()))
             return;
-        /*for (final LinkedList<ChannelId> lobby : lobbyMembers){
-            if(lobby.contains(clientChannel.id()))
-                return;
-        }*/
         lobbyMembers.add(new LinkedList<>(List.of(clientChannel.id())));
         lobbyMemberships.computeIfAbsent(clientChannel.id(), ignored -> lobbyMembers.size() - 1);
-        final var lobbyUpdate = new LobbyUpdatePDU();
-        lobbyUpdate.setStateFlag(LobbyUpdatePDU.CREATED);
-        lobbyUpdate.setLeaderId(Long.parseLong(clientChannel.id().asShortText(), 16));
-        lobbyUpdate.setMembers(lobbyMembers.get(lobbyMembers.size() - 1).stream().map(playerServerFacade::getNickname).toList());
+        final var lobbyUpdate = new LobbyUpdatePDU(
+                (byte) LobbyUpdatePDU.LobbyUpdateResponseFlag.CREATED.ordinal(),
+                Long.parseLong(clientChannel.id().asShortText(), 16),
+                lobbyMembers.get(lobbyMembers.size() - 1).stream().map(playerServerFacade::getNickname).toList()
+        );
         unicastPDUToClientChannel(lobbyUpdate, clientChannel);
     }
 
@@ -44,18 +41,17 @@ public class LobbyServerFacade extends ServerFacade<LobbyUpdatePDU> {
             if(lobby.size() > 2)
                 throw new RuntimeException(String.format("Lobby %s with more than 2 members exists.\n", lobby));
             lobbyMembers.get(entry.getValue()).add(clientChannel.id());
+            lobbyMemberships.computeIfAbsent(clientChannel.id(), ignored -> lobbyMembers.size() - 1);
 
-            final var lobbyUpdate = new LobbyUpdatePDU();
-            lobbyUpdate.setStateFlag(LobbyUpdatePDU.JOINED);
-            lobbyUpdate.setLeaderId(lobbyLeaderId);
-            lobbyUpdate.setMembers(lobby.stream().map(playerServerFacade::getNickname).toList());
+            final var lobbyUpdate = new LobbyUpdatePDU(
+                    (byte) LobbyUpdatePDU.LobbyUpdateResponseFlag.JOINED.ordinal(),
+                    lobbyLeaderId, lobby.stream().map(playerServerFacade::getNickname).toList()
+            );
             unicastPDUToClientChannel(lobbyUpdate, clientChannel);
         });
     }
 
     public synchronized void receiveLeaveRequest(final Channel clientChannel) {
-        final var lobbyUpdate = new LobbyUpdatePDU();
-
         if (!lobbyMemberships.containsKey(clientChannel.id()))
             return;
 
@@ -67,20 +63,22 @@ public class LobbyServerFacade extends ServerFacade<LobbyUpdatePDU> {
 
         if (lobby.size() == 1) {
             lobbyMembers.remove((int) lobbyMemberships.remove(clientChannel.id()));
-
-            lobbyUpdate.setStateFlag(LobbyUpdatePDU.LEFT);
         }
 
         if (lobby.size() == 2) {
             lobbyMemberships.remove(clientChannel.id());
             lobby.remove(clientChannel.id());
 
-            lobbyUpdate.setStateFlag(LobbyUpdatePDU.MEMBERLEFT);
+            final var lobbyUpdateForOtherMembers = new LobbyUpdatePDU(
+                    (byte) LobbyUpdatePDU.LobbyUpdateResponseFlag.MEMBERLEFT.ordinal(),
+                    Long.valueOf(lobby.get(0).asShortText(), 16),
+                    lobby.stream().map(playerServerFacade::getNickname).toList()
+            );
+            multicastPDUToClientChannelIds(lobbyUpdateForOtherMembers, lobby.get(0));
         }
 
-        lobbyUpdate.setLeaderId(-1L);
-        lobbyUpdate.setMembers(Collections.emptyList());
-        unicastPDUToClientChannel(lobbyUpdate, clientChannel);
+        final var lobbyUpdateForLeavingPlayer = new LobbyUpdatePDU((byte) LobbyUpdatePDU.LobbyUpdateResponseFlag.LEFT.ordinal(), -1L, Collections.emptyList());
+        unicastPDUToClientChannel(lobbyUpdateForLeavingPlayer, clientChannel);
     }
 
     public void removeDisconnectedChannelIdFromLobby(final ChannelId playerChannelId) {

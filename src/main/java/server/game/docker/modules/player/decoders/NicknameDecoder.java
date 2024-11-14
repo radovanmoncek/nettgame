@@ -5,13 +5,15 @@ import io.netty.channel.ChannelHandlerContext;
 import io.netty.handler.codec.ByteToMessageDecoder;
 import io.netty.handler.codec.CorruptedFrameException;
 import server.game.docker.modules.player.pdus.NicknamePDU;
-import server.game.docker.ship.enums.PDUType;
 
 import java.nio.charset.Charset;
+import java.util.Arrays;
 import java.util.List;
 
 public final class NicknameDecoder extends ByteToMessageDecoder {
-    private final int MAX_USERNAME_LENGTH = 8;
+    private static final byte MIN_PROTOCOL_IDENTIFIER = 0x1;
+    private static final int MAX_USERNAME_LENGTH = 8;
+    private static final byte MAX_PROTOCOL_IDENTIFIER = 0x10;
 
     @Override
     protected void decode(ChannelHandlerContext channelHandlerContext, ByteBuf in, List<Object> out) {
@@ -21,13 +23,13 @@ public final class NicknameDecoder extends ByteToMessageDecoder {
 
         in.markReaderIndex();
 
-        final var type = PDUType.valueOf((byte) in.readUnsignedByte());
+        final var type = in.readUnsignedByte();
 
-        if (type.equals(PDUType.INVALID)) {
-            throw new CorruptedFrameException(String.format("Invalid PDU type received: %s", in));
+        if (type < MIN_PROTOCOL_IDENTIFIER || type > MAX_PROTOCOL_IDENTIFIER) {
+            throw new CorruptedFrameException(String.format("Corrupted PDU received: %s", Arrays.toString(in.array())));
         }
 
-        if(!type.equals(PDUType.USERNAME)) {
+        if(type != NicknamePDU.PROTOCOL_IDENTIFIER) {
             in.resetReaderIndex();
             channelHandlerContext.fireChannelRead(in.retain());
             return;
@@ -38,8 +40,7 @@ public final class NicknameDecoder extends ByteToMessageDecoder {
             return;
         }
 
-        final var usernamePDU = new NicknamePDU();
-        usernamePDU.setNewClientUsername(in.toString(in.readerIndex(), MAX_USERNAME_LENGTH, Charset.defaultCharset()).trim());
+        final var usernamePDU = new NicknamePDU(in.toString(in.readerIndex(), MAX_USERNAME_LENGTH, Charset.defaultCharset()).trim());
         in.readerIndex(in.readerIndex() + MAX_USERNAME_LENGTH);
         out.add(usernamePDU);
     }

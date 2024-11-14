@@ -16,8 +16,8 @@ public final class PlayerServerHandler extends SimpleChannelInboundHandler<Nickn
 
     @Override
     public void channelRead0(ChannelHandlerContext ctx, NicknamePDU nicknamePDU) {
-        System.out.printf("A client with ChannelId %s has requested a new username: %s\n", ctx.channel().id(), nicknamePDU.getNewNickname()); //todo: log4j
-        playerServerFacade.receiveNicknameRequest(nicknamePDU.getNewNickname(), ctx.channel());
+        System.out.printf("A client with ChannelId %s has requested a new username: %s\n", ctx.channel().id(), nicknamePDU.nickname()); //todo: log4j
+        playerServerFacade.receiveNicknameRequest(nicknamePDU.nickname(), ctx.channel());
     }
 
     @Override

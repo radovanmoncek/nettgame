@@ -17,21 +17,17 @@ public class LobbyClientFacade extends ClientFacade<LobbyRequestPDU> {
      * </p>
      */
     public void createLobby() {
-        final var lobbyRequest = new LobbyRequestPDU();
-        lobbyRequest.setActionFlag(LobbyRequestPDU.CREATE);
+        final var lobbyRequest = new LobbyRequestPDU((byte) LobbyRequestPDU.LobbyRequestFlag.CREATE.ordinal(), null);
         unicastPDUToServerChannel(lobbyRequest);
     }
 
     public void joinLobby(final Long leaderChannelId) {
-        final var lobbyReq = new LobbyRequestPDU();
-        lobbyReq.setActionFlag(LobbyRequestPDU.JOIN);
-        lobbyReq.setLeaderId(leaderChannelId);
+        final var lobbyReq = new LobbyRequestPDU((byte) LobbyRequestPDU.LobbyRequestFlag.JOIN.ordinal(), leaderChannelId);
         unicastPDUToServerChannel(lobbyReq);
     }
 
     public void leaveLobby(){
-        final var lobbyRequest = new LobbyRequestPDU();
-        lobbyRequest.setActionFlag(LobbyRequestPDU.LEAVE);
+        final var lobbyRequest = new LobbyRequestPDU((byte) LobbyRequestPDU.LobbyRequestFlag.LEAVE.ordinal(), null);
         unicastPDUToServerChannel(lobbyRequest);
     }
 

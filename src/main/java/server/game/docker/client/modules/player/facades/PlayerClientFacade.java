@@ -11,8 +11,7 @@ public class PlayerClientFacade extends ClientFacade<NicknamePDU> {
     public void requestNickname(final String newNickname){
         if(newNickname.length() > 8)
             throw new IllegalArgumentException("Player name's length exceeds 8 characters");
-        final var nicknamePDU = new NicknamePDU();
-        nicknamePDU.setNewClientUsername(newNickname);
+        final var nicknamePDU = new NicknamePDU(newNickname);
         unicastPDUToServerChannel(nicknamePDU);
     }
 

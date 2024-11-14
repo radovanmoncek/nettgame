@@ -1,6 +1,5 @@
 package server.game.docker.modules.chat.pdus;
 
-import server.game.docker.ship.enums.PDUType;
 import server.game.docker.ship.parents.pdus.PDU;
 
 /**
@@ -14,33 +13,6 @@ import server.game.docker.ship.parents.pdus.PDU;
  *     --------------------------------
  * </pre>
  */
-public class ChatMessagePDU implements PDU {
-    public static final PDUType type = PDUType.CHATMESSAGE;
-    private Long authorID;
-    private String authorName;
-    private String message;
-
-    public Long getAuthorID() {
-        return authorID;
-    }
-
-    public void setAuthorID(Long authorID) {
-        this.authorID = authorID;
-    }
-
-    public String getAuthorName() {
-        return authorName;
-    }
-
-    public void setAuthorName(String authorName) {
-        this.authorName = authorName;
-    }
-
-    public String getMessage() {
-        return message;
-    }
-
-    public void setMessage(String message) {
-        this.message = message;
-    }
+public record ChatMessagePDU(String message) implements PDU {
+    public static final int PROTOCOL_IDENTIFIER = 6;
 }

@@ -98,27 +98,14 @@ public class ClientConnectivityTest {
         lobbyMembers = null;
     }
 
-    @Test
     @Order(4)
-    void leaveLobbyTest() throws Exception {
-        gameClient.getLobbyFacade().leaveLobby();
-        for (int i = 0; i < 10 && lobbyLeaderId == null; i++) {
-            TimeUnit.SECONDS.sleep(1);
-        }
-
-        assertEquals(-1L, lobbyLeaderId);
-        assertEquals(0, lobbyMembers.size());
-        lobbyLeaderId = null;
-        lobbyMembers = null;
-    }
-
-    @Test
-    @Order(5)
+    @RepeatedTest(4)
     void joinLobbyTest() throws Exception {
         resetGameClientSingletonInstance();
 
         final var player2NickReceived = new AtomicBoolean(false);
         final var lobbyJoined = new AtomicBoolean(false);
+        final var lobbyLeft = new AtomicBoolean(false);
         final var player2Nickname = new AtomicReference<>();
         final var player2LobbyLeaderId = new AtomicLong();
         final var player2LobbyMembers = new AtomicReference<Collection<String>>();
@@ -141,7 +128,9 @@ public class ClientConnectivityTest {
 
                     @Override
                     public void receiveLobbyLeft(Long leaderId, Collection<String> members) {
-
+                        lobbyLeft.set(true);
+                        player2LobbyLeaderId.set(leaderId);
+                        player2LobbyMembers.set(members);
                     }
 
                     @Override
@@ -153,8 +142,6 @@ public class ClientConnectivityTest {
         gameClient2.run(0);
 
         assertTrue(gameClient2.isConnected());
-
-        createLobbyTest();
 
         gameClient2.getUsernameClientFacade().requestNickname("Test2");
         gameClient2.getLobbyFacade().joinLobby(lobbyLeaderIdJoinLobbyTest);
@@ -169,7 +156,29 @@ public class ClientConnectivityTest {
         assertEquals(2, player2LobbyMembers.get().size());
         assertTrue(player2LobbyMembers.get().contains("Test") && player2LobbyMembers.get().contains("Test2"));
 
+        gameClient2.getLobbyFacade().leaveLobby();
+        for (int i = 0; i < 10 && !lobbyLeft.get(); i++) {
+            TimeUnit.SECONDS.sleep(1);
+        }
+
+        assertEquals(-1L, player2LobbyLeaderId.get());
+        assertEquals(0, player2LobbyMembers.get().size());
+
         gameClient2.shutdownGracefullyAfterNSeconds(0);
+    }
+
+    @Test
+    @Order(5)
+    void leaveLobbyTest() throws Exception {
+        gameClient.getLobbyFacade().leaveLobby();
+        for (int i = 0; i < 10 && lobbyLeaderId == null; i++) {
+            TimeUnit.SECONDS.sleep(1);
+        }
+
+        assertEquals(-1L, lobbyLeaderId);
+        assertEquals(0, lobbyMembers.size());
+        lobbyLeaderId = null;
+        lobbyMembers = null;
     }
 
     //TODO: messages (with lobby / session context) !!!!
@@ -177,7 +186,7 @@ public class ClientConnectivityTest {
     @Test
     @Order(6)
     void startSessionTest() throws Exception {
-//        gameClient.getSessionClientFacade().requestStartSession();
+        gameClient.getSessionClientFacade().requestStartSession();
     }
 
     @AfterAll

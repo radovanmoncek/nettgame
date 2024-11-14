@@ -17,7 +17,7 @@ public final class LobbyServerHandler extends SimpleChannelInboundHandler<LobbyR
     @Override
     public void channelRead0(ChannelHandlerContext channelHandlerContext, LobbyRequestPDU lobbyReq) {
         final var channel = channelHandlerContext.channel();
-        switch (lobbyReq.getActionFlag()) {
+        switch (lobbyReq.lobbyRequestFlag()) {
             case 0 -> {
                 System.out.printf("Player with ChannelId %s has requested lobby creation\n", channel.id());
                 lobbyServerFacade.receiveCreateRequest(channel);
@@ -28,7 +28,7 @@ public final class LobbyServerHandler extends SimpleChannelInboundHandler<LobbyR
             }
             case 1 -> {
                 System.out.printf("Player with ChannelId %s has requested lobby join\n", channel.id());
-                lobbyServerFacade.receiveJoinRequest(channel, lobbyReq.getLeaderId());
+                lobbyServerFacade.receiveJoinRequest(channel, lobbyReq.leaderId());
             }
         }
     }

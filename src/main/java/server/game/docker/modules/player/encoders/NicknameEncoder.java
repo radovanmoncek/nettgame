@@ -5,7 +5,6 @@ import io.netty.buffer.Unpooled;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.handler.codec.MessageToMessageEncoder;
 import server.game.docker.modules.player.pdus.NicknamePDU;
-import server.game.docker.ship.enums.PDUType;
 
 import java.nio.CharBuffer;
 import java.nio.charset.Charset;
@@ -21,13 +20,13 @@ public final class NicknameEncoder extends MessageToMessageEncoder<NicknamePDU> 
                         Unpooled.buffer(MAX_USERNAME_LENGTH).alloc(),
                         CharBuffer
                                 .allocate(MAX_USERNAME_LENGTH)
-                                .append(nicknamePDU.getNewNickname())
+                                .append(nicknamePDU.nickname())
                                 .position(0),
                         Charset.defaultCharset()
                 );
 
         final var byteBufOut = Unpooled.buffer(Byte.BYTES + Long.BYTES + MAX_USERNAME_LENGTH)
-                .writeByte(PDUType.USERNAME.oneBasedOrdinal())
+                .writeByte(NicknamePDU.PROTOCOL_IDENTIFIER)
                 .writeLong(MAX_USERNAME_LENGTH)
                 .writeBytes(usernameByteBuffer);
 

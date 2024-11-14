@@ -4,7 +4,6 @@ import io.netty.buffer.ByteBuf;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.handler.codec.ByteToMessageDecoder;
 import server.game.docker.modules.lobby.pdus.LobbyUpdatePDU;
-import server.game.docker.ship.enums.PDUType;
 
 import java.nio.charset.Charset;
 import java.util.ArrayList;
@@ -17,9 +16,9 @@ public class LobbyUpdateDecoder extends ByteToMessageDecoder {
     public void decode(ChannelHandlerContext channelHandlerContext, ByteBuf in, List<Object> out) {
         in.markReaderIndex();
 
-        final var type = PDUType.valueOf((byte) in.readUnsignedByte());
+        final var type = in.readUnsignedByte();
 
-        if(!type.equals(PDUType.LOBBYUPDATE)) {
+        if(type != LobbyUpdatePDU.PROTOCOL_IDENTIFIER) {
             in.resetReaderIndex();
 //            channelHandlerContext.fireChannelRead(in);
             return;
@@ -30,9 +29,7 @@ public class LobbyUpdateDecoder extends ByteToMessageDecoder {
             return;
         }
 
-        final var lobbyUpdate = new LobbyUpdatePDU();
-        lobbyUpdate.setStateFlag((byte) in.readUnsignedByte());
-        lobbyUpdate.setLeaderId(in.readLong());
+        final var lobbyUpdate = new LobbyUpdatePDU((byte) in.readUnsignedByte(), in.readLong(), new ArrayList<>());
         final var lobbyMembers = new ArrayList<String>();
         while (in.readableBytes() >= MAX_USERNAME_LENGTH) {
             lobbyMembers.add(in.toString(in.readerIndex(), MAX_USERNAME_LENGTH, Charset.defaultCharset()).trim());
@@ -40,7 +37,7 @@ public class LobbyUpdateDecoder extends ByteToMessageDecoder {
                 in.readerIndex(in.readerIndex() + Long.BYTES);
             }
         }
-        lobbyUpdate.setMembers(lobbyMembers);
+        lobbyUpdate.members().addAll(lobbyMembers);
 
         out.add(lobbyUpdate);
     }

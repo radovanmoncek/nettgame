@@ -14,12 +14,12 @@ public final class ChatMessageDecoder extends ByteToMessageDecoder {
 
     @Override
     public void decode(ChannelHandlerContext channelHandlerContext, ByteBuf in, List<Object> out) {
-        final var chatMessage = new ChatMessagePDU();
-
-        chatMessage.setAuthorID(in.readLong());
-        chatMessage.setAuthorName(in.toString(in.readerIndex(), AUTHOR_NAME_LENGTH, Charset.defaultCharset()).trim());
-        chatMessage.setMessage(in.toString(in.readerIndex() + AUTHOR_NAME_LENGTH, MAX_MESSAGE_LENGTH, Charset.defaultCharset()).trim());
-
-        out.add(chatMessage);
+//        final var chatMessage = new ChatMessagePDU();
+//
+//        chatMessage.setAuthorID(in.readLong());
+//        chatMessage.setAuthorName(in.toString(in.readerIndex(), AUTHOR_NAME_LENGTH, Charset.defaultCharset()).trim());
+//        chatMessage.setMessage(in.toString(in.readerIndex() + AUTHOR_NAME_LENGTH, MAX_MESSAGE_LENGTH, Charset.defaultCharset()).trim());
+//
+//        out.add(chatMessage);
     }
 }
