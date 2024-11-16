@@ -21,7 +21,7 @@ public class PlayerServerFacade extends ServerFacade<NicknamePDU> {
      *     as well as internally handling its assignment.
      * </p>
      * <p>
-     *     This is a default server module functionality method, overriding it without calling the super implementation cannot guarantee proper operation.
+     *     This is a default server module functionality method, overriding it without calling the super implementation will cause improper operation.
      * </p>
      * @param newClientUsername the requested username
      * @param clientChannel the request initiator

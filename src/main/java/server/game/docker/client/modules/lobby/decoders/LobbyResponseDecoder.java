@@ -3,13 +3,13 @@ package server.game.docker.client.modules.lobby.decoders;
 import io.netty.buffer.ByteBuf;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.handler.codec.ByteToMessageDecoder;
-import server.game.docker.modules.lobby.pdus.LobbyUpdatePDU;
+import server.game.docker.modules.lobby.pdus.LobbyResponsePDU;
 
 import java.nio.charset.Charset;
 import java.util.ArrayList;
 import java.util.List;
 
-public class LobbyUpdateDecoder extends ByteToMessageDecoder {
+public class LobbyResponseDecoder extends ByteToMessageDecoder {
     private static final int MAX_USERNAME_LENGTH = 8;
 
     @Override
@@ -18,9 +18,9 @@ public class LobbyUpdateDecoder extends ByteToMessageDecoder {
 
         final var type = in.readUnsignedByte();
 
-        if(type != LobbyUpdatePDU.PROTOCOL_IDENTIFIER) {
+        if(type != LobbyResponsePDU.PROTOCOL_IDENTIFIER) {
             in.resetReaderIndex();
-//            channelHandlerContext.fireChannelRead(in);
+            channelHandlerContext.fireChannelRead(in.retain());
             return;
         }
 
@@ -29,7 +29,7 @@ public class LobbyUpdateDecoder extends ByteToMessageDecoder {
             return;
         }
 
-        final var lobbyUpdate = new LobbyUpdatePDU((byte) in.readUnsignedByte(), in.readLong(), new ArrayList<>());
+        final var lobbyUpdate = new LobbyResponsePDU((byte) in.readUnsignedByte(), in.readLong(), new ArrayList<>());
         final var lobbyMembers = new ArrayList<String>();
         while (in.readableBytes() >= MAX_USERNAME_LENGTH) {
             lobbyMembers.add(in.toString(in.readerIndex(), MAX_USERNAME_LENGTH, Charset.defaultCharset()).trim());

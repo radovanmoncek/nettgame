@@ -8,7 +8,7 @@ import io.netty.channel.nio.NioEventLoopGroup;
 import io.netty.channel.socket.nio.NioSocketChannel;
 import server.game.docker.client.modules.lobby.facades.LobbyClientFacade;
 import server.game.docker.client.modules.player.facades.PlayerClientFacade;
-import server.game.docker.client.modules.sessions.SessionClientFacade;
+import server.game.docker.client.modules.sessions.facades.SessionClientFacade;
 import server.game.docker.client.ship.parents.facades.ClientFacade;
 import server.game.docker.ship.parents.pdus.PDU;
 
@@ -38,6 +38,7 @@ public final class GameClient {
     private Channel serverChannel;
     private PlayerClientFacade playerClientFacade;
     private LobbyClientFacade lobbyClientFacade;
+    private SessionClientFacade sessionClientFacade;
 
     /**
      * Constructs a new {@link GameClient} instance with an ip address of 127.0.0.1 and port number of 4321.
@@ -62,7 +63,8 @@ public final class GameClient {
                     .option(ChannelOption.SO_KEEPALIVE, true)
                     .handler(new ClientInitializer(
                             playerClientFacade,
-                            lobbyClientFacade
+                            lobbyClientFacade,
+                            sessionClientFacade
                     ));
         } catch (Exception e) {
             e.printStackTrace();
@@ -77,6 +79,7 @@ public final class GameClient {
         }
         injectServerChannelIntoClientFacade(playerClientFacade);
         injectServerChannelIntoClientFacade(lobbyClientFacade);
+        injectServerChannelIntoClientFacade(sessionClientFacade);
     }
 
     public static GameClient newInstance() throws Exception {
@@ -119,6 +122,11 @@ public final class GameClient {
         return this;
     }
 
+    public GameClient withSessionClientFacade(final SessionClientFacade sessionClientFacade) {
+        this.sessionClientFacade = sessionClientFacade;
+        return this;
+    }
+
     public InetAddress getServerAddress() {
         return gameServerAddress;
     }
@@ -135,6 +143,10 @@ public final class GameClient {
 
     public LobbyClientFacade getLobbyFacade() {
         return lobbyClientFacade;
+    }
+
+    public SessionClientFacade getSessionClientFacade() {
+        return sessionClientFacade;
     }
 
     public int getGameServerPort() {
@@ -171,9 +183,5 @@ public final class GameClient {
                         e.printStackTrace();
                     }
                 });
-    }
-
-    public SessionClientFacade getSessionClientFacade() {
-        return null;
     }
 }

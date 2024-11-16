@@ -1,5 +1,6 @@
 package server.game.docker.ship.parents.pdus;
 
+import server.game.docker.modules.lobby.pdus.LobbyResponsePDU;
 import server.game.docker.modules.player.pdus.NicknamePDU;
 
 /**
@@ -18,7 +19,7 @@ import server.game.docker.modules.player.pdus.NicknamePDU;
  * </pre>
  * @see NicknamePDU
  * @see server.game.docker.modules.lobby.pdus.LobbyRequestPDU
- * @see server.game.docker.modules.lobby.pdus.LobbyUpdatePDU
+ * @see LobbyResponsePDU
  * @see server.game.docker.modules.chat.pdus.ChatMessagePDU
  */
 public interface PDU {

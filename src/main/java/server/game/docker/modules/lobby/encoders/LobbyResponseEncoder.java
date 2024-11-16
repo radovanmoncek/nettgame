@@ -5,18 +5,17 @@ import io.netty.buffer.ByteBufUtil;
 import io.netty.buffer.Unpooled;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.handler.codec.MessageToByteEncoder;
-import server.game.docker.modules.lobby.pdus.LobbyRequestPDU;
-import server.game.docker.modules.lobby.pdus.LobbyUpdatePDU;
+import server.game.docker.modules.lobby.pdus.LobbyResponsePDU;
 
 import java.nio.CharBuffer;
 import java.nio.charset.Charset;
 import java.util.ArrayList;
 
-public final class LobbyUpdateEncoder extends MessageToByteEncoder<LobbyUpdatePDU> {
+public final class LobbyResponseEncoder extends MessageToByteEncoder<LobbyResponsePDU> {
     @Override
-    public void encode(ChannelHandlerContext channelHandlerContext, LobbyUpdatePDU lobbyUpdate, ByteBuf out) {
+    public void encode(ChannelHandlerContext channelHandlerContext, LobbyResponsePDU lobbyUpdate, ByteBuf out) {
         final var byteBuf = Unpooled.buffer(Byte.BYTES + Long.BYTES)
-                .writeByte(LobbyUpdatePDU.PROTOCOL_IDENTIFIER)
+                .writeByte(LobbyResponsePDU.PROTOCOL_IDENTIFIER)
                 .writeLong(Byte.BYTES + Long.BYTES + (lobbyUpdate.members() == null ? 0 : lobbyUpdate.members().size() * (long) Long.BYTES))
                 .writeByte(lobbyUpdate.lobbyUpdateResponseFlag())
                 .writeLong(lobbyUpdate.leaderId() == null ? -1L : lobbyUpdate.leaderId());

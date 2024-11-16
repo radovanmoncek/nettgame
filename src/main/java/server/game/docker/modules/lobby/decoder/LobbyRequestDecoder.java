@@ -16,7 +16,7 @@ public final class LobbyRequestDecoder extends ByteToMessageDecoder {
 
         if(type != LobbyRequestPDU.PROTOCOL_IDENTIFIER) {
             in.resetReaderIndex();
-//            channelHandlerContext.fireChannelRead(in);
+            channelHandlerContext.fireChannelRead(in.retain());
             return;
         }
 

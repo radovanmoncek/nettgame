@@ -9,13 +9,16 @@ import io.netty.channel.group.DefaultChannelGroup;
 import io.netty.channel.nio.NioEventLoopGroup;
 import io.netty.channel.socket.nio.NioServerSocketChannel;
 import io.netty.util.concurrent.GlobalEventExecutor;
-import server.game.docker.modules.player.facades.PlayerServerFacade;
 import server.game.docker.modules.lobby.facades.LobbyServerFacade;
+import server.game.docker.modules.player.facades.PlayerServerFacade;
+import server.game.docker.modules.session.facades.SessionServerFacade;
 import server.game.docker.ship.parents.facades.ServerFacade;
 import server.game.docker.ship.parents.pdus.PDU;
 
+import java.lang.reflect.Field;
 import java.util.Timer;
 import java.util.TimerTask;
+import java.util.function.Supplier;
 import java.util.stream.Stream;
 
 /**
@@ -55,13 +58,15 @@ public final class GameServer {
     private ChannelFuture future;
     private NioEventLoopGroup bossGroup;
     private NioEventLoopGroup workerGroup;
+    private Supplier<SessionServerFacade> sessionServerFacadeFactory;
 
     private GameServer() {
         managedClients = new DefaultChannelGroup(GlobalEventExecutor.INSTANCE);
         playerServerFacade = new PlayerServerFacade();
-        injectManagedClientsIntoServerFacade(playerServerFacade);
         lobbyServerFacade = new LobbyServerFacade(playerServerFacade);
-        injectManagedClientsIntoServerFacade(lobbyServerFacade);
+        sessionServerFacadeFactory = () -> {
+            throw new RuntimeException("SessionServerFacade was not supplied. Expect incorrect operation.");
+        };
     }
 
     public static GameServer newInstance() {
@@ -78,15 +83,22 @@ public final class GameServer {
         return this;
     }
 
-    public GameServer withIDServerFacade(final PlayerServerFacade iDServerFacade) {
-        this.playerServerFacade = iDServerFacade;
-        injectManagedClientsIntoServerFacade(iDServerFacade);
+    public GameServer withUsernameServerFacade(final PlayerServerFacade usernameServerFacade) {
+        this.playerServerFacade = usernameServerFacade;
         return this;
     }
 
     public GameServer withLobbyRequestServerFacade(final LobbyServerFacade lobbyServerFacade) {
         this.lobbyServerFacade = lobbyServerFacade;
-        injectManagedClientsIntoServerFacade(lobbyServerFacade);
+        return this;
+    }
+
+    public GameServer withSessionServerFacadeFactory(final Supplier<SessionServerFacade> sessionServerFacadeFactory) {
+        this.sessionServerFacadeFactory = () -> {
+            final var sessionServerFacade = sessionServerFacadeFactory.get();
+            injectManagedClientsIntoServerFacade(sessionServerFacade);
+            return sessionServerFacade;
+        };
         return this;
     }
 
@@ -105,7 +117,8 @@ public final class GameServer {
                 .channel(NioServerSocketChannel.class)
                 .childHandler(new GameServerInitializer(
                         playerServerFacade,
-                        lobbyServerFacade
+                        lobbyServerFacade,
+                        sessionServerFacadeFactory
                 ))
                 .option(ChannelOption.SO_BACKLOG, 128)
                 .childOption(ChannelOption.SO_KEEPALIVE, true);
@@ -113,7 +126,9 @@ public final class GameServer {
             future = bootstrap.bind(port).sync();
             System.out.printf("GameServer running on port %d\n", port);
 
-            //Blocking method
+            injectManagedClientsIntoServerFacade(playerServerFacade);
+            injectManagedClientsIntoServerFacade(lobbyServerFacade);
+
             future.channel().closeFuture().sync();
         } finally {
             shutdownGracefullyAfterNSeconds(0);
@@ -132,7 +147,12 @@ public final class GameServer {
     }
 
     private void injectManagedClientsIntoServerFacade(ServerFacade<? extends PDU> serverFacade) {
-        Stream.of(serverFacade.getClass().getSuperclass().getDeclaredFields())
+        Class<?> clazz = serverFacade.getClass();
+        while (Stream.of(clazz.getDeclaredFields()).map(Field::getType).noneMatch(ChannelGroup.class::equals)) {
+            clazz = clazz.getSuperclass();
+        }
+
+        Stream.of(clazz.getDeclaredFields())
                 .filter(field -> field.getType().equals(ChannelGroup.class))
                 .forEach(field -> {
                     field.setAccessible(true);

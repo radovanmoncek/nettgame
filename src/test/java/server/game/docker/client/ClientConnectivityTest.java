@@ -1,29 +1,42 @@
 package server.game.docker.client;
 
+import io.netty.channel.ChannelId;
 import org.junit.jupiter.api.*;
 import server.game.docker.GameServer;
 import server.game.docker.client.modules.lobby.facades.LobbyClientFacade;
 import server.game.docker.client.modules.player.facades.PlayerClientFacade;
+import server.game.docker.client.modules.sessions.facades.SessionClientFacade;
+import server.game.docker.modules.session.facades.SessionServerFacade;
+import server.game.docker.ship.parents.pdus.PDU;
 
 import java.util.Collection;
+import java.util.Map;
+import java.util.Objects;
 import java.util.concurrent.TimeUnit;
-import java.util.concurrent.atomic.AtomicBoolean;
-import java.util.concurrent.atomic.AtomicLong;
-import java.util.concurrent.atomic.AtomicReference;
 
 import static org.junit.jupiter.api.Assertions.*;
+
 @TestMethodOrder(MethodOrderer.OrderAnnotation.class)
 public class ClientConnectivityTest {
-    private static GameClient gameClient;
+    private static GameClient gameClient, gameClient2;
     private static GameServer gameServer;
-    private static String nickname;
-    private static Long lobbyLeaderId;
-    private static Collection<String> lobbyMembers;
-    private static Long lobbyLeaderIdJoinLobbyTest;
+    private static String nickname1, nickname2;
+    private static Long lobbyLeaderId1, lobbyLeaderId2;
+    private static Collection<String> lobbyMembers1, lobbyMembers2;
+    private static boolean sessionMember1, sessionMember2;
 
     @BeforeAll
     static void setup() throws Exception {
-        gameServer = GameServer.newInstance();
+        gameServer = GameServer
+                .newInstance()
+                .withSessionServerFacadeFactory(() -> new SessionServerFacade(){
+                    private Long tickCounter = 0L;
+
+                    @Override
+                    public void receiveSessionTick(ChannelId playerId, Map<ChannelId, String> playerLobby, PDU protocolDataUnit) {
+                        System.out.printf("playerId: %s, playerLobby: %s, PDU: %s, ticks: %d\n", playerId, playerLobby, protocolDataUnit, ++tickCounter);
+                    }
+                });
         new Thread(() -> {
             try {
                 gameServer.run();
@@ -36,29 +49,40 @@ public class ClientConnectivityTest {
 
         gameClient = GameClient
                 .newInstance()
-                .withPlayerClientFacade(new PlayerClientFacade(){
+                .withPlayerClientFacade(new PlayerClientFacade() {
                     @Override
                     public void receiveNewNickname(String newNickname) {
-                        nickname = newNickname;
+                        nickname1 = newNickname;
                     }
                 })
-                .withLobbyClientFacade(new LobbyClientFacade(){
+                .withLobbyClientFacade(new LobbyClientFacade() {
                     @Override
                     public void receiveLobbyLeft(Long leaderId, Collection<String> members) {
-                        lobbyLeaderId = leaderId;
-                        lobbyMembers = members;
+                        lobbyLeaderId1 = leaderId;
+                        lobbyMembers1 = members;
                     }
 
                     @Override
                     public void receiveLobbyJoined(Long leaderId, Collection<String> members) {
-                        lobbyLeaderId = leaderId;
-                        lobbyMembers = members;
+                        lobbyLeaderId1 = leaderId;
+                        lobbyMembers1 = members;
                     }
 
                     @Override
                     public void receiveLobbyCreated(Long leaderId, Collection<String> members) {
-                        lobbyLeaderId = lobbyLeaderIdJoinLobbyTest = leaderId;
-                        lobbyMembers = members;
+                        lobbyLeaderId1 = leaderId;
+                        lobbyMembers1 = members;
+                    }
+                })
+                .withSessionClientFacade(new SessionClientFacade() {
+                    @Override
+                    public void receiveStartSessionResponse() {
+                        sessionMember1 = true;
+                    }
+
+                    @Override
+                    public void receiveStopSessionResponse() {
+                        sessionMember1 = false;
                     }
                 });
 
@@ -77,108 +101,112 @@ public class ClientConnectivityTest {
         assertThrows(IllegalArgumentException.class, () -> gameClient.getUsernameClientFacade().requestNickname("TestThatIsWayOverTheLimitOf8Characters"));
         gameClient.getUsernameClientFacade().requestNickname("Test");
 
-        for (int i = 0; i < 10 && nickname == null; i++) {
+        for (int i = 0; i < 10 && nickname1 == null; i++) {
             TimeUnit.SECONDS.sleep(1);
         }
 
-        assertEquals("Test", nickname);
+        assertEquals("Test", nickname1);
     }
 
     @Test
     @Order(3)
     void createLobbyTest() throws Exception {
         gameClient.getLobbyFacade().createLobby();
-        for (int i = 0; i < 10 && lobbyLeaderId == null; i++) {
+        for (int i = 0; i < 10 && (lobbyLeaderId1 == null || lobbyLeaderId1.equals(-1L)); i++) {
             TimeUnit.SECONDS.sleep(1);
         }
 
-        assertEquals(1, lobbyMembers.size());
-        assertTrue(lobbyMembers.contains(nickname));
-        lobbyLeaderId = null;
-        lobbyMembers = null;
+        assertEquals(1, lobbyMembers1.size());
+        assertTrue(lobbyMembers1.contains(nickname1));
     }
 
     @Order(4)
     @RepeatedTest(4)
     void joinLobbyTest() throws Exception {
         resetGameClientSingletonInstance();
+        if (Objects.isNull(gameClient2)) {
+            gameClient2 = GameClient
+                    .newInstance()
+                    .withPlayerClientFacade(new PlayerClientFacade() {
+                        @Override
+                        public void receiveNewNickname(String newNickname) {
+                            nickname2 = newNickname;
+                        }
+                    })
+                    .withLobbyClientFacade(new LobbyClientFacade() {
+                        @Override
+                        public void receiveLobbyJoined(Long leaderChannelId, Collection<String> members) {
+                            lobbyLeaderId2 = leaderChannelId;
+                            lobbyMembers2 = members;
+                        }
 
-        final var player2NickReceived = new AtomicBoolean(false);
-        final var lobbyJoined = new AtomicBoolean(false);
-        final var lobbyLeft = new AtomicBoolean(false);
-        final var player2Nickname = new AtomicReference<>();
-        final var player2LobbyLeaderId = new AtomicLong();
-        final var player2LobbyMembers = new AtomicReference<Collection<String>>();
-        final var gameClient2 = GameClient
-                .newInstance()
-                .withPlayerClientFacade(new PlayerClientFacade(){
-                    @Override
-                    public void receiveNewNickname(String newNickname) {
-                        player2Nickname.set(newNickname);
-                        player2NickReceived.set(true);
-                    }
-                })
-                .withLobbyClientFacade(new LobbyClientFacade(){
-                    @Override
-                    public void receiveLobbyJoined(Long leaderChannelId, Collection<String> members) {
-                        player2LobbyLeaderId.set(leaderChannelId);
-                        player2LobbyMembers.set(members);
-                        lobbyJoined.set(true);
-                    }
+                        @Override
+                        public void receiveLobbyLeft(Long leaderId, Collection<String> members) {
+                            lobbyLeaderId2 = leaderId;
+                            lobbyMembers2 = members;
+                        }
 
-                    @Override
-                    public void receiveLobbyLeft(Long leaderId, Collection<String> members) {
-                        lobbyLeft.set(true);
-                        player2LobbyLeaderId.set(leaderId);
-                        player2LobbyMembers.set(members);
-                    }
+                        @Override
+                        public void receiveLobbyCreated(Long leaderId, Collection<String> members) {
+                            lobbyLeaderId2 = leaderId;
+                            lobbyMembers2 = members;
+                        }
+                    })
+                    .withSessionClientFacade(new SessionClientFacade(){
+                        @Override
+                        public void receiveStartSessionResponse() {
+                            sessionMember2 = true;
+                        }
 
-                    @Override
-                    public void receiveLobbyCreated(Long leaderId, Collection<String> members) {
+                        @Override
+                        public void receiveStopSessionResponse() {
+                            sessionMember2 = false;
+                        }
+                    });
 
-                    }
-                });
+            gameClient2.run(0);
 
-        gameClient2.run(0);
+            gameClient2.getUsernameClientFacade().requestNickname("Test2");
 
-        assertTrue(gameClient2.isConnected());
+            for (int i = 0; i < 2 && nickname2 == null; i++) {
+                TimeUnit.SECONDS.sleep(1);
+            }
 
-        gameClient2.getUsernameClientFacade().requestNickname("Test2");
-        gameClient2.getLobbyFacade().joinLobby(lobbyLeaderIdJoinLobbyTest);
-        for (int i = 0; i < 20 && (!player2NickReceived.get() || !lobbyJoined.get()); i++) {
+            assertEquals("Test2", nickname2);
+            assertTrue(gameClient2.isConnected());
+        }
+
+        gameClient2.getLobbyFacade().joinLobby(lobbyLeaderId1);
+
+        for (int i = 0; i < 2 && ((lobbyLeaderId2 == null || lobbyLeaderId2.equals(-1L)) || lobbyMembers2.isEmpty()); i++) {
             TimeUnit.SECONDS.sleep(1);
         }
 
-        assertTrue(player2NickReceived.get());
-        assertTrue(lobbyJoined.get());
-        assertEquals("Test2", player2Nickname.get());
-        assertEquals(lobbyLeaderIdJoinLobbyTest, player2LobbyLeaderId.get());
-        assertEquals(2, player2LobbyMembers.get().size());
-        assertTrue(player2LobbyMembers.get().contains("Test") && player2LobbyMembers.get().contains("Test2"));
+        assertEquals(lobbyLeaderId1, lobbyLeaderId2);
+        assertEquals(2, lobbyMembers2.size());
+        assertTrue(lobbyMembers2.contains(nickname1) && lobbyMembers2.contains(nickname2));
+
+        //todo: test member joined for 1st client
 
         gameClient2.getLobbyFacade().leaveLobby();
-        for (int i = 0; i < 10 && !lobbyLeft.get(); i++) {
+        for (int i = 0; i < 10 && !lobbyMembers2.isEmpty(); i++) {
             TimeUnit.SECONDS.sleep(1);
         }
 
-        assertEquals(-1L, player2LobbyLeaderId.get());
-        assertEquals(0, player2LobbyMembers.get().size());
-
-        gameClient2.shutdownGracefullyAfterNSeconds(0);
+        assertEquals(-1L, lobbyLeaderId2);
+        assertTrue(lobbyMembers2.isEmpty());
     }
 
     @Test
     @Order(5)
     void leaveLobbyTest() throws Exception {
         gameClient.getLobbyFacade().leaveLobby();
-        for (int i = 0; i < 10 && lobbyLeaderId == null; i++) {
+        for (int i = 0; i < 10 && !lobbyLeaderId1.equals(-1L); i++) {
             TimeUnit.SECONDS.sleep(1);
         }
 
-        assertEquals(-1L, lobbyLeaderId);
-        assertEquals(0, lobbyMembers.size());
-        lobbyLeaderId = null;
-        lobbyMembers = null;
+        assertEquals(-1L, lobbyLeaderId1);
+        assertEquals(0, lobbyMembers1.size());
     }
 
     //TODO: messages (with lobby / session context) !!!!
@@ -186,12 +214,53 @@ public class ClientConnectivityTest {
     @Test
     @Order(6)
     void startSessionTest() throws Exception {
+        assertEquals(-1L, lobbyLeaderId1);
+        assertEquals(-1L, lobbyLeaderId2);
+
+        createLobbyTest();
+        gameClient2.getLobbyFacade().joinLobby(lobbyLeaderId1);
+        for(int i = 0; i < 2 && lobbyMembers2.isEmpty(); i++) {
+            TimeUnit.SECONDS.sleep(1);
+        }
+
+        assertEquals(lobbyLeaderId1, lobbyLeaderId2);
+//todo:        assertTrue(lobbyMembers1.contains(nickname1) && lobbyMembers1.contains(nickname2));
+        assertTrue(lobbyMembers2.contains(nickname1) && lobbyMembers2.contains(nickname2));
+
         gameClient.getSessionClientFacade().requestStartSession();
+
+        TimeUnit.SECONDS.sleep(1);
+
+        assertFalse(sessionMember1);
+
+        gameClient2.getSessionClientFacade().requestStartSession();
+
+        TimeUnit.SECONDS.sleep(1);
+
+        assertTrue(sessionMember1);
+        assertTrue(sessionMember2);
+
+        gameClient.getSessionClientFacade().requestStopSession();
+
+        TimeUnit.SECONDS.sleep(2);
+
+        assertTrue(sessionMember1);
+        assertTrue(sessionMember2);
+
+        gameClient2.getSessionClientFacade().requestStopSession();
+
+        TimeUnit.SECONDS.sleep(2);
+
+        assertFalse(sessionMember1);
+        assertFalse(sessionMember2);
+
+        TimeUnit.SECONDS.sleep(4);
     }
 
     @AfterAll
     static void tearDown() throws Exception {
         gameClient.shutdownGracefullyAfterNSeconds(0);
+        gameClient2.shutdownGracefullyAfterNSeconds(0);
         gameServer.shutdownGracefullyAfterNSeconds(0);
     }
 

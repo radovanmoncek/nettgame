@@ -17,10 +17,10 @@ import java.util.Collection;
  *     --------------------------------
  * </pre>
  */
-public record LobbyUpdatePDU(Byte lobbyUpdateResponseFlag, Long leaderId, Collection<String> members) implements PDU {
+public record LobbyResponsePDU(Byte lobbyUpdateResponseFlag, Long leaderId, Collection<String> members) implements PDU {
     public static final Byte PROTOCOL_IDENTIFIER = 4;
 
     public enum LobbyUpdateResponseFlag {
-        CREATED, JOINED, LEFT, MEMBERJOINED, MEMBERLEFT;
+        CREATED, JOINED, LEFT, MEMBERJOINED, MEMBERLEFT
     }
 }
