@@ -9,6 +9,7 @@ import io.netty.channel.socket.nio.NioSocketChannel;
 import server.game.docker.client.modules.lobby.facades.LobbyClientFacade;
 import server.game.docker.client.modules.player.facades.PlayerClientFacade;
 import server.game.docker.client.modules.sessions.facades.SessionClientFacade;
+import server.game.docker.client.modules.state.facades.StateClientFacade;
 import server.game.docker.client.ship.parents.facades.ClientFacade;
 import server.game.docker.ship.parents.pdus.PDU;
 
@@ -39,6 +40,7 @@ public final class GameClient {
     private PlayerClientFacade playerClientFacade;
     private LobbyClientFacade lobbyClientFacade;
     private SessionClientFacade sessionClientFacade;
+    private StateClientFacade stateClientFacade;
 
     /**
      * Constructs a new {@link GameClient} instance with an ip address of 127.0.0.1 and port number of 4321.
@@ -64,7 +66,8 @@ public final class GameClient {
                     .handler(new ClientInitializer(
                             playerClientFacade,
                             lobbyClientFacade,
-                            sessionClientFacade
+                            sessionClientFacade,
+                            stateClientFacade
                     ));
         } catch (Exception e) {
             e.printStackTrace();
@@ -80,6 +83,7 @@ public final class GameClient {
         injectServerChannelIntoClientFacade(playerClientFacade);
         injectServerChannelIntoClientFacade(lobbyClientFacade);
         injectServerChannelIntoClientFacade(sessionClientFacade);
+        injectServerChannelIntoClientFacade(stateClientFacade);
     }
 
     public static GameClient newInstance() throws Exception {
@@ -127,11 +131,16 @@ public final class GameClient {
         return this;
     }
 
+    public GameClient withStateClientFacade(final StateClientFacade stateClientFacade) {
+        this.stateClientFacade = stateClientFacade;
+        return this;
+    }
+
     public InetAddress getServerAddress() {
         return gameServerAddress;
     }
 
-    public void setServerChannel(Channel serverChannel) {
+    public void setServerChannel(final Channel serverChannel) {
         this.serverChannel = serverChannel;
         injectServerChannelIntoClientFacade(playerClientFacade);
         injectServerChannelIntoClientFacade(lobbyClientFacade);
@@ -147,6 +156,10 @@ public final class GameClient {
 
     public SessionClientFacade getSessionClientFacade() {
         return sessionClientFacade;
+    }
+
+    public StateClientFacade getStateClientFacade() {
+        return stateClientFacade;
     }
 
     public int getGameServerPort() {

@@ -12,6 +12,7 @@ import io.netty.util.concurrent.GlobalEventExecutor;
 import server.game.docker.modules.lobby.facades.LobbyServerFacade;
 import server.game.docker.modules.player.facades.PlayerServerFacade;
 import server.game.docker.modules.session.facades.SessionServerFacade;
+import server.game.docker.modules.state.facades.StateServerFacade;
 import server.game.docker.ship.parents.facades.ServerFacade;
 import server.game.docker.ship.parents.pdus.PDU;
 
@@ -59,6 +60,7 @@ public final class GameServer {
     private NioEventLoopGroup bossGroup;
     private NioEventLoopGroup workerGroup;
     private Supplier<SessionServerFacade> sessionServerFacadeFactory;
+    private StateServerFacade stateServerFacade;
 
     private GameServer() {
         managedClients = new DefaultChannelGroup(GlobalEventExecutor.INSTANCE);
@@ -102,6 +104,11 @@ public final class GameServer {
         return this;
     }
 
+    public GameServer withStateServerFacade(final StateServerFacade stateServerFacade) {
+        this.stateServerFacade = stateServerFacade;
+        return this;
+    }
+
     /**
      * <p>
      * Runs the DockerGameServer instance and blocks the current thread until the {@link #shutdownGracefullyAfterNSeconds shutdownGracefullyAfterNSeconds(int seconds)} method is called.
@@ -118,7 +125,8 @@ public final class GameServer {
                 .childHandler(new GameServerInitializer(
                         playerServerFacade,
                         lobbyServerFacade,
-                        sessionServerFacadeFactory
+                        sessionServerFacadeFactory,
+                        stateServerFacade
                 ))
                 .option(ChannelOption.SO_BACKLOG, 128)
                 .childOption(ChannelOption.SO_KEEPALIVE, true);
@@ -128,6 +136,7 @@ public final class GameServer {
 
             injectManagedClientsIntoServerFacade(playerServerFacade);
             injectManagedClientsIntoServerFacade(lobbyServerFacade);
+            injectManagedClientsIntoServerFacade(stateServerFacade);
 
             future.channel().closeFuture().sync();
         } finally {

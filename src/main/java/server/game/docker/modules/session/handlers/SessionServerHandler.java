@@ -8,6 +8,7 @@ import server.game.docker.modules.lobby.facades.LobbyServerFacade;
 import server.game.docker.modules.player.facades.PlayerServerFacade;
 import server.game.docker.modules.session.facades.SessionServerFacade;
 import server.game.docker.modules.session.pdus.SessionPDU;
+import server.game.docker.modules.state.facades.StateServerFacade;
 import server.game.docker.ship.parents.pdus.PDU;
 
 import java.util.*;
@@ -18,13 +19,15 @@ public class SessionServerHandler extends SimpleChannelInboundHandler<PDU> {
     private final Supplier<SessionServerFacade> sessionServerFacadeFactory;
     private final LobbyServerFacade lobbyServerFacade;
     private final PlayerServerFacade playerServerFacade;
-    public static final Map<ChannelId, Integer> sessionMembers = new HashMap<>();
-    public static final ArrayList<Queue<SessionMessage>> sessionMessageQueues = new ArrayList<>();
+    private final StateServerFacade stateServerFacade;
+    private static final Map<ChannelId, Integer> sessionMembers = new HashMap<>();
+    private static final ArrayList<Queue<SessionMessage>> sessionMessageQueues = new ArrayList<>();
 
-    public SessionServerHandler(Supplier<SessionServerFacade> sessionServerFacadePrototype, LobbyServerFacade lobbyServerFacade, PlayerServerFacade playerServerFacade) {
+    public SessionServerHandler(Supplier<SessionServerFacade> sessionServerFacadePrototype, LobbyServerFacade lobbyServerFacade, PlayerServerFacade playerServerFacade, StateServerFacade stateServerFacade) {
         this.sessionServerFacadeFactory = sessionServerFacadePrototype;
         this.lobbyServerFacade = lobbyServerFacade;
         this.playerServerFacade = playerServerFacade;
+        this.stateServerFacade = stateServerFacade;
     }
 
     @Override
@@ -91,7 +94,8 @@ public class SessionServerHandler extends SimpleChannelInboundHandler<PDU> {
                             sessionServerFacade.receiveSessionTick(
                                     Objects.isNull(sessionMessage)? null : sessionMessage.playerId,
                                     playerLobbyMap,
-                                    Objects.isNull(sessionMessage)? null : sessionMessage.protocolDataUnit
+                                    Objects.isNull(sessionMessage)? null : sessionMessage.protocolDataUnit,
+                                    stateServerFacade
                             );
 
                             try {
@@ -113,5 +117,5 @@ public class SessionServerHandler extends SimpleChannelInboundHandler<PDU> {
         return sessionMessageQueues.get(messageQueueIndex).poll();
     }
 
-    private record SessionMessage(ChannelId playerId, PDU protocolDataUnit) {};
+    private record SessionMessage(ChannelId playerId, PDU protocolDataUnit) {}
 }

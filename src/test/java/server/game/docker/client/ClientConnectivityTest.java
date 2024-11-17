@@ -6,7 +6,10 @@ import server.game.docker.GameServer;
 import server.game.docker.client.modules.lobby.facades.LobbyClientFacade;
 import server.game.docker.client.modules.player.facades.PlayerClientFacade;
 import server.game.docker.client.modules.sessions.facades.SessionClientFacade;
+import server.game.docker.client.modules.state.facades.StateClientFacade;
+import server.game.docker.client.modules.state.pdus.StateRequestPDU;
 import server.game.docker.modules.session.facades.SessionServerFacade;
+import server.game.docker.modules.state.facades.StateServerFacade;
 import server.game.docker.ship.parents.pdus.PDU;
 
 import java.util.Collection;
@@ -24,6 +27,7 @@ public class ClientConnectivityTest {
     private static Long lobbyLeaderId1, lobbyLeaderId2;
     private static Collection<String> lobbyMembers1, lobbyMembers2;
     private static boolean sessionMember1, sessionMember2;
+    public static Integer x1, y1, x2, y2;
 
     @BeforeAll
     static void setup() throws Exception {
@@ -33,10 +37,15 @@ public class ClientConnectivityTest {
                     private Long tickCounter = 0L;
 
                     @Override
-                    public void receiveSessionTick(ChannelId playerId, Map<ChannelId, String> playerLobby, PDU protocolDataUnit) {
-                        System.out.printf("playerId: %s, playerLobby: %s, PDU: %s, ticks: %d\n", playerId, playerLobby, protocolDataUnit, ++tickCounter);
+                    public void receiveSessionTick(ChannelId playerId, Map<ChannelId, String> playerLobby, PDU protocolDataUnit, StateServerFacade stateServerFacade) {
+                        System.out.printf("playerNickname: %s, playerLobby: %s, PDU: %s, ticks: %d\n", playerId, playerLobby, protocolDataUnit, ++tickCounter); //todo: log4j
+                        if(protocolDataUnit instanceof StateRequestPDU stateRequestPDU) {
+                            System.out.printf("Player:%s x:%d y:%d\n", playerId, stateRequestPDU.x(), stateRequestPDU.y());//todo: log4j
+                            stateServerFacade.respondToStateRequest(playerLobby.get(playerId), stateRequestPDU.x(), stateRequestPDU.y(), playerLobby.keySet().toArray(ChannelId[]::new));
+                        }
                     }
-                });
+                })
+                .withStateServerFacade(new StateServerFacade());
         new Thread(() -> {
             try {
                 gameServer.run();
@@ -83,6 +92,14 @@ public class ClientConnectivityTest {
                     @Override
                     public void receiveStopSessionResponse() {
                         sessionMember1 = false;
+                    }
+                })
+                .withStateClientFacade(new StateClientFacade() {
+                    @Override
+                    public void receiveState(String playerNickname, Integer x, Integer y) {
+                        nickname1 = playerNickname;
+                        x1 = x;
+                        y1 = y;
                     }
                 });
 
@@ -161,6 +178,14 @@ public class ClientConnectivityTest {
                         @Override
                         public void receiveStopSessionResponse() {
                             sessionMember2 = false;
+                        }
+                    })
+                    .withStateClientFacade(new StateClientFacade() {
+                        @Override
+                        public void receiveState(String playerNickname, Integer x, Integer y) {
+                            nickname2 = playerNickname;
+                            x2 = x;
+                            y2 = y;
                         }
                     });
 
@@ -255,6 +280,71 @@ public class ClientConnectivityTest {
         assertFalse(sessionMember2);
 
         TimeUnit.SECONDS.sleep(4);
+    }
+
+    @Test
+    @Order(7)
+    void movingWithinSessionBoundsTest() throws Exception {
+        assertFalse(sessionMember1);
+        assertFalse(sessionMember2);
+
+        gameClient.getSessionClientFacade().requestStartSession();
+
+        TimeUnit.SECONDS.sleep(1);
+
+        assertFalse(sessionMember1);
+
+        gameClient2.getSessionClientFacade().requestStartSession();
+
+        TimeUnit.SECONDS.sleep(1);
+
+        assertTrue(sessionMember1);
+        assertTrue(sessionMember2);
+
+        gameClient.getStateClientFacade().requestState(10, 10);
+
+        TimeUnit.MILLISECONDS.sleep(33);
+
+        assertEquals(10, x1);
+        assertEquals(10, y1);
+        assertEquals(10, x2);
+        assertEquals(10, y2);
+
+        gameClient2.getStateClientFacade().requestState(11, 11);
+
+        TimeUnit.MILLISECONDS.sleep(33);
+
+        assertEquals(11, x2);
+        assertEquals(11, y2);
+        assertEquals(11, x1);
+        assertEquals(11, y1);
+
+        for (int i = 0; i < 800; i++) {
+            gameClient.getStateClientFacade().requestState(i, Math.min(i , 600));
+
+            TimeUnit.MILLISECONDS.sleep(60);
+
+            assertEquals(i, x1);
+            assertEquals(Math.min(i, 600), y1);
+            assertEquals(i, x2);
+            assertEquals(Math.min(i, 600), y2);
+
+            gameClient2.getStateClientFacade().requestState(i, Math.min(i, 600));
+
+            TimeUnit.MILLISECONDS.sleep(60);
+
+            assertEquals(i, x2);
+            assertEquals(Math.min(i, 600), y2);
+            assertEquals(i, x1);
+            assertEquals(Math.min(i, 600), y1);
+        }
+
+        gameClient.getSessionClientFacade().requestStopSession();
+        gameClient2.getSessionClientFacade().requestStopSession();
+
+        TimeUnit.SECONDS.sleep(2);
+
+        //todo: lobby and session ArrayList index will shift to the left, needs fix !!!!
     }
 
     @AfterAll

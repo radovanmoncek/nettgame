@@ -2,6 +2,7 @@ package server.game.docker.modules.session.facades;
 
 import io.netty.channel.ChannelId;
 import server.game.docker.modules.session.pdus.SessionPDU;
+import server.game.docker.modules.state.facades.StateServerFacade;
 import server.game.docker.ship.parents.facades.ServerFacade;
 import server.game.docker.ship.parents.pdus.PDU;
 
@@ -28,8 +29,9 @@ public class SessionServerFacade extends ServerFacade<SessionPDU> {
     public void receiveSessionTick(
             final ChannelId playerId,
             final Map<ChannelId, String> playerLobby,
-            final PDU protocolDataUnit
-    ) {
+            final PDU protocolDataUnit,
+            final StateServerFacade stateServerFacade
+            ) {
         throw new UnsupportedOperationException("Not supported yet.");
     }
 }

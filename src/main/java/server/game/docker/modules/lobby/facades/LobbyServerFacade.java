@@ -10,6 +10,7 @@ import java.util.*;
 
 public class LobbyServerFacade extends ServerFacade<LobbyResponsePDU> {
     private final Map<ChannelId, Integer> lobbyMemberships;
+    @Deprecated
     private final ArrayList<LinkedList<ChannelId>> lobbyMembers;
     private final PlayerServerFacade playerServerFacade;
 
