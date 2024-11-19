@@ -8,11 +8,13 @@ import server.game.docker.ship.parents.pdus.PDU;
  * </p>
  * PDU:
  * <pre>
- *     --------------------------------
- *     | AuthorID(8B) |   Msg(64B)    |
- *     --------------------------------
+ *     --------------------------------------
+ *     | AuthorNick(8B)  |   Message(64B)   |
+ *     --------------------------------------
  * </pre>
  */
-public record ChatMessagePDU(String message) implements PDU {
+public record ChatMessagePDU(String authorNick, String message) implements PDU {
     public static final int PROTOCOL_IDENTIFIER = 6;
+    public static final int AUTHOR_NICK_LENGTH = 8;
+    public static final int MAX_MESSAGE_LENGTH = 64;
 }

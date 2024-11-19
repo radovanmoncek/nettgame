@@ -6,6 +6,6 @@ import server.game.docker.modules.chat.pdus.ChatMessagePDU;
 
 public final class ChatInboundHandler extends SimpleChannelInboundHandler<ChatMessagePDU> {
     @Override
-    public void channelRead0(ChannelHandlerContext channelHandlerContext, ChatMessagePDU chatMessagePDU) {
+    public void channelRead0(final ChannelHandlerContext channelHandlerContext, final ChatMessagePDU chatMessagePDU) {
     }
 }

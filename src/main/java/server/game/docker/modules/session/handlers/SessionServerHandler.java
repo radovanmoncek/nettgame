@@ -20,8 +20,7 @@ public class SessionServerHandler extends SimpleChannelInboundHandler<PDU> {
     private final LobbyServerFacade lobbyServerFacade;
     private final PlayerServerFacade playerServerFacade;
     private final StateServerFacade stateServerFacade;
-    private static final Map<ChannelId, Integer> sessionMembers = new HashMap<>();
-    private static final ArrayList<Queue<SessionMessage>> sessionMessageQueues = new ArrayList<>();
+    private static final Map<ChannelId, Queue<SessionMessage>> sessionMembers = new HashMap<>();
 
     public SessionServerHandler(Supplier<SessionServerFacade> sessionServerFacadePrototype, LobbyServerFacade lobbyServerFacade, PlayerServerFacade playerServerFacade, StateServerFacade stateServerFacade) {
         this.sessionServerFacadeFactory = sessionServerFacadePrototype;
@@ -40,13 +39,14 @@ public class SessionServerHandler extends SimpleChannelInboundHandler<PDU> {
                 }
                 case 2 ->{
                     System.out.printf("A player has requested session end or has disconnected %s \n", protocolDataUnit);
-                    final var sessionMessageQueueIndex = sessionMembers.remove(channelHandlerContext.channel().id());
-                    final var lobby = lobbyServerFacade.findPlayerLobby(channelHandlerContext.channel().id());
-                    lobby
+                    final var sessionMessageQueue = sessionMembers.remove(channelHandlerContext.channel().id());
+                    lobbyServerFacade
+                            .findPlayerLobby(channelHandlerContext.channel().id())
                             .stream()
+                            .flatMap(Collection::stream)
                             .filter(playerId -> !playerId.equals(channelHandlerContext.channel().id()) && !sessionMembers.containsKey(playerId))
                             .findAny()
-                            .ifPresent(playerId -> sessionMessageQueues.get(sessionMessageQueueIndex).offer(new SessionMessage(channelHandlerContext.channel().id(), sessionPDU)));
+                            .ifPresent(playerId -> sessionMessageQueue.offer(new SessionMessage(channelHandlerContext.channel().id(), sessionPDU)));
                 }
                 case 1 ->{
                     //TODO:
@@ -56,27 +56,25 @@ public class SessionServerHandler extends SimpleChannelInboundHandler<PDU> {
             return;
         }
 
-        sessionMessageQueues.get(sessionMembers.get(channelHandlerContext.channel().id())).offer(new SessionMessage(channelHandlerContext.channel().id(), protocolDataUnit));
+        sessionMembers.get(channelHandlerContext.channel().id()).offer(new SessionMessage(channelHandlerContext.channel().id(), protocolDataUnit));
     }
 
     private void startSession(final Channel clientChannel) {
         sessionMembers.putIfAbsent(clientChannel.id(), null);
 
-        LinkedList<ChannelId> playerLobby;
-        if ((playerLobby = lobbyServerFacade.findPlayerLobby(clientChannel.id())) != null) {
+        lobbyServerFacade.findPlayerLobby(clientChannel.id()).ifPresent(playerLobby ->
             playerLobby.stream().filter(playerId -> !clientChannel.id().equals(playerId) && sessionMembers.containsKey(playerId)).findAny().ifPresent(playerId -> {
-                sessionMessageQueues.add(new LinkedList<>());
+                final var messageQueue = new LinkedList<SessionMessage>();
 
                 new Thread(() -> {
-                    final var messageQueueIndex = sessionMessageQueues.size() - 1;
-                    sessionMembers.put(clientChannel.id(), messageQueueIndex);
-                    sessionMembers.put(playerId, messageQueueIndex);
+                    sessionMembers.put(clientChannel.id(), messageQueue);
+                    sessionMembers.put(playerId, messageQueue);
                     final SessionServerFacade sessionServerFacade;
                     try {
                         sessionServerFacade = sessionServerFacadeFactory.get();
                         sessionServerFacade.receiveSessionStart(playerLobby.toArray(ChannelId[]::new));
                         while (!sessionServerFacade.isEnded()) {
-                            final var sessionMessage = pollMessageQueue(messageQueueIndex);
+                            final var sessionMessage = messageQueue.poll();
                             if(Objects.nonNull(sessionMessage) && sessionMessage.protocolDataUnit instanceof SessionPDU sessionPDU) {
                                 if(sessionPDU.sessionFlag() == 1) {
                                     continue;
@@ -104,17 +102,13 @@ public class SessionServerHandler extends SimpleChannelInboundHandler<PDU> {
                                 e.printStackTrace(); //todo: log4j
                             }
                         }
-                        System.out.printf("Session with messageQueue index %d has ended", messageQueueIndex); //todo: log4j
+                        System.out.printf("Session with messageQueue: %s has ended", messageQueue); //todo: log4j
                     } catch (Exception e) {
                         e.printStackTrace();
                     }
                 }).start();
-            });
-        }
-    }
-
-    private synchronized SessionMessage pollMessageQueue(final Integer messageQueueIndex) {
-        return sessionMessageQueues.get(messageQueueIndex).poll();
+            })
+        );
     }
 
     private record SessionMessage(ChannelId playerId, PDU protocolDataUnit) {}

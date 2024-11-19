@@ -9,17 +9,30 @@ import java.nio.charset.Charset;
 import java.util.List;
 
 public final class ChatMessageDecoder extends ByteToMessageDecoder {
-    private static final int AUTHOR_NAME_LENGTH = 8;
-    private static final int MAX_MESSAGE_LENGTH = 64;
-
     @Override
     public void decode(ChannelHandlerContext channelHandlerContext, ByteBuf in, List<Object> out) {
-//        final var chatMessage = new ChatMessagePDU();
-//
-//        chatMessage.setAuthorID(in.readLong());
-//        chatMessage.setAuthorName(in.toString(in.readerIndex(), AUTHOR_NAME_LENGTH, Charset.defaultCharset()).trim());
-//        chatMessage.setMessage(in.toString(in.readerIndex() + AUTHOR_NAME_LENGTH, MAX_MESSAGE_LENGTH, Charset.defaultCharset()).trim());
-//
-//        out.add(chatMessage);
+        if(in.markReaderIndex().readByte() != ChatMessagePDU.PROTOCOL_IDENTIFIER){
+            channelHandlerContext.fireChannelRead(in.resetReaderIndex().retain());
+            return;
+        }
+
+        if(in.readableBytes() < in.readLong()){
+            in.resetReaderIndex();
+            return;
+        }
+
+        out.add(
+                new ChatMessagePDU(
+                        in
+                                .toString(in.readerIndex(), ChatMessagePDU.AUTHOR_NICK_LENGTH, Charset.defaultCharset())
+                                .trim(),
+                        in
+                                .toString(
+                                        in.readerIndex() + ChatMessagePDU.AUTHOR_NICK_LENGTH,
+                                        ChatMessagePDU.MAX_MESSAGE_LENGTH,
+                                        Charset.defaultCharset())
+                                .trim()
+                )
+        );
     }
 }

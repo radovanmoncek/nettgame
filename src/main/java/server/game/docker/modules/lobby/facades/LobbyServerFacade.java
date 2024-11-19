@@ -9,26 +9,23 @@ import server.game.docker.ship.parents.facades.ServerFacade;
 import java.util.*;
 
 public class LobbyServerFacade extends ServerFacade<LobbyResponsePDU> {
-    private final Map<ChannelId, Integer> lobbyMemberships;
-    @Deprecated
-    private final ArrayList<LinkedList<ChannelId>> lobbyMembers;
+    private final Map<ChannelId, LinkedList<ChannelId>> lobbyMemberships;
     private final PlayerServerFacade playerServerFacade;
 
     public LobbyServerFacade(PlayerServerFacade playerServerFacade) {
         this.playerServerFacade = playerServerFacade;
         lobbyMemberships = new HashMap<>();
-        lobbyMembers = new ArrayList<>();
     }
 
     public synchronized void receiveCreateRequest(final Channel clientChannel) {
         if (lobbyMemberships.containsKey(clientChannel.id()))
             return;
-        lobbyMembers.add(new LinkedList<>(List.of(clientChannel.id())));
-        lobbyMemberships.computeIfAbsent(clientChannel.id(), ignored -> lobbyMembers.size() - 1);
+
+        lobbyMemberships.putIfAbsent(clientChannel.id(), new LinkedList<>(List.of(clientChannel.id())));
         final var lobbyUpdate = new LobbyResponsePDU(
                 (byte) LobbyResponsePDU.LobbyUpdateResponseFlag.CREATED.ordinal(),
                 Long.parseLong(clientChannel.id().asShortText(), 16),
-                lobbyMembers.get(lobbyMembers.size() - 1).stream().map(playerServerFacade::getNickname).toList()
+                lobbyMemberships.get(clientChannel.id()).stream().map(playerServerFacade::getNickname).toList()
         );
         unicastPDUToClientChannel(lobbyUpdate, clientChannel);
     }
@@ -40,16 +37,16 @@ public class LobbyServerFacade extends ServerFacade<LobbyResponsePDU> {
         lobbyMemberships
                 .entrySet()
                 .stream()
-                .filter(entry -> lobbyLeaderId.equals(Long.valueOf(entry.getKey().asShortText(), 16)) && lobbyMembers.get(entry.getValue()).size() < 2)
+                .filter(entry -> lobbyLeaderId.equals(Long.valueOf(entry.getKey().asShortText(), 16)) && entry.getValue().size() < 2)
                 .findAny()
                 .ifPresent(entry -> {
-            final var lobby = lobbyMembers.get(entry.getValue());
+            final var lobby = entry.getValue();
 
             if(lobby.size() > 2)
                 throw new RuntimeException(String.format("Lobby %s with more than 2 members exists.\n", lobby));
 
-            lobbyMembers.get(entry.getValue()).add(clientChannel.id());
-            lobbyMemberships.computeIfAbsent(clientChannel.id(), ignored -> lobbyMembers.size() - 1);
+            lobby.add(clientChannel.id());
+            lobbyMemberships.putIfAbsent(clientChannel.id(), lobby);
 
             final var lobbyUpdate = new LobbyResponsePDU(
                     (byte) LobbyResponsePDU.LobbyUpdateResponseFlag.JOINED.ordinal(),
@@ -64,14 +61,14 @@ public class LobbyServerFacade extends ServerFacade<LobbyResponsePDU> {
         if (!lobbyMemberships.containsKey(clientChannel.id()))
             return;
 
-        final var lobby = lobbyMembers.get(lobbyMemberships.get(clientChannel.id()));
+        final var lobby = lobbyMemberships.get(clientChannel.id());
 
         if (lobby.isEmpty()) {
             throw new RuntimeException(String.format("Lobby %s with size 0 exists.\n", lobby));
         }
 
         if (lobby.size() == 1) {
-            lobbyMembers.remove((int) lobbyMemberships.remove(clientChannel.id()));
+            lobbyMemberships.remove(clientChannel.id());
         }
 
         if (lobby.size() == 2) {
@@ -95,14 +92,14 @@ public class LobbyServerFacade extends ServerFacade<LobbyResponsePDU> {
         if (!lobbyMemberships.containsKey(playerChannelId))
             return;
 
-        final var lobby = lobbyMembers.get(lobbyMemberships.get(playerChannelId));
+        final var lobby = lobbyMemberships.get(playerChannelId);
 
         if (lobby.isEmpty()) {
             throw new RuntimeException(String.format("Lobby %s with size 0 exists.\n", lobby));
         }
 
         if (lobby.size() == 1) {
-            lobbyMembers.remove((int) lobbyMemberships.remove(playerChannelId));
+            lobbyMemberships.remove(playerChannelId);
         }
 
         if (lobby.size() == 2) {
@@ -111,7 +108,8 @@ public class LobbyServerFacade extends ServerFacade<LobbyResponsePDU> {
         }
     }
 
-    public LinkedList<ChannelId> findPlayerLobby(final ChannelId playerChannelId) {
-        return lobbyMembers.get(lobbyMemberships.get(playerChannelId)); //todo: return Optional
+    public Optional<LinkedList<ChannelId>> findPlayerLobby(final ChannelId playerChannelId) {
+        final var foundLobby = lobbyMemberships.get(playerChannelId);
+        return foundLobby == null? Optional.empty() : Optional.of(foundLobby);
     }
 }
