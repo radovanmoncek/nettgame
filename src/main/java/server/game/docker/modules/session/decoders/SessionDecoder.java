@@ -7,7 +7,7 @@ import server.game.docker.modules.session.pdus.SessionPDU;
 
 import java.util.List;
 
-public class SessionDecoder extends ByteToMessageDecoder {
+public final class SessionDecoder extends ByteToMessageDecoder {
     @Override
     protected void decode(ChannelHandlerContext ctx, ByteBuf in, List<Object> out) {
         in.markReaderIndex();

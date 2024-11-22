@@ -9,6 +9,7 @@ import io.netty.channel.group.DefaultChannelGroup;
 import io.netty.channel.nio.NioEventLoopGroup;
 import io.netty.channel.socket.nio.NioServerSocketChannel;
 import io.netty.util.concurrent.GlobalEventExecutor;
+import server.game.docker.modules.chat.facades.ChatMessageServerFacade;
 import server.game.docker.modules.lobby.facades.LobbyServerFacade;
 import server.game.docker.modules.player.facades.PlayerServerFacade;
 import server.game.docker.modules.session.facades.SessionServerFacade;
@@ -61,6 +62,7 @@ public final class GameServer {
     private NioEventLoopGroup workerGroup;
     private Supplier<SessionServerFacade> sessionServerFacadeFactory;
     private StateServerFacade stateServerFacade;
+    private ChatMessageServerFacade chatMessageServerFacade;
 
     private GameServer() {
         managedClients = new DefaultChannelGroup(GlobalEventExecutor.INSTANCE);
@@ -109,6 +111,11 @@ public final class GameServer {
         return this;
     }
 
+    public GameServer withChatMessageServerFacade(final ChatMessageServerFacade chatMessageServerFacade) {
+        this.chatMessageServerFacade = chatMessageServerFacade;
+        return this;
+    }
+
     /**
      * <p>
      * Runs the DockerGameServer instance and blocks the current thread until the {@link #shutdownGracefullyAfterNSeconds shutdownGracefullyAfterNSeconds(int seconds)} method is called.
@@ -126,7 +133,8 @@ public final class GameServer {
                         playerServerFacade,
                         lobbyServerFacade,
                         sessionServerFacadeFactory,
-                        stateServerFacade
+                        stateServerFacade,
+                        chatMessageServerFacade
                 ))
                 .option(ChannelOption.SO_BACKLOG, 128)
                 .childOption(ChannelOption.SO_KEEPALIVE, true);
@@ -137,6 +145,7 @@ public final class GameServer {
             injectManagedClientsIntoServerFacade(playerServerFacade);
             injectManagedClientsIntoServerFacade(lobbyServerFacade);
             injectManagedClientsIntoServerFacade(stateServerFacade);
+            injectManagedClientsIntoServerFacade(chatMessageServerFacade);
 
             future.channel().closeFuture().sync();
         } finally {

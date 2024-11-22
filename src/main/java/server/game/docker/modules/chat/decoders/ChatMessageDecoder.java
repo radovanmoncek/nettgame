@@ -9,10 +9,10 @@ import java.nio.charset.Charset;
 import java.util.List;
 
 public final class ChatMessageDecoder extends ByteToMessageDecoder {
+
     @Override
     public void decode(ChannelHandlerContext channelHandlerContext, ByteBuf in, List<Object> out) {
         if(in.markReaderIndex().readByte() != ChatMessagePDU.PROTOCOL_IDENTIFIER){
-            channelHandlerContext.fireChannelRead(in.resetReaderIndex().retain());
             return;
         }
 

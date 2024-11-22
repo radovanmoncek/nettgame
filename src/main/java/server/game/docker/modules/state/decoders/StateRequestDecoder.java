@@ -8,6 +8,7 @@ import server.game.docker.client.modules.state.pdus.StateRequestPDU;
 import java.util.List;
 
 public class StateRequestDecoder extends ByteToMessageDecoder {
+
     @Override
     protected void decode(ChannelHandlerContext ctx, ByteBuf in, List<Object> out) {
         in.markReaderIndex();
@@ -16,7 +17,7 @@ public class StateRequestDecoder extends ByteToMessageDecoder {
 
         if(type != StateRequestPDU.PROTOCOL_IDENTIFIER){
             in.resetReaderIndex();
-            //            ctx.fireChannelRead(in.retain()); to extend modules
+            ctx.fireChannelRead(in.retain());
             return;
         }
 

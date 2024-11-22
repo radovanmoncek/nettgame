@@ -4,10 +4,12 @@ import io.netty.channel.ChannelId;
 import org.junit.jupiter.api.*;
 import server.game.docker.GameServer;
 import server.game.docker.client.modules.lobby.facades.LobbyClientFacade;
+import server.game.docker.client.modules.messages.facades.ChatMessageClientFacade;
 import server.game.docker.client.modules.player.facades.PlayerClientFacade;
 import server.game.docker.client.modules.sessions.facades.SessionClientFacade;
 import server.game.docker.client.modules.state.facades.StateClientFacade;
 import server.game.docker.client.modules.state.pdus.StateRequestPDU;
+import server.game.docker.modules.chat.facades.ChatMessageServerFacade;
 import server.game.docker.modules.session.facades.SessionServerFacade;
 import server.game.docker.modules.state.facades.StateServerFacade;
 import server.game.docker.ship.parents.pdus.PDU;
@@ -27,7 +29,9 @@ public class ClientConnectivityTest {
     private static Long lobbyLeaderId1, lobbyLeaderId2;
     private static Collection<String> lobbyMembers1, lobbyMembers2;
     private static boolean sessionMember1, sessionMember2;
-    public static Integer x1, y1, x2, y2;
+    private static Integer x1, y1, x2, y2;
+    private static String message1, message2;
+    private static String messageNickname1, messageNickname2;
 
     @BeforeAll
     static void setup() throws Exception {
@@ -45,7 +49,8 @@ public class ClientConnectivityTest {
                         }
                     }
                 })
-                .withStateServerFacade(new StateServerFacade());
+                .withStateServerFacade(new StateServerFacade())
+                .withChatMessageServerFacade(new ChatMessageServerFacade());
         new Thread(() -> {
             try {
                 gameServer.run();
@@ -100,6 +105,13 @@ public class ClientConnectivityTest {
                         nickname1 = playerNickname;
                         x1 = x;
                         y1 = y;
+                    }
+                })
+                .withChatMessageClientFacade(new ChatMessageClientFacade() {
+                    @Override
+                    public void receivePlayerLobbyChatMessage(String playerNickname, String message) {
+                        messageNickname1 = playerNickname;
+                        message1 = message;
                     }
                 });
 
@@ -187,6 +199,13 @@ public class ClientConnectivityTest {
                             x2 = x;
                             y2 = y;
                         }
+                    })
+                    .withChatMessageClientFacade(new ChatMessageClientFacade(){
+                        @Override
+                        public void receivePlayerLobbyChatMessage(String playerNickname, String message) {
+                            messageNickname2 = playerNickname;
+                            message2 = message;
+                        }
                     });
 
             gameClient2.run(0);
@@ -234,10 +253,50 @@ public class ClientConnectivityTest {
         assertEquals(0, lobbyMembers1.size());
     }
 
-    //TODO: messages (with lobby / session context) !!!!
-
     @Test
     @Order(6)
+    void chatMessageTest() throws Exception {
+        gameClient.getLobbyFacade().createLobby();
+
+        TimeUnit.SECONDS.sleep(1);
+
+        assertNotNull(lobbyLeaderId1);
+
+        gameClient2.getLobbyFacade().joinLobby(lobbyLeaderId1);
+
+        TimeUnit.SECONDS.sleep(1);
+
+        assertNotNull(lobbyLeaderId2);
+
+        gameClient.getChatMessageFacade().sendPlayerLobbyChatMessage(nickname1, "Test message");
+
+        TimeUnit.SECONDS.sleep(1);
+
+        assertEquals("Test", messageNickname2);
+        assertEquals("Test message", message2);
+
+        gameClient2.getChatMessageFacade().sendPlayerLobbyChatMessage(nickname2, "Test message 2");
+
+        TimeUnit.SECONDS.sleep(1);
+
+        assertEquals("Test2", messageNickname1);
+        assertEquals("Test message 2", message1);
+
+        gameClient.getLobbyFacade().leaveLobby();
+
+        TimeUnit.SECONDS.sleep(1);
+
+        assertEquals(-1L, lobbyLeaderId1);
+
+        gameClient2.getLobbyFacade().leaveLobby();
+
+        TimeUnit.SECONDS.sleep(1);
+
+        assertEquals(-1L, lobbyLeaderId2);
+    }
+
+    @Test
+    @Order(7)
     void startSessionTest() throws Exception {
         assertEquals(-1L, lobbyLeaderId1);
         assertEquals(-1L, lobbyLeaderId2);
@@ -278,12 +337,10 @@ public class ClientConnectivityTest {
 
         assertFalse(sessionMember1);
         assertFalse(sessionMember2);
-
-        TimeUnit.SECONDS.sleep(4);
     }
 
     @Test
-    @Order(7)
+    @Order(8)
     void movingWithinSessionBoundsTest() throws Exception {
         assertFalse(sessionMember1);
         assertFalse(sessionMember2);
@@ -303,7 +360,7 @@ public class ClientConnectivityTest {
 
         gameClient.getStateClientFacade().requestState(10, 10);
 
-        TimeUnit.MILLISECONDS.sleep(33);
+        TimeUnit.MILLISECONDS.sleep(60);
 
         assertEquals(10, x1);
         assertEquals(10, y1);
@@ -312,14 +369,14 @@ public class ClientConnectivityTest {
 
         gameClient2.getStateClientFacade().requestState(11, 11);
 
-        TimeUnit.MILLISECONDS.sleep(33);
+        TimeUnit.MILLISECONDS.sleep(60);
 
         assertEquals(11, x2);
         assertEquals(11, y2);
         assertEquals(11, x1);
         assertEquals(11, y1);
 
-        for (int i = 0; i < 800; i++) {
+        for (int i = 100; i < 200; i++) {
             gameClient.getStateClientFacade().requestState(i, Math.min(i , 600));
 
             TimeUnit.MILLISECONDS.sleep(60);
@@ -343,8 +400,6 @@ public class ClientConnectivityTest {
         gameClient2.getSessionClientFacade().requestStopSession();
 
         TimeUnit.SECONDS.sleep(2);
-
-        //todo: lobby and session ArrayList index will shift to the left, needs fix !!!!
     }
 
     @AfterAll

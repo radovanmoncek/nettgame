@@ -22,7 +22,12 @@ public class SessionServerHandler extends SimpleChannelInboundHandler<PDU> {
     private final StateServerFacade stateServerFacade;
     private static final Map<ChannelId, Queue<SessionMessage>> sessionMembers = new HashMap<>();
 
-    public SessionServerHandler(Supplier<SessionServerFacade> sessionServerFacadePrototype, LobbyServerFacade lobbyServerFacade, PlayerServerFacade playerServerFacade, StateServerFacade stateServerFacade) {
+    public SessionServerHandler(
+            final Supplier<SessionServerFacade> sessionServerFacadePrototype,
+            final LobbyServerFacade lobbyServerFacade,
+            final PlayerServerFacade playerServerFacade,
+            final StateServerFacade stateServerFacade
+    ) {
         this.sessionServerFacadeFactory = sessionServerFacadePrototype;
         this.lobbyServerFacade = lobbyServerFacade;
         this.playerServerFacade = playerServerFacade;

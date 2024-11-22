@@ -7,6 +7,7 @@ import io.netty.channel.EventLoopGroup;
 import io.netty.channel.nio.NioEventLoopGroup;
 import io.netty.channel.socket.nio.NioSocketChannel;
 import server.game.docker.client.modules.lobby.facades.LobbyClientFacade;
+import server.game.docker.client.modules.messages.facades.ChatMessageClientFacade;
 import server.game.docker.client.modules.player.facades.PlayerClientFacade;
 import server.game.docker.client.modules.sessions.facades.SessionClientFacade;
 import server.game.docker.client.modules.state.facades.StateClientFacade;
@@ -41,6 +42,7 @@ public final class GameClient {
     private LobbyClientFacade lobbyClientFacade;
     private SessionClientFacade sessionClientFacade;
     private StateClientFacade stateClientFacade;
+    private ChatMessageClientFacade chatMessageClientFacade;
 
     /**
      * Constructs a new {@link GameClient} instance with an ip address of 127.0.0.1 and port number of 4321.
@@ -67,7 +69,8 @@ public final class GameClient {
                             playerClientFacade,
                             lobbyClientFacade,
                             sessionClientFacade,
-                            stateClientFacade
+                            stateClientFacade,
+                            chatMessageClientFacade
                     ));
         } catch (Exception e) {
             e.printStackTrace();
@@ -84,6 +87,7 @@ public final class GameClient {
         injectServerChannelIntoClientFacade(lobbyClientFacade);
         injectServerChannelIntoClientFacade(sessionClientFacade);
         injectServerChannelIntoClientFacade(stateClientFacade);
+        injectServerChannelIntoClientFacade(chatMessageClientFacade);
     }
 
     public static GameClient newInstance() throws Exception {
@@ -136,6 +140,11 @@ public final class GameClient {
         return this;
     }
 
+    public GameClient withChatMessageClientFacade(ChatMessageClientFacade chatMessageClientFacade) {
+        this.chatMessageClientFacade = chatMessageClientFacade;
+        return this;
+    }
+
     public InetAddress getServerAddress() {
         return gameServerAddress;
     }
@@ -160,6 +169,10 @@ public final class GameClient {
 
     public StateClientFacade getStateClientFacade() {
         return stateClientFacade;
+    }
+
+    public ChatMessageClientFacade getChatMessageFacade() {
+        return chatMessageClientFacade;
     }
 
     public int getGameServerPort() {

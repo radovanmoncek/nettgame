@@ -12,17 +12,11 @@ import java.util.List;
  * Example
  */
 public class StateResponseDecoder extends ByteToMessageDecoder {
-    private static final int MAX_PLAYER_NICKNAME_LENGTH = 8;
 
     @Override
-    protected void decode(ChannelHandlerContext ctx, ByteBuf in, List<Object> out) {
-        in.markReaderIndex();
-
-        final var type = in.readByte();
-
-        if(type != StateResponsePDU.PROTOCOL_IDENTIFIER){
-            in.resetReaderIndex();
-//            ctx.fireChannelRead(in.retain()); to extend modules
+    protected void decode(final ChannelHandlerContext ctx, final ByteBuf in, final List<Object> out) {
+        if(in.markReaderIndex().readByte() != StateResponsePDU.PROTOCOL_IDENTIFIER){
+            ctx.fireChannelRead(in.resetReaderIndex().retain());
             return;
         }
 
@@ -31,9 +25,9 @@ public class StateResponseDecoder extends ByteToMessageDecoder {
             return;
         }
 
-        final var playerNickname= in.toString(in.readerIndex(), MAX_PLAYER_NICKNAME_LENGTH, Charset.defaultCharset());
+        final var playerNickname = in.toString(in.readerIndex(), StateResponsePDU.MAX_PLAYER_NICKNAME_LENGTH, Charset.defaultCharset());
 
-        in.readerIndex(in.readerIndex() + MAX_PLAYER_NICKNAME_LENGTH);
+        in.readerIndex(in.readerIndex() + StateResponsePDU.MAX_PLAYER_NICKNAME_LENGTH);
 
         out.add(new StateResponsePDU(playerNickname, in.readInt(), in.readInt()));
     }
