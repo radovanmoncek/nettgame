@@ -57,9 +57,10 @@ public final class GameClient {
     }
 
     /**
-     * @param reconnectIntervalSeconds
+     * @param reconnectIntervalSeconds the number of seconds between reconnect attempts.
+     * @param failReconnectAfterAttempts the number of reconnect retries.
      */
-    public void run(int reconnectIntervalSeconds) {
+    public void run(int reconnectIntervalSeconds, int failReconnectAfterAttempts) {
         try {
             bootstrap = bootstrap
                     .group(workerGroup)
@@ -76,7 +77,7 @@ public final class GameClient {
             e.printStackTrace();
             workerGroup.shutdownGracefully();
         }
-        while (serverChannel == null) {
+        for (int i = 0; i < failReconnectAfterAttempts && serverChannel == null; i++) {
             try {
                 serverChannel = bootstrap.connect(gameServerAddress, gameServerPort).sync().channel();
                 TimeUnit.SECONDS.sleep(reconnectIntervalSeconds);

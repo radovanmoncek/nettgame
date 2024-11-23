@@ -139,7 +139,7 @@ public final class GameServer {
                 .option(ChannelOption.SO_BACKLOG, 128)
                 .childOption(ChannelOption.SO_KEEPALIVE, true);
         try {
-            future = bootstrap.bind(port).sync();
+            future = bootstrap/*.localAddress("0.0.0.0", port)*/.bind(port).sync();
             System.out.printf("GameServer running on port %d\n", port);
 
             injectManagedClientsIntoServerFacade(playerServerFacade);
@@ -148,7 +148,8 @@ public final class GameServer {
             injectManagedClientsIntoServerFacade(chatMessageServerFacade);
 
             future.channel().closeFuture().sync();
-        } finally {
+        }
+        finally {
             shutdownGracefullyAfterNSeconds(0);
         }
     }

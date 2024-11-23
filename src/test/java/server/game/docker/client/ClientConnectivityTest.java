@@ -1,21 +1,20 @@
 package server.game.docker.client;
 
-import io.netty.channel.ChannelId;
+import com.github.dockerjava.api.DockerClient;
+import com.github.dockerjava.api.command.CreateContainerResponse;
+import com.github.dockerjava.api.model.HostConfig;
+import com.github.dockerjava.api.model.PortBinding;
+import com.github.dockerjava.core.DefaultDockerClientConfig;
+import com.github.dockerjava.core.DockerClientImpl;
+import com.github.dockerjava.httpclient5.ApacheDockerHttpClient;
 import org.junit.jupiter.api.*;
-import server.game.docker.GameServer;
 import server.game.docker.client.modules.lobby.facades.LobbyClientFacade;
 import server.game.docker.client.modules.messages.facades.ChatMessageClientFacade;
 import server.game.docker.client.modules.player.facades.PlayerClientFacade;
 import server.game.docker.client.modules.sessions.facades.SessionClientFacade;
 import server.game.docker.client.modules.state.facades.StateClientFacade;
-import server.game.docker.client.modules.state.pdus.StateRequestPDU;
-import server.game.docker.modules.chat.facades.ChatMessageServerFacade;
-import server.game.docker.modules.session.facades.SessionServerFacade;
-import server.game.docker.modules.state.facades.StateServerFacade;
-import server.game.docker.ship.parents.pdus.PDU;
 
 import java.util.Collection;
-import java.util.Map;
 import java.util.Objects;
 import java.util.concurrent.TimeUnit;
 
@@ -24,7 +23,6 @@ import static org.junit.jupiter.api.Assertions.*;
 @TestMethodOrder(MethodOrderer.OrderAnnotation.class)
 public class ClientConnectivityTest {
     private static GameClient gameClient, gameClient2;
-    private static GameServer gameServer;
     private static String nickname1, nickname2;
     private static Long lobbyLeaderId1, lobbyLeaderId2;
     private static Collection<String> lobbyMembers1, lobbyMembers2;
@@ -32,34 +30,32 @@ public class ClientConnectivityTest {
     private static Integer x1, y1, x2, y2;
     private static String message1, message2;
     private static String messageNickname1, messageNickname2;
+    private static DockerClient dockerClient;
+    private static CreateContainerResponse container;
 
     @BeforeAll
     static void setup() throws Exception {
-        gameServer = GameServer
-                .newInstance()
-                .withSessionServerFacadeFactory(() -> new SessionServerFacade(){
-                    private Long tickCounter = 0L;
+        final var defaultDockerClientConfig = DefaultDockerClientConfig
+                .createDefaultConfigBuilder()
+                .withDockerHost("tcp://localhost:2375")
+                .build();
 
-                    @Override
-                    public void receiveSessionTick(ChannelId playerId, Map<ChannelId, String> playerLobby, PDU protocolDataUnit, StateServerFacade stateServerFacade) {
-                        System.out.printf("playerNickname: %s, playerLobby: %s, PDU: %s, ticks: %d\n", playerId, playerLobby, protocolDataUnit, ++tickCounter); //todo: log4j
-                        if(protocolDataUnit instanceof StateRequestPDU stateRequestPDU) {
-                            System.out.printf("Player:%s x:%d y:%d\n", playerId, stateRequestPDU.x(), stateRequestPDU.y());//todo: log4j
-                            stateServerFacade.respondToStateRequest(playerLobby.get(playerId), stateRequestPDU.x(), stateRequestPDU.y(), playerLobby.keySet().toArray(ChannelId[]::new));
-                        }
-                    }
-                })
-                .withStateServerFacade(new StateServerFacade())
-                .withChatMessageServerFacade(new ChatMessageServerFacade());
-        new Thread(() -> {
-            try {
-                gameServer.run();
-            } catch (InterruptedException e) {
-                e.printStackTrace(); //todo: log4j
-            }
-        }).start();
+        dockerClient = DockerClientImpl.getInstance(defaultDockerClientConfig, new ApacheDockerHttpClient.Builder().dockerHost(defaultDockerClientConfig.getDockerHost()).build());
 
-        TimeUnit.SECONDS.sleep(4);
+        System.out.println(dockerClient.listImagesCmd().exec());
+
+        dockerClient
+                .startContainerCmd(
+                (container = dockerClient
+                        .createContainerCmd("docker-game-server:latest")
+                        .withHostConfig(HostConfig.newHostConfig().withPortBindings(PortBinding.parse("4321:4321")))
+                        .exec()
+                )
+                        .getId()
+                )
+                .exec();
+
+        TimeUnit.SECONDS.sleep(10);
 
         gameClient = GameClient
                 .newInstance()
@@ -115,7 +111,7 @@ public class ClientConnectivityTest {
                     }
                 });
 
-        gameClient.run(0);
+        gameClient.run(0, 10);
     }
 
     @Test
@@ -208,7 +204,7 @@ public class ClientConnectivityTest {
                         }
                     });
 
-            gameClient2.run(0);
+            gameClient2.run(0, 10);
 
             gameClient2.getUsernameClientFacade().requestNickname("Test2");
 
@@ -377,23 +373,23 @@ public class ClientConnectivityTest {
         assertEquals(11, y1);
 
         for (int i = 100; i < 200; i++) {
-            gameClient.getStateClientFacade().requestState(i, Math.min(i , 600));
+            gameClient.getStateClientFacade().requestState(i, i);
 
             TimeUnit.MILLISECONDS.sleep(60);
 
             assertEquals(i, x1);
-            assertEquals(Math.min(i, 600), y1);
+            assertEquals(i, y1);
             assertEquals(i, x2);
-            assertEquals(Math.min(i, 600), y2);
+            assertEquals(i, y2);
 
-            gameClient2.getStateClientFacade().requestState(i, Math.min(i, 600));
+            gameClient2.getStateClientFacade().requestState(i, i);
 
             TimeUnit.MILLISECONDS.sleep(60);
 
             assertEquals(i, x2);
-            assertEquals(Math.min(i, 600), y2);
+            assertEquals(i, y2);
             assertEquals(i, x1);
-            assertEquals(Math.min(i, 600), y1);
+            assertEquals(i, y1);
         }
 
         gameClient.getSessionClientFacade().requestStopSession();
@@ -406,7 +402,8 @@ public class ClientConnectivityTest {
     static void tearDown() throws Exception {
         gameClient.shutdownGracefullyAfterNSeconds(0);
         gameClient2.shutdownGracefullyAfterNSeconds(0);
-        gameServer.shutdownGracefullyAfterNSeconds(0);
+        dockerClient.close();
+        dockerClient.stopContainerCmd(container.getId());
     }
 
     private void resetGameClientSingletonInstance() throws NoSuchFieldException, IllegalAccessException {

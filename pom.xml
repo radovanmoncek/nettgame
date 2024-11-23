@@ -26,5 +26,15 @@
             <version>5.11.0-M2</version>
             <scope>test</scope>
         </dependency>
+        <dependency>
+            <groupId>com.github.docker-java</groupId>
+            <artifactId>docker-java</artifactId>
+            <version>3.4.0</version>
+        </dependency>
+        <dependency>
+            <groupId>com.github.docker-java</groupId>
+            <artifactId>docker-java-transport-httpclient5</artifactId>
+            <version>3.4.0</version>
+        </dependency>
     </dependencies>
 </project>
