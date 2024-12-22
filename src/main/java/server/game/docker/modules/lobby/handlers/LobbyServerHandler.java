@@ -2,14 +2,14 @@ package server.game.docker.modules.lobby.handlers;
 
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.SimpleChannelInboundHandler;
-import server.game.docker.modules.lobby.facades.LobbyServerFacade;
+import server.game.docker.modules.lobby.facades.LobbyChannelGroupFacade;
 import server.game.docker.modules.lobby.pdus.LobbyRequestPDU;
 
 public final class LobbyServerHandler extends SimpleChannelInboundHandler<LobbyRequestPDU> {
-    private final LobbyServerFacade lobbyServerFacade;
+    private final LobbyChannelGroupFacade lobbyServerFacade;
 
     public LobbyServerHandler(
-            LobbyServerFacade lobbyServerFacade
+            LobbyChannelGroupFacade lobbyServerFacade
     ) {
         this.lobbyServerFacade = lobbyServerFacade;
     }

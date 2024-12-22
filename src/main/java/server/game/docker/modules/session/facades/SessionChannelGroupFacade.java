@@ -1,14 +1,15 @@
 package server.game.docker.modules.session.facades;
 
 import io.netty.channel.ChannelId;
+import server.game.docker.client.modules.state.pdus.StateRequestPDU;
 import server.game.docker.modules.session.pdus.SessionPDU;
-import server.game.docker.modules.state.facades.StateServerFacade;
-import server.game.docker.ship.parents.facades.ServerFacade;
+import server.game.docker.modules.state.facades.StateChannelGroupFacade;
+import server.game.docker.ship.parents.facades.ChannelGroupFacade;
 import server.game.docker.ship.parents.pdus.PDU;
 
-import java.util.Map;
+import java.util.LinkedList;
 
-public class SessionServerFacade extends ServerFacade<SessionPDU> {
+public class SessionChannelGroupFacade extends ChannelGroupFacade<SessionPDU> {
     private boolean ended = false;
 
     public boolean isEnded() {
@@ -28,9 +29,9 @@ public class SessionServerFacade extends ServerFacade<SessionPDU> {
 
     public void receiveSessionTick(
             final ChannelId playerId,
-            final Map<ChannelId, String> playerLobby,
-            final PDU protocolDataUnit,
-            final StateServerFacade stateServerFacade
+            final LinkedList<ChannelId> playerLobby,
+            final StateRequestPDU stateRequestPDU,
+            final StateChannelGroupFacade stateServerFacade
             ) {
         throw new UnsupportedOperationException("Not supported yet.");
     }

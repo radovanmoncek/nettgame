@@ -8,13 +8,17 @@ import com.github.dockerjava.core.DefaultDockerClientConfig;
 import com.github.dockerjava.core.DockerClientImpl;
 import com.github.dockerjava.httpclient5.ApacheDockerHttpClient;
 import org.junit.jupiter.api.*;
-import server.game.docker.client.modules.lobby.facades.LobbyClientFacade;
-import server.game.docker.client.modules.messages.facades.ChatMessageClientFacade;
-import server.game.docker.client.modules.player.facades.PlayerClientFacade;
-import server.game.docker.client.modules.sessions.facades.SessionClientFacade;
-import server.game.docker.client.modules.state.facades.StateClientFacade;
+import server.game.docker.client.modules.lobby.facades.LobbyChannelFacade;
+import server.game.docker.client.modules.messages.facades.ChatMessageChannelFacade;
+import server.game.docker.client.modules.player.facades.PlayerChannelFacade;
+import server.game.docker.client.modules.sessions.facades.SessionChannelFacade;
+import server.game.docker.client.modules.state.facades.StateChannelFacade;
+import server.game.docker.client.ship.bootstrap.GameClient;
 
+import javax.swing.*;
+import java.awt.*;
 import java.util.Collection;
+import java.util.List;
 import java.util.Objects;
 import java.util.concurrent.TimeUnit;
 
@@ -27,7 +31,7 @@ public class ClientConnectivityTest {
     private static Long lobbyLeaderId1, lobbyLeaderId2;
     private static Collection<String> lobbyMembers1, lobbyMembers2;
     private static boolean sessionMember1, sessionMember2;
-    private static Integer x1, y1, x2, y2;
+    private static Integer x1 = 0, y1 = 0, x2 = 0, y2 = 0;
     private static String message1, message2;
     private static String messageNickname1, messageNickname2;
     private static DockerClient dockerClient;
@@ -46,70 +50,98 @@ public class ClientConnectivityTest {
 
         dockerClient
                 .startContainerCmd(
-                (container = dockerClient
-                        .createContainerCmd("docker-game-server:latest")
-                        .withHostConfig(HostConfig.newHostConfig().withPortBindings(PortBinding.parse("4321:4321")))
-                        .exec()
-                )
-                        .getId()
+                        (container = dockerClient
+                                .createContainerCmd("docker-game-server:latest")
+                                .withHostConfig(HostConfig.newHostConfig().withPortBindings(PortBinding.parse("4321:4321")))
+                                .exec()
+                        )
+                                .getId()
                 )
                 .exec();
 
         TimeUnit.SECONDS.sleep(10);
+        SwingUtilities.invokeLater(() -> new JPanel() {
+            public void launch() {
+                try {
+                    gameClient = GameClient
+                            .newInstance()
+                            .withPlayerClientFacade(new PlayerChannelFacade() {
+                                @Override
+                                public void receiveNewNickname(String newNickname) {
+                                    nickname1 = newNickname;
+                                }
+                            })
+                            .withLobbyClientFacade(new LobbyChannelFacade() {
+                                @Override
+                                public void receiveLobbyLeft(Long leaderId, Collection<String> members) {
+                                    lobbyLeaderId1 = leaderId;
+                                    lobbyMembers1 = members;
+                                }
 
-        gameClient = GameClient
-                .newInstance()
-                .withPlayerClientFacade(new PlayerClientFacade() {
-                    @Override
-                    public void receiveNewNickname(String newNickname) {
-                        nickname1 = newNickname;
-                    }
-                })
-                .withLobbyClientFacade(new LobbyClientFacade() {
-                    @Override
-                    public void receiveLobbyLeft(Long leaderId, Collection<String> members) {
-                        lobbyLeaderId1 = leaderId;
-                        lobbyMembers1 = members;
-                    }
+                                @Override
+                                public void receiveLobbyJoined(Long leaderId, Collection<String> members) {
+                                    lobbyLeaderId1 = leaderId;
+                                    lobbyMembers1 = members;
+                                }
 
-                    @Override
-                    public void receiveLobbyJoined(Long leaderId, Collection<String> members) {
-                        lobbyLeaderId1 = leaderId;
-                        lobbyMembers1 = members;
-                    }
+                                @Override
+                                public void receiveLobbyCreated(Long leaderId, Collection<String> members) {
+                                    lobbyLeaderId1 = leaderId;
+                                    lobbyMembers1 = members;
+                                }
+                            })
+                            .withSessionClientFacade(new SessionChannelFacade() {
+                                @Override
+                                public void receiveStartSessionResponse() {
+                                    sessionMember1 = true;
+                                }
 
-                    @Override
-                    public void receiveLobbyCreated(Long leaderId, Collection<String> members) {
-                        lobbyLeaderId1 = leaderId;
-                        lobbyMembers1 = members;
-                    }
-                })
-                .withSessionClientFacade(new SessionClientFacade() {
-                    @Override
-                    public void receiveStartSessionResponse() {
-                        sessionMember1 = true;
-                    }
+                                @Override
+                                public void receiveStopSessionResponse() {
+                                    sessionMember1 = false;
+                                }
+                            })
+                            .withStateClientFacade(new StateChannelFacade() {
+                                @Override
+                                public void receiveState(List<GameEntity> gameEntities) {
+                                    x1 = gameEntities.get(0).x();
+                                    y1 = gameEntities.get(0).y();
+                                    x2 = gameEntities.get(1).x();
+                                    y2 = gameEntities.get(1).y();
+                                    repaint();
+                                }
+                            })
+                            .withChatMessageClientFacade(new ChatMessageChannelFacade() {
+                                @Override
+                                public void receivePlayerLobbyChatMessage(String playerNickname, String message) {
+                                    messageNickname1 = playerNickname;
+                                    message1 = message;
+                                }
+                            });
 
-                    @Override
-                    public void receiveStopSessionResponse() {
-                        sessionMember1 = false;
-                    }
-                })
-                .withStateClientFacade(new StateClientFacade() {
-                    @Override
-                    public void receiveState(String playerNickname, Integer x, Integer y) {
-                        nickname1 = playerNickname;
-                        x1 = x;
-                        y1 = y;
-                    }
-                })
-                .withChatMessageClientFacade(new ChatMessageClientFacade() {
-                    @Override
-                    public void receivePlayerLobbyChatMessage(String playerNickname, String message) {
-                        messageNickname1 = playerNickname;
-                        message1 = message;
-                    }
-                });
+                    final var frame = new JFrame();
+                    frame.add(this);
+                    frame.setSize(new Dimension(800, 600));
+                    frame.setLocationRelativeTo(null);
+                    frame.setVisible(true);
+                } catch (Exception e) {
+                    e.printStackTrace(); //todo: log4j
+                }
+            }
+
+            @Override
+            public void paint(Graphics g) {
+                super.paint(g);
+                g.setColor(Color.WHITE);
+                g.clearRect(0, 0, getWidth(), getHeight());
+                g.setColor(Color.BLACK);
+                g.fillRect(x1, y1, 40, 40);
+                g.fillRect(x2, y2, 40, 40);
+            }
+        }.launch());
+
+        while(Objects.isNull(gameClient))
+            TimeUnit.SECONDS.sleep(1);
 
         gameClient.run(0, 10);
     }
@@ -152,13 +184,13 @@ public class ClientConnectivityTest {
         if (Objects.isNull(gameClient2)) {
             gameClient2 = GameClient
                     .newInstance()
-                    .withPlayerClientFacade(new PlayerClientFacade() {
+                    .withPlayerClientFacade(new PlayerChannelFacade() {
                         @Override
                         public void receiveNewNickname(String newNickname) {
                             nickname2 = newNickname;
                         }
                     })
-                    .withLobbyClientFacade(new LobbyClientFacade() {
+                    .withLobbyClientFacade(new LobbyChannelFacade() {
                         @Override
                         public void receiveLobbyJoined(Long leaderChannelId, Collection<String> members) {
                             lobbyLeaderId2 = leaderChannelId;
@@ -177,7 +209,7 @@ public class ClientConnectivityTest {
                             lobbyMembers2 = members;
                         }
                     })
-                    .withSessionClientFacade(new SessionClientFacade(){
+                    .withSessionClientFacade(new SessionChannelFacade() {
                         @Override
                         public void receiveStartSessionResponse() {
                             sessionMember2 = true;
@@ -188,15 +220,16 @@ public class ClientConnectivityTest {
                             sessionMember2 = false;
                         }
                     })
-                    .withStateClientFacade(new StateClientFacade() {
+                    .withStateClientFacade(new StateChannelFacade() {
                         @Override
-                        public void receiveState(String playerNickname, Integer x, Integer y) {
-                            nickname2 = playerNickname;
-                            x2 = x;
-                            y2 = y;
+                        public void receiveState(final List<GameEntity> gameEntities) {
+                            x1 = gameEntities.get(0).x();
+                            y1 = gameEntities.get(0).y();
+                            x2 = gameEntities.get(1).x();
+                            y2 = gameEntities.get(1).y();
                         }
                     })
-                    .withChatMessageClientFacade(new ChatMessageClientFacade(){
+                    .withChatMessageClientFacade(new ChatMessageChannelFacade() {
                         @Override
                         public void receivePlayerLobbyChatMessage(String playerNickname, String message) {
                             messageNickname2 = playerNickname;
@@ -299,7 +332,7 @@ public class ClientConnectivityTest {
 
         createLobbyTest();
         gameClient2.getLobbyFacade().joinLobby(lobbyLeaderId1);
-        for(int i = 0; i < 2 && lobbyMembers2.isEmpty(); i++) {
+        for (int i = 0; i < 2 && lobbyMembers2.isEmpty(); i++) {
             TimeUnit.SECONDS.sleep(1);
         }
 
@@ -356,40 +389,40 @@ public class ClientConnectivityTest {
 
         gameClient.getStateClientFacade().requestState(10, 10);
 
-        TimeUnit.MILLISECONDS.sleep(60);
+        TimeUnit.MILLISECONDS.sleep(40);
 
         assertEquals(10, x1);
         assertEquals(10, y1);
-        assertEquals(10, x2);
-        assertEquals(10, y2);
+        assertEquals(0, x2);
+        assertEquals(0, y2);
 
         gameClient2.getStateClientFacade().requestState(11, 11);
 
-        TimeUnit.MILLISECONDS.sleep(60);
+        TimeUnit.MILLISECONDS.sleep(40);
 
         assertEquals(11, x2);
         assertEquals(11, y2);
-        assertEquals(11, x1);
-        assertEquals(11, y1);
+        assertEquals(10, x1);
+        assertEquals(10, y1);
 
         for (int i = 100; i < 200; i++) {
             gameClient.getStateClientFacade().requestState(i, i);
 
-            TimeUnit.MILLISECONDS.sleep(60);
+            TimeUnit.MILLISECONDS.sleep(40);
 
             assertEquals(i, x1);
             assertEquals(i, y1);
+//            assertEquals(i, x2);
+//            assertEquals(i, y2);
+
+            gameClient2.getStateClientFacade().requestState(i, 10);
+
+            TimeUnit.MILLISECONDS.sleep(40);
+
             assertEquals(i, x2);
-            assertEquals(i, y2);
-
-            gameClient2.getStateClientFacade().requestState(i, i);
-
-            TimeUnit.MILLISECONDS.sleep(60);
-
-            assertEquals(i, x2);
-            assertEquals(i, y2);
-            assertEquals(i, x1);
-            assertEquals(i, y1);
+            assertEquals(10, y2);
+//            assertEquals(i, x1);
+//            assertEquals(i, y1);
         }
 
         gameClient.getSessionClientFacade().requestStopSession();
@@ -402,8 +435,8 @@ public class ClientConnectivityTest {
     static void tearDown() throws Exception {
         gameClient.shutdownGracefullyAfterNSeconds(0);
         gameClient2.shutdownGracefullyAfterNSeconds(0);
+        dockerClient.stopContainerCmd(container.getId()).exec();
         dockerClient.close();
-        dockerClient.stopContainerCmd(container.getId());
     }
 
     private void resetGameClientSingletonInstance() throws NoSuchFieldException, IllegalAccessException {

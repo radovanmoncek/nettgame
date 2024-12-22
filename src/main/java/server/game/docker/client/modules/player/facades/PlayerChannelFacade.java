@@ -1,9 +1,9 @@
 package server.game.docker.client.modules.player.facades;
 
-import server.game.docker.client.ship.parents.facades.ClientFacade;
+import server.game.docker.client.ship.parents.facades.ChannelFacade;
 import server.game.docker.modules.player.pdus.NicknamePDU;
 
-public class PlayerClientFacade extends ClientFacade<NicknamePDU> {
+public class PlayerChannelFacade extends ChannelFacade<NicknamePDU> {
     /**
      *
      * @param newNickname
@@ -20,6 +20,6 @@ public class PlayerClientFacade extends ClientFacade<NicknamePDU> {
      * @param newNickname
      */
     public void receiveNewNickname(final String newNickname){
-        throw new UnsupportedOperationException("Method receiveNewUsername is not implemented.");
+        throw new UnsupportedOperationException("Method receiveNewNickname is not implemented.");
     }
 }

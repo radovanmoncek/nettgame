@@ -4,38 +4,39 @@ import io.netty.channel.Channel;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.ChannelId;
 import io.netty.channel.SimpleChannelInboundHandler;
-import server.game.docker.modules.lobby.facades.LobbyServerFacade;
-import server.game.docker.modules.player.facades.PlayerServerFacade;
-import server.game.docker.modules.session.facades.SessionServerFacade;
+import server.game.docker.client.modules.state.pdus.StateRequestPDU;
+import server.game.docker.modules.lobby.facades.LobbyChannelGroupFacade;
+import server.game.docker.modules.session.facades.SessionChannelGroupFacade;
 import server.game.docker.modules.session.pdus.SessionPDU;
-import server.game.docker.modules.state.facades.StateServerFacade;
+import server.game.docker.modules.state.facades.StateChannelGroupFacade;
 import server.game.docker.ship.parents.pdus.PDU;
 
 import java.util.*;
+import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.TimeUnit;
 import java.util.function.Supplier;
 
-public class SessionServerHandler extends SimpleChannelInboundHandler<PDU> {
-    private final Supplier<SessionServerFacade> sessionServerFacadeFactory;
-    private final LobbyServerFacade lobbyServerFacade;
-    private final PlayerServerFacade playerServerFacade;
-    private final StateServerFacade stateServerFacade;
-    private static final Map<ChannelId, Queue<SessionMessage>> sessionMembers = new HashMap<>();
+public class SessionSimpleChannelInboundHandler extends SimpleChannelInboundHandler<PDU> {
+    private final Supplier<SessionChannelGroupFacade> sessionChannelGroupFacadeFactory;
+    private final StateChannelGroupFacade stateChannelGroupFacade;
+    private final ThreadGroup managedSessions;
+    private final LobbyChannelGroupFacade lobbyServerFacade;
+    private static final ConcurrentHashMap<ChannelId, Queue<SessionMessage>> sessionMembers = new ConcurrentHashMap<>();
 
-    public SessionServerHandler(
-            final Supplier<SessionServerFacade> sessionServerFacadePrototype,
-            final LobbyServerFacade lobbyServerFacade,
-            final PlayerServerFacade playerServerFacade,
-            final StateServerFacade stateServerFacade
-    ) {
-        this.sessionServerFacadeFactory = sessionServerFacadePrototype;
+    public SessionSimpleChannelInboundHandler(
+            final Supplier<SessionChannelGroupFacade> sessionChannelGroupFacadeFactory,
+            final StateChannelGroupFacade stateChannelGroupFacade,
+            final LobbyChannelGroupFacade lobbyServerFacade,
+            final ThreadGroup managedSessions
+            ) {
+        this.sessionChannelGroupFacadeFactory = sessionChannelGroupFacadeFactory;
+        this.stateChannelGroupFacade = stateChannelGroupFacade;
+        this.managedSessions = managedSessions;
         this.lobbyServerFacade = lobbyServerFacade;
-        this.playerServerFacade = playerServerFacade;
-        this.stateServerFacade = stateServerFacade;
     }
 
     @Override
-    protected void channelRead0(ChannelHandlerContext channelHandlerContext, PDU protocolDataUnit) {
+    protected void channelRead0(final ChannelHandlerContext channelHandlerContext, final PDU protocolDataUnit) {
         if (protocolDataUnit instanceof SessionPDU sessionPDU) {
             switch (sessionPDU.sessionFlag()) {
                 case 0 -> {
@@ -65,40 +66,39 @@ public class SessionServerHandler extends SimpleChannelInboundHandler<PDU> {
     }
 
     private void startSession(final Channel clientChannel) {
-        sessionMembers.putIfAbsent(clientChannel.id(), null);
+        sessionMembers.putIfAbsent(clientChannel.id(), new LinkedList<>());
 
         lobbyServerFacade.findPlayerLobby(clientChannel.id()).ifPresent(playerLobby ->
             playerLobby.stream().filter(playerId -> !clientChannel.id().equals(playerId) && sessionMembers.containsKey(playerId)).findAny().ifPresent(playerId -> {
                 final var messageQueue = new LinkedList<SessionMessage>();
 
-                new Thread(() -> {
+                new Thread(managedSessions, () -> {
                     sessionMembers.put(clientChannel.id(), messageQueue);
                     sessionMembers.put(playerId, messageQueue);
-                    final SessionServerFacade sessionServerFacade;
+
+                    final SessionChannelGroupFacade sessionChannelGroupFacade;
+
                     try {
-                        sessionServerFacade = sessionServerFacadeFactory.get();
-                        sessionServerFacade.receiveSessionStart(playerLobby.toArray(ChannelId[]::new));
-                        while (!sessionServerFacade.isEnded()) {
+                        sessionChannelGroupFacade = sessionChannelGroupFacadeFactory.get();
+                        sessionChannelGroupFacade.receiveSessionStart(playerLobby.toArray(ChannelId[]::new));
+
+                        while (!sessionChannelGroupFacade.isEnded()) {
                             final var sessionMessage = messageQueue.poll();
+
                             if(Objects.nonNull(sessionMessage) && sessionMessage.protocolDataUnit instanceof SessionPDU sessionPDU) {
                                 if(sessionPDU.sessionFlag() == 1) {
-                                    continue;
                                 }
 
                                 if(sessionPDU.sessionFlag() == 2) {
-                                    sessionServerFacade.receiveSessionEnd(playerLobby.toArray(ChannelId[]::new));
+                                    sessionChannelGroupFacade.receiveSessionEnd(playerLobby.toArray(ChannelId[]::new));
                                 }
                             }
 
-                            final var playerLobbyMap = new HashMap<ChannelId, String>();
-
-                            playerLobby.forEach(channelId -> playerLobbyMap.put(channelId, playerServerFacade.getNickname(channelId)));
-
-                            sessionServerFacade.receiveSessionTick(
+                            sessionChannelGroupFacade.receiveSessionTick(
                                     Objects.isNull(sessionMessage)? null : sessionMessage.playerId,
-                                    playerLobbyMap,
-                                    Objects.isNull(sessionMessage)? null : sessionMessage.protocolDataUnit,
-                                    stateServerFacade
+                                    playerLobby,
+                                    Objects.isNull(sessionMessage) || !(sessionMessage.protocolDataUnit instanceof StateRequestPDU)? null : (StateRequestPDU) sessionMessage.protocolDataUnit,
+                                    stateChannelGroupFacade
                             );
 
                             try {
@@ -107,11 +107,14 @@ public class SessionServerHandler extends SimpleChannelInboundHandler<PDU> {
                                 e.printStackTrace(); //todo: log4j
                             }
                         }
-                        System.out.printf("Session with messageQueue: %s has ended", messageQueue); //todo: log4j
+                        System.out.printf("Session with messageQueue: %s has ended\n", messageQueue); //todo: log4j
+                        managedSessions.list();
                     } catch (Exception e) {
                         e.printStackTrace();
                     }
                 }).start();
+
+                managedSessions.list();
             })
         );
     }

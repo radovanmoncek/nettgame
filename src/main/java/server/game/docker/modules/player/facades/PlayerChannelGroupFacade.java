@@ -3,15 +3,15 @@ package server.game.docker.modules.player.facades;
 import io.netty.channel.Channel;
 import io.netty.channel.ChannelId;
 import server.game.docker.modules.player.pdus.NicknamePDU;
-import server.game.docker.ship.parents.facades.ServerFacade;
+import server.game.docker.ship.parents.facades.ChannelGroupFacade;
 
 import java.util.HashMap;
 import java.util.Map;
 
-public class PlayerServerFacade extends ServerFacade<NicknamePDU> {
+public class PlayerChannelGroupFacade extends ChannelGroupFacade<NicknamePDU> {
     private final Map<ChannelId, String> nicknames;
 
-    public PlayerServerFacade() {
+    public PlayerChannelGroupFacade() {
         nicknames = new HashMap<>();
     }
 

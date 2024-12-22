@@ -2,13 +2,13 @@ package server.game.docker.client.modules.messages.handlers;
 
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.SimpleChannelInboundHandler;
-import server.game.docker.client.modules.messages.facades.ChatMessageClientFacade;
+import server.game.docker.client.modules.messages.facades.ChatMessageChannelFacade;
 import server.game.docker.modules.chat.pdus.ChatMessagePDU;
 
 public class ChatMessageClientHandler extends SimpleChannelInboundHandler<ChatMessagePDU> {
-    private final ChatMessageClientFacade chatMessageClientFacade;
+    private final ChatMessageChannelFacade chatMessageClientFacade;
 
-    public ChatMessageClientHandler(ChatMessageClientFacade chatMessageClientFacade) {
+    public ChatMessageClientHandler(ChatMessageChannelFacade chatMessageClientFacade) {
         this.chatMessageClientFacade = chatMessageClientFacade;
     }
 

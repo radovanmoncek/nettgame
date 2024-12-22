@@ -2,15 +2,15 @@ package server.game.docker.modules.chat.handlers;
 
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.SimpleChannelInboundHandler;
-import server.game.docker.modules.chat.facades.ChatMessageServerFacade;
+import server.game.docker.modules.chat.facades.ChatMessageChannelGroupFacade;
 import server.game.docker.modules.chat.pdus.ChatMessagePDU;
-import server.game.docker.modules.lobby.facades.LobbyServerFacade;
+import server.game.docker.modules.lobby.facades.LobbyChannelGroupFacade;
 
 public final class ChatMessageServerHandler extends SimpleChannelInboundHandler<ChatMessagePDU> {
-    private final ChatMessageServerFacade chatMessageServerFacade;
-    private final LobbyServerFacade lobbyServerFacade;
+    private final ChatMessageChannelGroupFacade chatMessageServerFacade;
+    private final LobbyChannelGroupFacade lobbyServerFacade;
 
-    public ChatMessageServerHandler(ChatMessageServerFacade chatMessageServerFacade, LobbyServerFacade lobbyServerFacade) {
+    public ChatMessageServerHandler(ChatMessageChannelGroupFacade chatMessageServerFacade, LobbyChannelGroupFacade lobbyServerFacade) {
         this.chatMessageServerFacade = chatMessageServerFacade;
         this.lobbyServerFacade = lobbyServerFacade;
     }

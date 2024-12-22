@@ -1,4 +1,4 @@
-package server.game.docker.client;
+package server.game.docker.client.ship.bootstrap;
 
 import io.netty.bootstrap.Bootstrap;
 import io.netty.channel.Channel;
@@ -6,12 +6,12 @@ import io.netty.channel.ChannelOption;
 import io.netty.channel.EventLoopGroup;
 import io.netty.channel.nio.NioEventLoopGroup;
 import io.netty.channel.socket.nio.NioSocketChannel;
-import server.game.docker.client.modules.lobby.facades.LobbyClientFacade;
-import server.game.docker.client.modules.messages.facades.ChatMessageClientFacade;
-import server.game.docker.client.modules.player.facades.PlayerClientFacade;
-import server.game.docker.client.modules.sessions.facades.SessionClientFacade;
-import server.game.docker.client.modules.state.facades.StateClientFacade;
-import server.game.docker.client.ship.parents.facades.ClientFacade;
+import server.game.docker.client.modules.lobby.facades.LobbyChannelFacade;
+import server.game.docker.client.modules.messages.facades.ChatMessageChannelFacade;
+import server.game.docker.client.modules.player.facades.PlayerChannelFacade;
+import server.game.docker.client.modules.sessions.facades.SessionChannelFacade;
+import server.game.docker.client.modules.state.facades.StateChannelFacade;
+import server.game.docker.client.ship.parents.facades.ChannelFacade;
 import server.game.docker.ship.parents.pdus.PDU;
 
 import java.lang.reflect.Field;
@@ -38,11 +38,11 @@ public final class GameClient {
     private InetAddress gameServerAddress;
     private int gameServerPort;
     private Channel serverChannel;
-    private PlayerClientFacade playerClientFacade;
-    private LobbyClientFacade lobbyClientFacade;
-    private SessionClientFacade sessionClientFacade;
-    private StateClientFacade stateClientFacade;
-    private ChatMessageClientFacade chatMessageClientFacade;
+    private PlayerChannelFacade playerClientFacade;
+    private LobbyChannelFacade lobbyClientFacade;
+    private SessionChannelFacade sessionClientFacade;
+    private StateChannelFacade stateClientFacade;
+    private ChatMessageChannelFacade chatMessageClientFacade;
 
     /**
      * Constructs a new {@link GameClient} instance with an ip address of 127.0.0.1 and port number of 4321.
@@ -66,7 +66,7 @@ public final class GameClient {
                     .group(workerGroup)
                     .channel(NioSocketChannel.class)
                     .option(ChannelOption.SO_KEEPALIVE, true)
-                    .handler(new ClientInitializer(
+                    .handler(new GameClientChannelInitializer(
                             playerClientFacade,
                             lobbyClientFacade,
                             sessionClientFacade,
@@ -84,6 +84,13 @@ public final class GameClient {
             } catch (Exception ignored) {
             }
         }
+
+        playerClientFacade = Objects.requireNonNullElse(playerClientFacade, new PlayerChannelFacade());
+        lobbyClientFacade = Objects.requireNonNullElse(lobbyClientFacade, new LobbyChannelFacade());
+        sessionClientFacade = Objects.requireNonNullElse(sessionClientFacade, new SessionChannelFacade());
+        stateClientFacade = Objects.requireNonNullElse(stateClientFacade, new StateChannelFacade());
+        chatMessageClientFacade = Objects.requireNonNullElse(chatMessageClientFacade, new ChatMessageChannelFacade());
+
         injectServerChannelIntoClientFacade(playerClientFacade);
         injectServerChannelIntoClientFacade(lobbyClientFacade);
         injectServerChannelIntoClientFacade(sessionClientFacade);
@@ -98,7 +105,7 @@ public final class GameClient {
         return INSTANCE;
     }
 
-    public GameClient withPlayerClientFacade(final PlayerClientFacade playerClientFacade) {
+    public GameClient withPlayerClientFacade(final PlayerChannelFacade playerClientFacade) {
         if(this.playerClientFacade != null)
             return this;
 
@@ -109,7 +116,7 @@ public final class GameClient {
         return this;
     }
 
-    public GameClient withLobbyClientFacade(final LobbyClientFacade lobbyClientFacade) {
+    public GameClient withLobbyClientFacade(final LobbyChannelFacade lobbyClientFacade) {
         if (this.lobbyClientFacade != null)
             return this;
 
@@ -131,17 +138,17 @@ public final class GameClient {
         return this;
     }
 
-    public GameClient withSessionClientFacade(final SessionClientFacade sessionClientFacade) {
+    public GameClient withSessionClientFacade(final SessionChannelFacade sessionClientFacade) {
         this.sessionClientFacade = sessionClientFacade;
         return this;
     }
 
-    public GameClient withStateClientFacade(final StateClientFacade stateClientFacade) {
+    public GameClient withStateClientFacade(final StateChannelFacade stateClientFacade) {
         this.stateClientFacade = stateClientFacade;
         return this;
     }
 
-    public GameClient withChatMessageClientFacade(ChatMessageClientFacade chatMessageClientFacade) {
+    public GameClient withChatMessageClientFacade(ChatMessageChannelFacade chatMessageClientFacade) {
         this.chatMessageClientFacade = chatMessageClientFacade;
         return this;
     }
@@ -156,23 +163,23 @@ public final class GameClient {
         injectServerChannelIntoClientFacade(lobbyClientFacade);
     }
 
-    public PlayerClientFacade getUsernameClientFacade() {
+    public PlayerChannelFacade getUsernameClientFacade() {
         return playerClientFacade;
     }
 
-    public LobbyClientFacade getLobbyFacade() {
+    public LobbyChannelFacade getLobbyFacade() {
         return lobbyClientFacade;
     }
 
-    public SessionClientFacade getSessionClientFacade() {
+    public SessionChannelFacade getSessionClientFacade() {
         return sessionClientFacade;
     }
 
-    public StateClientFacade getStateClientFacade() {
+    public StateChannelFacade getStateClientFacade() {
         return stateClientFacade;
     }
 
-    public ChatMessageClientFacade getChatMessageFacade() {
+    public ChatMessageChannelFacade getChatMessageFacade() {
         return chatMessageClientFacade;
     }
 
@@ -195,8 +202,8 @@ public final class GameClient {
         return serverChannel != null && serverChannel.isActive();
     }
 
-    private void injectServerChannelIntoClientFacade(final ClientFacade<? extends PDU> clientFacade) {
-        var clazz = clientFacade.getClass().getSuperclass();
+    private void injectServerChannelIntoClientFacade(final ChannelFacade<? extends PDU> channelFacade) {
+        var clazz = channelFacade.getClass().getSuperclass();
         while (Stream.of(clazz.getDeclaredFields()).map(Field::getType).noneMatch(Channel.class::equals)) {
             clazz = clazz.getSuperclass();
         }
@@ -205,7 +212,7 @@ public final class GameClient {
                 .findAny().ifPresent(field -> {
                     field.setAccessible(true);
                     try {
-                        field.set(clientFacade, serverChannel);
+                        field.set(channelFacade, serverChannel);
                     } catch (IllegalAccessException e) {
                         e.printStackTrace();
                     }

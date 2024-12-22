@@ -2,9 +2,9 @@ package server.game.docker.modules.chat.facades;
 
 import io.netty.channel.ChannelId;
 import server.game.docker.modules.chat.pdus.ChatMessagePDU;
-import server.game.docker.ship.parents.facades.ServerFacade;
+import server.game.docker.ship.parents.facades.ChannelGroupFacade;
 
-public class ChatMessageServerFacade extends ServerFacade<ChatMessagePDU> {
+public class ChatMessageChannelGroupFacade extends ChannelGroupFacade<ChatMessagePDU> {
 
     public void receivePlayerLobbyMessage(final String playerNickname, final String playerMessage, final ChannelId receiverId) {
         if(receiverId != null) {

@@ -1,6 +1,6 @@
 package server.game.docker.client.modules.lobby.facades;
 
-import server.game.docker.client.ship.parents.facades.ClientFacade;
+import server.game.docker.client.ship.parents.facades.ChannelFacade;
 import server.game.docker.modules.lobby.pdus.LobbyRequestPDU;
 
 import java.util.Collection;
@@ -10,7 +10,7 @@ import java.util.Collection;
  *     Provides client side lobby functionality for outbound actions.
  * </p>
  */
-public class LobbyClientFacade extends ClientFacade<LobbyRequestPDU> {
+public class LobbyChannelFacade extends ChannelFacade<LobbyRequestPDU> {
     /**
      * <p>
      *     Sends a {@link LobbyRequestPDU} to the server with the actionFlag attribute set to 0 (CREATE).

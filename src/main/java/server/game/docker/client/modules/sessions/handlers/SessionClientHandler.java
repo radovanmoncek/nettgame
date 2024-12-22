@@ -2,13 +2,13 @@ package server.game.docker.client.modules.sessions.handlers;
 
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.SimpleChannelInboundHandler;
-import server.game.docker.client.modules.sessions.facades.SessionClientFacade;
+import server.game.docker.client.modules.sessions.facades.SessionChannelFacade;
 import server.game.docker.modules.session.pdus.SessionPDU;
 
 public class SessionClientHandler extends SimpleChannelInboundHandler<SessionPDU> {
-    private final SessionClientFacade sessionClientFacade;
+    private final SessionChannelFacade sessionClientFacade;
 
-    public SessionClientHandler(SessionClientFacade sessionClientFacade) {
+    public SessionClientHandler(SessionChannelFacade sessionClientFacade) {
         this.sessionClientFacade = sessionClientFacade;
     }
 

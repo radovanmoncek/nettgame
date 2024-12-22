@@ -25,10 +25,6 @@ public class StateResponseDecoder extends ByteToMessageDecoder {
             return;
         }
 
-        final var playerNickname = in.toString(in.readerIndex(), StateResponsePDU.MAX_PLAYER_NICKNAME_LENGTH, Charset.defaultCharset());
-
-        in.readerIndex(in.readerIndex() + StateResponsePDU.MAX_PLAYER_NICKNAME_LENGTH);
-
-        out.add(new StateResponsePDU(playerNickname, in.readInt(), in.readInt()));
+        out.add(new StateResponsePDU(in.readInt(), in.readInt(), 0, in.readInt(), in.readInt()));
     }
 }

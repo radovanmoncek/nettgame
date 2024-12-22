@@ -2,14 +2,14 @@ package server.game.docker.modules.player.handlers;
 
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.SimpleChannelInboundHandler;
-import server.game.docker.modules.player.facades.PlayerServerFacade;
+import server.game.docker.modules.player.facades.PlayerChannelGroupFacade;
 import server.game.docker.modules.player.pdus.NicknamePDU;
 
 public final class PlayerServerHandler extends SimpleChannelInboundHandler<NicknamePDU> {
-    private final PlayerServerFacade playerServerFacade;
+    private final PlayerChannelGroupFacade playerServerFacade;
 
     public PlayerServerHandler(
-            final PlayerServerFacade playerServerFacade
+            final PlayerChannelGroupFacade playerServerFacade
     ) {
         this.playerServerFacade = playerServerFacade;
     }

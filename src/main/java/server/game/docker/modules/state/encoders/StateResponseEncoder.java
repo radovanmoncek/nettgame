@@ -14,23 +14,18 @@ import java.nio.charset.Charset;
  * Example
  */
 public class StateResponseEncoder extends MessageToByteEncoder<StateResponsePDU> {
-    private static final int MAXIMUM_PLAYER_NICKNAME_LENGTH = 8;
 
     @Override
-    protected void encode(ChannelHandlerContext ctx, StateResponsePDU msg, ByteBuf out) {
+    protected void encode(ChannelHandlerContext ctx, StateResponsePDU stateResponsePDU, ByteBuf out) {
         final var byteBuf = Unpooled
                 .buffer(Byte.BYTES + Long.BYTES)
                 .writeByte(StateResponsePDU.PROTOCOL_IDENTIFIER)
-                .writeLong(MAXIMUM_PLAYER_NICKNAME_LENGTH + 2 * Integer.BYTES)
-                .writeBytes(
-                        ByteBufUtil.encodeString(
-                                Unpooled.buffer(MAXIMUM_PLAYER_NICKNAME_LENGTH).alloc(),
-                                CharBuffer.allocate(MAXIMUM_PLAYER_NICKNAME_LENGTH).append(msg.playerNickname()).position(0),
-                                Charset.defaultCharset()
-                        )
-                )
-                .writeInt(msg.x())
-                .writeInt(msg.y());
+                .writeLong(4 * Integer.BYTES)
+                .writeInt(stateResponsePDU.x())
+                .writeInt(stateResponsePDU.y())
+                .writeInt(stateResponsePDU.x2())
+                .writeInt(stateResponsePDU.y2());
+
         ctx.writeAndFlush(byteBuf);
     }
 }

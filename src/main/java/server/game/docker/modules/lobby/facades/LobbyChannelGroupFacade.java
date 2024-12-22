@@ -3,16 +3,16 @@ package server.game.docker.modules.lobby.facades;
 import io.netty.channel.Channel;
 import io.netty.channel.ChannelId;
 import server.game.docker.modules.lobby.pdus.LobbyResponsePDU;
-import server.game.docker.modules.player.facades.PlayerServerFacade;
-import server.game.docker.ship.parents.facades.ServerFacade;
+import server.game.docker.modules.player.facades.PlayerChannelGroupFacade;
+import server.game.docker.ship.parents.facades.ChannelGroupFacade;
 
 import java.util.*;
 
-public class LobbyServerFacade extends ServerFacade<LobbyResponsePDU> {
+public class LobbyChannelGroupFacade extends ChannelGroupFacade<LobbyResponsePDU> {
     private final Map<ChannelId, LinkedList<ChannelId>> lobbyMemberships;
-    private final PlayerServerFacade playerServerFacade;
+    private final PlayerChannelGroupFacade playerServerFacade;
 
-    public LobbyServerFacade(PlayerServerFacade playerServerFacade) {
+    public LobbyChannelGroupFacade(PlayerChannelGroupFacade playerServerFacade) {
         this.playerServerFacade = playerServerFacade;
         lobbyMemberships = new HashMap<>();
     }
