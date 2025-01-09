@@ -5,11 +5,11 @@ import io.netty.channel.SimpleChannelInboundHandler;
 import server.game.docker.modules.lobby.facades.LobbyChannelGroupFacade;
 import server.game.docker.modules.lobby.pdus.LobbyRequestPDU;
 
-public final class LobbyServerHandler extends SimpleChannelInboundHandler<LobbyRequestPDU> {
+public final class LobbySimpleChannelInboundHandlerHandler extends SimpleChannelInboundHandler<LobbyRequestPDU> {
     private final LobbyChannelGroupFacade lobbyServerFacade;
 
-    public LobbyServerHandler(
-            LobbyChannelGroupFacade lobbyServerFacade
+    public LobbySimpleChannelInboundHandlerHandler(
+            final LobbyChannelGroupFacade lobbyServerFacade
     ) {
         this.lobbyServerFacade = lobbyServerFacade;
     }
@@ -35,7 +35,7 @@ public final class LobbyServerHandler extends SimpleChannelInboundHandler<LobbyR
 
     @Override
     public void handlerRemoved(ChannelHandlerContext ctx) {
-        System.out.printf("A player with ChannelId %s has disconnected, lobby system must take action", ctx.channel().id());
+        System.out.printf("A player with ChannelId %s has disconnected, lobby system must take action", ctx.channel().id()); //todo: log4j
         lobbyServerFacade.removeDisconnectedChannelIdFromLobby(ctx.channel().id());
     }
 }

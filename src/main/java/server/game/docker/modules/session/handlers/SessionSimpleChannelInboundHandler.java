@@ -40,22 +40,12 @@ public class SessionSimpleChannelInboundHandler extends SimpleChannelInboundHand
         if (protocolDataUnit instanceof SessionPDU sessionPDU) {
             switch (sessionPDU.sessionFlag()) {
                 case 0 -> {
-                    System.out.printf("A player has requested session start %s \n", protocolDataUnit);
+                    System.out.printf("A player has requested session start %s \n", sessionPDU);
                     startSession(channelHandlerContext.channel());
                 }
-                case 2 ->{
-                    System.out.printf("A player has requested session end or has disconnected %s \n", protocolDataUnit);
-                    final var sessionMessageQueue = sessionMembers.remove(channelHandlerContext.channel().id());
-                    lobbyServerFacade
-                            .findPlayerLobby(channelHandlerContext.channel().id())
-                            .stream()
-                            .flatMap(Collection::stream)
-                            .filter(playerId -> !playerId.equals(channelHandlerContext.channel().id()) && !sessionMembers.containsKey(playerId))
-                            .findAny()
-                            .ifPresent(playerId -> sessionMessageQueue.offer(new SessionMessage(channelHandlerContext.channel().id(), sessionPDU)));
-                }
-                case 1 ->{
-                    //TODO:
+                case 1 -> {
+                    System.out.printf("A player has requested session end %s \n", sessionPDU);
+                    sessionMembers.get(channelHandlerContext.channel().id()).offer(new SessionMessage(channelHandlerContext.channel().id(), sessionPDU));
                 }
             }
 
@@ -87,9 +77,6 @@ public class SessionSimpleChannelInboundHandler extends SimpleChannelInboundHand
 
                             if(Objects.nonNull(sessionMessage) && sessionMessage.protocolDataUnit instanceof SessionPDU sessionPDU) {
                                 if(sessionPDU.sessionFlag() == 1) {
-                                }
-
-                                if(sessionPDU.sessionFlag() == 2) {
                                     sessionChannelGroupFacade.receiveSessionEnd(playerLobby.toArray(ChannelId[]::new));
                                 }
                             }
@@ -107,8 +94,13 @@ public class SessionSimpleChannelInboundHandler extends SimpleChannelInboundHand
                                 e.printStackTrace(); //todo: log4j
                             }
                         }
+
                         System.out.printf("Session with messageQueue: %s has ended\n", messageQueue); //todo: log4j
+
                         managedSessions.list();
+
+                        sessionMembers.remove(playerLobby.get(0));
+                        sessionMembers.remove(playerLobby.get(1));
                     } catch (Exception e) {
                         e.printStackTrace();
                     }

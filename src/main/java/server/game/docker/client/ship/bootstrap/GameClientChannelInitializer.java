@@ -7,7 +7,7 @@ import io.netty.handler.logging.LoggingHandler;
 import server.game.docker.client.modules.lobby.decoders.LobbyResponseDecoder;
 import server.game.docker.client.modules.lobby.encoders.LobbyRequestEncoder;
 import server.game.docker.client.modules.lobby.facades.LobbyChannelFacade;
-import server.game.docker.client.modules.lobby.handlers.LobbyClientHandler;
+import server.game.docker.client.modules.lobby.handlers.LobbySimpleChannelInboundHandler;
 import server.game.docker.client.modules.messages.facades.ChatMessageChannelFacade;
 import server.game.docker.client.modules.messages.handlers.ChatMessageClientHandler;
 import server.game.docker.client.modules.player.facades.PlayerChannelFacade;
@@ -56,7 +56,7 @@ public final class GameClientChannelInitializer extends ChannelInitializer<Socke
                 new SessionDecoder(),
                 new ChatMessageDecoder(),
                 new PlayerClientHandler(playerClientFacade),
-                new LobbyClientHandler(lobbyClientFacade),
+                new LobbySimpleChannelInboundHandler(lobbyClientFacade),
                 new StateClientHandler(stateClientFacade),
                 new ChatMessageClientHandler(chatMessageClientFacade),
                 new SessionClientHandler(sessionClientFacade),

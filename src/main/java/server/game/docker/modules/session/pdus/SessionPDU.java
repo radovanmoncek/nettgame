@@ -6,6 +6,6 @@ public record SessionPDU(Byte sessionFlag) implements PDU {
     public static final Byte PROTOCOL_IDENTIFIER = 7;
 
     public enum SessionFlag {
-        START, JOIN, STOP
+        START, STOP
     }
 }

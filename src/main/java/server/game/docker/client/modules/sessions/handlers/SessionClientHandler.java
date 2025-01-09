@@ -19,7 +19,7 @@ public class SessionClientHandler extends SimpleChannelInboundHandler<SessionPDU
                 System.out.printf("%s\n", msg);
                 sessionClientFacade.receiveStartSessionResponse();
             }
-            case 2 ->{
+            case 1 ->{
                 System.out.printf("%s\n", msg);
                 sessionClientFacade.receiveStopSessionResponse();
             }

@@ -11,7 +11,7 @@ import server.game.docker.modules.chat.handlers.ChatMessageServerHandler;
 import server.game.docker.modules.lobby.decoder.LobbyRequestDecoder;
 import server.game.docker.modules.lobby.encoders.LobbyResponseEncoder;
 import server.game.docker.modules.lobby.facades.LobbyChannelGroupFacade;
-import server.game.docker.modules.lobby.handlers.LobbyServerHandler;
+import server.game.docker.modules.lobby.handlers.LobbySimpleChannelInboundHandlerHandler;
 import server.game.docker.modules.player.decoders.NicknameDecoder;
 import server.game.docker.modules.player.encoders.NicknameEncoder;
 import server.game.docker.modules.player.facades.PlayerChannelGroupFacade;
@@ -60,7 +60,7 @@ public final class GameServerContainerChannelInitializer extends ChannelInitiali
                 new NicknameDecoder(),
                 new ChatMessageDecoder(),
                 new PlayerServerHandler(playerChannelGroupFacade),
-                new LobbyServerHandler(lobbyChannelGroupFacade),
+                new LobbySimpleChannelInboundHandlerHandler(lobbyChannelGroupFacade),
                 new ChatMessageServerHandler(chatMessageChannelGroupFacade, lobbyChannelGroupFacade),
                 new SessionSimpleChannelInboundHandler(sessionChannelGroupFacadeSupplier, stateChannelGroupFacade, lobbyChannelGroupFacade, managedSessions),
                 new NicknameEncoder(),

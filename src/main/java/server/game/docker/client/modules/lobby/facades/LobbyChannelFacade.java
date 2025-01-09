@@ -42,4 +42,12 @@ public class LobbyChannelFacade extends ChannelFacade<LobbyRequestPDU> {
     public void receiveLobbyJoined(final Long leaderId, final Collection<String> members) {
         throw new UnsupportedOperationException("Method receiveLobbyJoined is not implemented.");
     }
+
+    public void receiveLobbyMemberJoined(final Long aLong, final Collection<String> members) {
+        throw new UnsupportedOperationException("Method receiveLobbyMemberJoined is not implemented.");
+    }
+
+    public void receiveLobbyMemberLeft(final Long leaderId, final Collection<String> members) {
+        throw new UnsupportedOperationException("Method receiveLobbyMemberLeft is not implemented.");
+    }
 }

@@ -8,17 +8,10 @@ import com.github.dockerjava.core.DefaultDockerClientConfig;
 import com.github.dockerjava.core.DockerClientImpl;
 import com.github.dockerjava.httpclient5.ApacheDockerHttpClient;
 import org.junit.jupiter.api.*;
-import server.game.docker.client.modules.lobby.facades.LobbyChannelFacade;
-import server.game.docker.client.modules.messages.facades.ChatMessageChannelFacade;
-import server.game.docker.client.modules.player.facades.PlayerChannelFacade;
-import server.game.docker.client.modules.sessions.facades.SessionChannelFacade;
-import server.game.docker.client.modules.state.facades.StateChannelFacade;
 import server.game.docker.client.ship.bootstrap.GameClient;
+import server.game.docker.client.ship.examples.SampleGameClient;
 
-import javax.swing.*;
-import java.awt.*;
 import java.util.Collection;
-import java.util.List;
 import java.util.Objects;
 import java.util.concurrent.TimeUnit;
 
@@ -26,23 +19,17 @@ import static org.junit.jupiter.api.Assertions.*;
 
 @TestMethodOrder(MethodOrderer.OrderAnnotation.class)
 public class ClientConnectivityTest {
-    private static GameClient gameClient, gameClient2;
-    private static String nickname1, nickname2;
-    private static Long lobbyLeaderId1, lobbyLeaderId2;
-    private static Collection<String> lobbyMembers1, lobbyMembers2;
-    private static boolean sessionMember1, sessionMember2;
-    private static Integer x1 = 0, y1 = 0, x2 = 0, y2 = 0;
-    private static String message1, message2;
-    private static String messageNickname1, messageNickname2;
     private static DockerClient dockerClient;
     private static CreateContainerResponse container;
+    private static SampleGameClient sampleGameClient1, sampleGameClient2;
 
     @BeforeAll
     static void setup() throws Exception {
-        final var defaultDockerClientConfig = DefaultDockerClientConfig
-                .createDefaultConfigBuilder()
-                .withDockerHost("tcp://localhost:2375")
-                .build();
+        final var defaultDockerClientConfig =
+                DefaultDockerClientConfig
+                        .createDefaultConfigBuilder()
+                        .withDockerHost("tcp://localhost:2375")
+                        .build();
 
         dockerClient = DockerClientImpl.getInstance(defaultDockerClientConfig, new ApacheDockerHttpClient.Builder().dockerHost(defaultDockerClientConfig.getDockerHost()).build());
 
@@ -59,387 +46,260 @@ public class ClientConnectivityTest {
                 )
                 .exec();
 
-        TimeUnit.SECONDS.sleep(10);
-        SwingUtilities.invokeLater(() -> new JPanel() {
-            public void launch() {
-                try {
-                    gameClient = GameClient
-                            .newInstance()
-                            .withPlayerClientFacade(new PlayerChannelFacade() {
-                                @Override
-                                public void receiveNewNickname(String newNickname) {
-                                    nickname1 = newNickname;
-                                }
-                            })
-                            .withLobbyClientFacade(new LobbyChannelFacade() {
-                                @Override
-                                public void receiveLobbyLeft(Long leaderId, Collection<String> members) {
-                                    lobbyLeaderId1 = leaderId;
-                                    lobbyMembers1 = members;
-                                }
+        TimeUnit.SECONDS.sleep(2);
 
-                                @Override
-                                public void receiveLobbyJoined(Long leaderId, Collection<String> members) {
-                                    lobbyLeaderId1 = leaderId;
-                                    lobbyMembers1 = members;
-                                }
+        sampleGameClient1 = new SampleGameClient();
 
-                                @Override
-                                public void receiveLobbyCreated(Long leaderId, Collection<String> members) {
-                                    lobbyLeaderId1 = leaderId;
-                                    lobbyMembers1 = members;
-                                }
-                            })
-                            .withSessionClientFacade(new SessionChannelFacade() {
-                                @Override
-                                public void receiveStartSessionResponse() {
-                                    sessionMember1 = true;
-                                }
+        resetGameClientSingletonInstance();
 
-                                @Override
-                                public void receiveStopSessionResponse() {
-                                    sessionMember1 = false;
-                                }
-                            })
-                            .withStateClientFacade(new StateChannelFacade() {
-                                @Override
-                                public void receiveState(List<GameEntity> gameEntities) {
-                                    x1 = gameEntities.get(0).x();
-                                    y1 = gameEntities.get(0).y();
-                                    x2 = gameEntities.get(1).x();
-                                    y2 = gameEntities.get(1).y();
-                                    repaint();
-                                }
-                            })
-                            .withChatMessageClientFacade(new ChatMessageChannelFacade() {
-                                @Override
-                                public void receivePlayerLobbyChatMessage(String playerNickname, String message) {
-                                    messageNickname1 = playerNickname;
-                                    message1 = message;
-                                }
-                            });
+        sampleGameClient2 = new SampleGameClient();
 
-                    final var frame = new JFrame();
-                    frame.add(this);
-                    frame.setSize(new Dimension(800, 600));
-                    frame.setLocationRelativeTo(null);
-                    frame.setVisible(true);
-                } catch (Exception e) {
-                    e.printStackTrace(); //todo: log4j
-                }
-            }
-
-            @Override
-            public void paint(Graphics g) {
-                super.paint(g);
-                g.setColor(Color.WHITE);
-                g.clearRect(0, 0, getWidth(), getHeight());
-                g.setColor(Color.BLACK);
-                g.fillRect(x1, y1, 40, 40);
-                g.fillRect(x2, y2, 40, 40);
-            }
-        }.launch());
-
-        while(Objects.isNull(gameClient))
-            TimeUnit.SECONDS.sleep(1);
-
-        gameClient.run(0, 10);
+        TimeUnit.SECONDS.sleep(2);
     }
 
     @Test
     @Order(1)
     void connectionTest() {
-        assertTrue(gameClient.isConnected());
+        assertTrue(sampleGameClient1.getGameClient().isConnected());
     }
 
     @Test
     @Order(2)
     void usernameRequestAndReceiveTest() throws InterruptedException {
-        assertThrows(IllegalArgumentException.class, () -> gameClient.getUsernameClientFacade().requestNickname("TestThatIsWayOverTheLimitOf8Characters"));
-        gameClient.getUsernameClientFacade().requestNickname("Test");
+        assertThrows(IllegalArgumentException.class, () -> sampleGameClient1.getGameClient().getUsernameClientFacade().requestNickname("TestThatIsWayOverTheLimitOf8Characters"));
+        assertThrows(IllegalArgumentException.class, () -> sampleGameClient2.getGameClient().getUsernameClientFacade().requestNickname("TestThatIsWayOverTheLimitOf8Characters"));
 
-        for (int i = 0; i < 10 && nickname1 == null; i++) {
+        sampleGameClient1.getGameClient().getUsernameClientFacade().requestNickname("Test");
+
+        for (int i = 0; i < 10 && sampleGameClient1.getNickname() == null; i++) {
             TimeUnit.SECONDS.sleep(1);
         }
 
-        assertEquals("Test", nickname1);
+        assertEquals("Test", sampleGameClient1.getNickname());
     }
 
     @Test
     @Order(3)
     void createLobbyTest() throws Exception {
-        gameClient.getLobbyFacade().createLobby();
-        for (int i = 0; i < 10 && (lobbyLeaderId1 == null || lobbyLeaderId1.equals(-1L)); i++) {
+        sampleGameClient1.getGameClient().getLobbyFacade().createLobby();
+
+        for (int i = 0; i < 10 && (sampleGameClient1.getLobbyLeaderId() == null || sampleGameClient1.getLobbyLeaderId().equals(-1L)); i++) {
             TimeUnit.SECONDS.sleep(1);
         }
 
-        assertEquals(1, lobbyMembers1.size());
-        assertTrue(lobbyMembers1.contains(nickname1));
+        assertEquals(1, sampleGameClient1.getLobbyMembers().size());
+        assertTrue(sampleGameClient1.getLobbyMembers().contains(sampleGameClient1.getNickname()));
     }
 
     @Order(4)
     @RepeatedTest(4)
     void joinLobbyTest() throws Exception {
-        resetGameClientSingletonInstance();
-        if (Objects.isNull(gameClient2)) {
-            gameClient2 = GameClient
-                    .newInstance()
-                    .withPlayerClientFacade(new PlayerChannelFacade() {
-                        @Override
-                        public void receiveNewNickname(String newNickname) {
-                            nickname2 = newNickname;
-                        }
-                    })
-                    .withLobbyClientFacade(new LobbyChannelFacade() {
-                        @Override
-                        public void receiveLobbyJoined(Long leaderChannelId, Collection<String> members) {
-                            lobbyLeaderId2 = leaderChannelId;
-                            lobbyMembers2 = members;
-                        }
+        sampleGameClient2.getGameClient().getUsernameClientFacade().requestNickname("Test2");
 
-                        @Override
-                        public void receiveLobbyLeft(Long leaderId, Collection<String> members) {
-                            lobbyLeaderId2 = leaderId;
-                            lobbyMembers2 = members;
-                        }
-
-                        @Override
-                        public void receiveLobbyCreated(Long leaderId, Collection<String> members) {
-                            lobbyLeaderId2 = leaderId;
-                            lobbyMembers2 = members;
-                        }
-                    })
-                    .withSessionClientFacade(new SessionChannelFacade() {
-                        @Override
-                        public void receiveStartSessionResponse() {
-                            sessionMember2 = true;
-                        }
-
-                        @Override
-                        public void receiveStopSessionResponse() {
-                            sessionMember2 = false;
-                        }
-                    })
-                    .withStateClientFacade(new StateChannelFacade() {
-                        @Override
-                        public void receiveState(final List<GameEntity> gameEntities) {
-                            x1 = gameEntities.get(0).x();
-                            y1 = gameEntities.get(0).y();
-                            x2 = gameEntities.get(1).x();
-                            y2 = gameEntities.get(1).y();
-                        }
-                    })
-                    .withChatMessageClientFacade(new ChatMessageChannelFacade() {
-                        @Override
-                        public void receivePlayerLobbyChatMessage(String playerNickname, String message) {
-                            messageNickname2 = playerNickname;
-                            message2 = message;
-                        }
-                    });
-
-            gameClient2.run(0, 10);
-
-            gameClient2.getUsernameClientFacade().requestNickname("Test2");
-
-            for (int i = 0; i < 2 && nickname2 == null; i++) {
-                TimeUnit.SECONDS.sleep(1);
-            }
-
-            assertEquals("Test2", nickname2);
-            assertTrue(gameClient2.isConnected());
-        }
-
-        gameClient2.getLobbyFacade().joinLobby(lobbyLeaderId1);
-
-        for (int i = 0; i < 2 && ((lobbyLeaderId2 == null || lobbyLeaderId2.equals(-1L)) || lobbyMembers2.isEmpty()); i++) {
+        for (int i = 0; i < 2 && sampleGameClient2.getNickname() == null; i++) {
             TimeUnit.SECONDS.sleep(1);
         }
 
-        assertEquals(lobbyLeaderId1, lobbyLeaderId2);
-        assertEquals(2, lobbyMembers2.size());
-        assertTrue(lobbyMembers2.contains(nickname1) && lobbyMembers2.contains(nickname2));
+        assertEquals("Test2", sampleGameClient2.getNickname());
 
-        //todo: test member joined for 1st client
+        assertTrue(sampleGameClient2.getGameClient().isConnected());
 
-        gameClient2.getLobbyFacade().leaveLobby();
-        for (int i = 0; i < 10 && !lobbyMembers2.isEmpty(); i++) {
+        sampleGameClient2.getGameClient().getLobbyFacade().joinLobby(sampleGameClient1.getLobbyLeaderId());
+
+        for (int i = 0; i < 2 && ((sampleGameClient2.getLobbyLeaderId() == null || sampleGameClient2.getLobbyLeaderId().equals(-1L)) || sampleGameClient2.getLobbyMembers().isEmpty()); i++) {
             TimeUnit.SECONDS.sleep(1);
         }
 
-        assertEquals(-1L, lobbyLeaderId2);
-        assertTrue(lobbyMembers2.isEmpty());
+        assertEquals(sampleGameClient1.getLobbyLeaderId(), sampleGameClient2.getLobbyLeaderId());
+
+        assertEquals(2, sampleGameClient2.getLobbyMembers().size());
+
+        assertTrue(sampleGameClient2.getLobbyMembers().contains(sampleGameClient1.getNickname()) && sampleGameClient2.getLobbyMembers().contains(sampleGameClient2.getNickname()));
+
+        assertEquals(2, sampleGameClient1.getLobbyMembers().size());
+
+        assertTrue(sampleGameClient1.getLobbyMembers().contains(sampleGameClient1.getNickname()) && sampleGameClient1.getLobbyMembers().contains(sampleGameClient2.getNickname()));
+
+        sampleGameClient2.getGameClient().getLobbyFacade().leaveLobby();
+
+        for (int i = 0; i < 10 && !sampleGameClient2.getLobbyMembers().isEmpty(); i++) {
+            TimeUnit.SECONDS.sleep(1);
+        }
+
+        assertEquals(-1L, sampleGameClient2.getLobbyLeaderId());
+
+        assertTrue(sampleGameClient2.getLobbyMembers().isEmpty());
     }
 
     @Test
     @Order(5)
     void leaveLobbyTest() throws Exception {
-        gameClient.getLobbyFacade().leaveLobby();
-        for (int i = 0; i < 10 && !lobbyLeaderId1.equals(-1L); i++) {
+        sampleGameClient1.getGameClient().getLobbyFacade().leaveLobby();
+        for (int i = 0; i < 10 && !sampleGameClient1.getLobbyLeaderId().equals(-1L); i++) {
             TimeUnit.SECONDS.sleep(1);
         }
 
-        assertEquals(-1L, lobbyLeaderId1);
-        assertEquals(0, lobbyMembers1.size());
+        assertEquals(-1L, sampleGameClient1.getLobbyLeaderId());
+        assertEquals(0, sampleGameClient1.getLobbyMembers().size());
     }
 
     @Test
     @Order(6)
     void chatMessageTest() throws Exception {
-        gameClient.getLobbyFacade().createLobby();
+        sampleGameClient1.getGameClient().getLobbyFacade().createLobby();
 
         TimeUnit.SECONDS.sleep(1);
 
-        assertNotNull(lobbyLeaderId1);
+        assertNotNull(sampleGameClient1.getLobbyLeaderId());
 
-        gameClient2.getLobbyFacade().joinLobby(lobbyLeaderId1);
-
-        TimeUnit.SECONDS.sleep(1);
-
-        assertNotNull(lobbyLeaderId2);
-
-        gameClient.getChatMessageFacade().sendPlayerLobbyChatMessage(nickname1, "Test message");
+        sampleGameClient2.getGameClient().getLobbyFacade().joinLobby(sampleGameClient1.getLobbyLeaderId());
 
         TimeUnit.SECONDS.sleep(1);
 
-        assertEquals("Test", messageNickname2);
-        assertEquals("Test message", message2);
+        assertNotNull(sampleGameClient2.getLobbyLeaderId());
 
-        gameClient2.getChatMessageFacade().sendPlayerLobbyChatMessage(nickname2, "Test message 2");
-
-        TimeUnit.SECONDS.sleep(1);
-
-        assertEquals("Test2", messageNickname1);
-        assertEquals("Test message 2", message1);
-
-        gameClient.getLobbyFacade().leaveLobby();
+        sampleGameClient1.getGameClient().getChatMessageFacade().sendPlayerLobbyChatMessage(sampleGameClient1.getNickname(), "Test message");
 
         TimeUnit.SECONDS.sleep(1);
 
-        assertEquals(-1L, lobbyLeaderId1);
+        assertEquals("Test", sampleGameClient2.getChat().get(sampleGameClient2.getChat().size() - 1).get(0));
+        assertEquals("Test message", sampleGameClient2.getChat().get(sampleGameClient2.getChat().size() - 1).get(1));
 
-        gameClient2.getLobbyFacade().leaveLobby();
+        sampleGameClient2.getGameClient().getChatMessageFacade().sendPlayerLobbyChatMessage(sampleGameClient2.getNickname(), "Test message 2");
 
         TimeUnit.SECONDS.sleep(1);
 
-        assertEquals(-1L, lobbyLeaderId2);
+        assertEquals("Test2", sampleGameClient1.getChat().get(sampleGameClient1.getChat().size() - 1).get(0));
+        assertEquals("Test message 2", sampleGameClient1.getChat().get(sampleGameClient1.getChat().size() - 1).get(1));
+
+        sampleGameClient1.getGameClient().getLobbyFacade().leaveLobby();
+
+        TimeUnit.SECONDS.sleep(1);
+
+        assertEquals(-1L, sampleGameClient1.getLobbyLeaderId());
+
+        sampleGameClient2.getGameClient().getLobbyFacade().leaveLobby();
+
+        TimeUnit.SECONDS.sleep(1);
+
+        assertEquals(-1L, sampleGameClient2.getLobbyLeaderId());
     }
 
     @Test
     @Order(7)
     void startSessionTest() throws Exception {
-        assertEquals(-1L, lobbyLeaderId1);
-        assertEquals(-1L, lobbyLeaderId2);
+        assertEquals(-1L, sampleGameClient1.getLobbyLeaderId());
+        assertEquals(-1L, sampleGameClient2.getLobbyLeaderId());
 
         createLobbyTest();
-        gameClient2.getLobbyFacade().joinLobby(lobbyLeaderId1);
-        for (int i = 0; i < 2 && lobbyMembers2.isEmpty(); i++) {
+
+        sampleGameClient2.getGameClient().getLobbyFacade().joinLobby(sampleGameClient1.getLobbyLeaderId());
+
+        for (int i = 0; i < 2 && sampleGameClient2.getLobbyMembers().isEmpty(); i++) {
             TimeUnit.SECONDS.sleep(1);
         }
 
-        assertEquals(lobbyLeaderId1, lobbyLeaderId2);
-//todo:        assertTrue(lobbyMembers1.contains(nickname1) && lobbyMembers1.contains(nickname2));
-        assertTrue(lobbyMembers2.contains(nickname1) && lobbyMembers2.contains(nickname2));
+        assertEquals(sampleGameClient1.getLobbyLeaderId(), sampleGameClient2.getLobbyLeaderId());
 
-        gameClient.getSessionClientFacade().requestStartSession();
+        assertTrue(sampleGameClient1.getLobbyMembers().contains(sampleGameClient1.getNickname()) && sampleGameClient1.getLobbyMembers().contains(sampleGameClient2.getNickname()));
 
-        TimeUnit.SECONDS.sleep(1);
+        assertTrue(sampleGameClient2.getLobbyMembers().contains(sampleGameClient1.getNickname()) && sampleGameClient2.getLobbyMembers().contains(sampleGameClient2.getNickname()));
 
-        assertFalse(sessionMember1);
-
-        gameClient2.getSessionClientFacade().requestStartSession();
+        sampleGameClient1.getGameClient().getSessionClientFacade().requestStartSession();
 
         TimeUnit.SECONDS.sleep(1);
 
-        assertTrue(sessionMember1);
-        assertTrue(sessionMember2);
+        assertFalse(sampleGameClient1.isSessionMember());
 
-        gameClient.getSessionClientFacade().requestStopSession();
+        sampleGameClient2.getGameClient().getSessionClientFacade().requestStartSession();
+
+        TimeUnit.SECONDS.sleep(1);
+
+        assertTrue(sampleGameClient1.isSessionMember());
+        assertTrue(sampleGameClient2.isSessionMember());
+
+        sampleGameClient1.getGameClient().getSessionClientFacade().requestStopSession();
 
         TimeUnit.SECONDS.sleep(2);
 
-        assertTrue(sessionMember1);
-        assertTrue(sessionMember2);
-
-        gameClient2.getSessionClientFacade().requestStopSession();
+        sampleGameClient2.getGameClient().getSessionClientFacade().requestStopSession();
 
         TimeUnit.SECONDS.sleep(2);
 
-        assertFalse(sessionMember1);
-        assertFalse(sessionMember2);
+        assertFalse(sampleGameClient1.isSessionMember());
+        assertFalse(sampleGameClient2.isSessionMember());
     }
 
     @Test
     @Order(8)
     void movingWithinSessionBoundsTest() throws Exception {
-        assertFalse(sessionMember1);
-        assertFalse(sessionMember2);
+        assertFalse(sampleGameClient1.isSessionMember());
+        assertFalse(sampleGameClient2.isSessionMember());
 
-        gameClient.getSessionClientFacade().requestStartSession();
-
-        TimeUnit.SECONDS.sleep(1);
-
-        assertFalse(sessionMember1);
-
-        gameClient2.getSessionClientFacade().requestStartSession();
+        sampleGameClient1.getGameClient().getSessionClientFacade().requestStartSession();
 
         TimeUnit.SECONDS.sleep(1);
 
-        assertTrue(sessionMember1);
-        assertTrue(sessionMember2);
+        assertFalse(sampleGameClient2.isSessionMember());
 
-        gameClient.getStateClientFacade().requestState(10, 10);
+        sampleGameClient2.getGameClient().getSessionClientFacade().requestStartSession();
 
-        TimeUnit.MILLISECONDS.sleep(40);
+        TimeUnit.SECONDS.sleep(1);
 
-        assertEquals(10, x1);
-        assertEquals(10, y1);
-        assertEquals(0, x2);
-        assertEquals(0, y2);
+        assertTrue(sampleGameClient1.isSessionMember());
+        assertTrue(sampleGameClient2.isSessionMember());
 
-        gameClient2.getStateClientFacade().requestState(11, 11);
+        sampleGameClient1.getGameClient().getStateClientFacade().requestState(10, 10);
 
         TimeUnit.MILLISECONDS.sleep(40);
 
-        assertEquals(11, x2);
-        assertEquals(11, y2);
-        assertEquals(10, x1);
-        assertEquals(10, y1);
+        assertEquals(10, sampleGameClient1.getGameEntities().get(0).x());
+        assertEquals(10, sampleGameClient1.getGameEntities().get(0).y());
+        assertEquals(0, sampleGameClient1.getGameEntities().get(1).x());
+        assertEquals(0, sampleGameClient1.getGameEntities().get(1).y());
+
+        sampleGameClient2.getGameClient().getStateClientFacade().requestState(11, 11);
+
+        TimeUnit.MILLISECONDS.sleep(40);
+
+        assertEquals(11, sampleGameClient2.getGameEntities().get(1).x());
+        assertEquals(11, sampleGameClient2.getGameEntities().get(1).y());
+        assertEquals(10, sampleGameClient2.getGameEntities().get(0).x());
+        assertEquals(10, sampleGameClient2.getGameEntities().get(0).y());
 
         for (int i = 100; i < 200; i++) {
-            gameClient.getStateClientFacade().requestState(i, i);
+            sampleGameClient1.getGameClient().getStateClientFacade().requestState(i, i);
 
             TimeUnit.MILLISECONDS.sleep(40);
 
-            assertEquals(i, x1);
-            assertEquals(i, y1);
-//            assertEquals(i, x2);
-//            assertEquals(i, y2);
+            assertEquals(i, sampleGameClient1.getGameEntities().get(0).x());
+            assertEquals(i, sampleGameClient1.getGameEntities().get(0).y());
 
-            gameClient2.getStateClientFacade().requestState(i, 10);
+            sampleGameClient2.getGameClient().getStateClientFacade().requestState(i, 10);
 
             TimeUnit.MILLISECONDS.sleep(40);
 
-            assertEquals(i, x2);
-            assertEquals(10, y2);
-//            assertEquals(i, x1);
-//            assertEquals(i, y1);
+            assertEquals(i, sampleGameClient2.getGameEntities().get(1).x());
+            assertEquals(10, sampleGameClient2.getGameEntities().get(1).y());
         }
 
-        gameClient.getSessionClientFacade().requestStopSession();
-        gameClient2.getSessionClientFacade().requestStopSession();
+        sampleGameClient1.getGameClient().getSessionClientFacade().requestStopSession();
+        sampleGameClient2.getGameClient().getSessionClientFacade().requestStopSession();
 
         TimeUnit.SECONDS.sleep(2);
+
+        assertFalse(sampleGameClient1.isSessionMember());
+        assertFalse(sampleGameClient2.isSessionMember());
     }
 
     @AfterAll
     static void tearDown() throws Exception {
-        gameClient.shutdownGracefullyAfterNSeconds(0);
-        gameClient2.shutdownGracefullyAfterNSeconds(0);
         dockerClient.stopContainerCmd(container.getId()).exec();
         dockerClient.close();
+        dockerClient = null;
     }
 
-    private void resetGameClientSingletonInstance() throws NoSuchFieldException, IllegalAccessException {
+    private static void resetGameClientSingletonInstance() throws NoSuchFieldException, IllegalAccessException {
         final var singletonInstance = GameClient.class.getDeclaredField("INSTANCE");
         singletonInstance.setAccessible(true);
         singletonInstance.set(GameClient.class, null);

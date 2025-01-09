@@ -5,10 +5,10 @@ import io.netty.channel.SimpleChannelInboundHandler;
 import server.game.docker.client.modules.lobby.facades.LobbyChannelFacade;
 import server.game.docker.modules.lobby.pdus.LobbyResponsePDU;
 
-public class LobbyClientHandler extends SimpleChannelInboundHandler<LobbyResponsePDU> {
+public class LobbySimpleChannelInboundHandler extends SimpleChannelInboundHandler<LobbyResponsePDU> {
     private final LobbyChannelFacade lobbyClientFacade;
 
-    public LobbyClientHandler(final LobbyChannelFacade lobbyClientFacade) {
+    public LobbySimpleChannelInboundHandler(final LobbyChannelFacade lobbyClientFacade) {
         this.lobbyClientFacade = lobbyClientFacade;
     }
 
@@ -26,6 +26,14 @@ public class LobbyClientHandler extends SimpleChannelInboundHandler<LobbyRespons
             case 1 -> {
                 System.out.printf("Received lobby join response %s from the server\n", lobbyUpdate); //todo: log4j
                 lobbyClientFacade.receiveLobbyJoined(lobbyUpdate.leaderId(), lobbyUpdate.members());
+            }
+            case 3 -> {
+                System.out.printf("Received lobby member join response %s from the server\n", lobbyUpdate); //todo: log4j
+                lobbyClientFacade.receiveLobbyMemberJoined(lobbyUpdate.leaderId(), lobbyUpdate.members());
+            }
+            case 4 -> {
+                System.out.printf("Received lobby member leave response %s from the server\n", lobbyUpdate); //todo: log4j
+                lobbyClientFacade.receiveLobbyMemberLeft(lobbyUpdate.leaderId(), lobbyUpdate.members());
             }
         }
     }
