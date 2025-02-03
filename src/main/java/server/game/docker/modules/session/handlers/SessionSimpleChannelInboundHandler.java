@@ -4,7 +4,7 @@ import io.netty.channel.Channel;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.ChannelId;
 import io.netty.channel.SimpleChannelInboundHandler;
-import server.game.docker.client.modules.state.pdus.StateRequestPDU;
+import client.modules.state.models.StateRequestPDU;
 import server.game.docker.modules.lobby.facades.LobbyChannelGroupFacade;
 import server.game.docker.modules.session.facades.SessionChannelGroupFacade;
 import server.game.docker.modules.session.pdus.SessionPDU;

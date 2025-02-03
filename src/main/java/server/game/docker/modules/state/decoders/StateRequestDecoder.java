@@ -3,7 +3,7 @@ package server.game.docker.modules.state.decoders;
 import io.netty.buffer.ByteBuf;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.handler.codec.ByteToMessageDecoder;
-import server.game.docker.client.modules.state.pdus.StateRequestPDU;
+import client.modules.state.models.StateRequestPDU;
 
 import java.util.List;
 
