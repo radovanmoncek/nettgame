@@ -5,7 +5,7 @@ import client.modules.messages.handlers.ChatMessageClientHandler;
 import client.modules.player.handlers.PlayerClientHandler;
 import client.modules.sessions.handlers.SessionClientHandler;
 import client.modules.state.handlers.StateClientHandler;
-import client.ship.parents.facades.ChannelPDUCommunicationsHandler;
+import client.ship.parents.handlers.ChannelHandler;
 import io.netty.bootstrap.Bootstrap;
 import io.netty.channel.Channel;
 import io.netty.channel.ChannelOption;
@@ -42,7 +42,7 @@ public final class GameClient {
     private InetAddress gameServerAddress;
     private int gameServerPort;
     private Channel serverChannel;
-    private Supplier<ChannelPDUCommunicationsHandler<? extends PDU>>
+    private Supplier<ChannelHandler<? extends PDU>>
             playerClientHandlerSupplier,
             lobbyClientHandlerSupplier,
             sessionClientHandlerSupplier,
@@ -106,7 +106,7 @@ public final class GameClient {
         return INSTANCE;
     }
 
-    public GameClient withPlayerClientHandlerSupplier(final Supplier<ChannelPDUCommunicationsHandler<? extends PDU>> playerClientFacade) {
+    public GameClient withPlayerClientHandlerSupplier(final Supplier<ChannelHandler<? extends PDU>> playerClientFacade) {
         if(this.playerClientHandlerSupplier != null)
             return this;
 
@@ -117,7 +117,7 @@ public final class GameClient {
         return this;
     }
 
-    public GameClient withLobbyClientHandlerSupplier(final Supplier<ChannelPDUCommunicationsHandler<? extends PDU>> lobbyClientFacade) {
+    public GameClient withLobbyClientHandlerSupplier(final Supplier<ChannelHandler<? extends PDU>> lobbyClientFacade) {
         if (this.lobbyClientHandlerSupplier != null)
             return this;
 
@@ -129,17 +129,17 @@ public final class GameClient {
         return this;
     }
 
-    public GameClient withSessionClientHandlerSupplier(final Supplier<ChannelPDUCommunicationsHandler<? extends PDU>> sessionClientFacade) {
+    public GameClient withSessionClientHandlerSupplier(final Supplier<ChannelHandler<? extends PDU>> sessionClientFacade) {
         this.sessionClientHandlerSupplier = sessionClientFacade;
         return this;
     }
 
-    public GameClient withStateClientHandlerSupplier(final Supplier<ChannelPDUCommunicationsHandler<? extends PDU>> stateClientFacade) {
+    public GameClient withStateClientHandlerSupplier(final Supplier<ChannelHandler<? extends PDU>> stateClientFacade) {
         this.stateClientHandlerSupplier = stateClientFacade;
         return this;
     }
 
-    public GameClient withChatMessageClientHandlerSupplier(final Supplier<ChannelPDUCommunicationsHandler<? extends PDU>> chatMessageClientFacade) {
+    public GameClient withChatMessageClientHandlerSupplier(final Supplier<ChannelHandler<? extends PDU>> chatMessageClientFacade) {
         this.chatMessageClientHandlerSupplier = chatMessageClientFacade;
         return this;
     }
@@ -159,7 +159,7 @@ public final class GameClient {
         return serverChannel != null && serverChannel.isActive();
     }
 
-    private Supplier<ChannelPDUCommunicationsHandler<? extends PDU>> injectServerChannelIntoClientHandler(final Supplier<ChannelPDUCommunicationsHandler<? extends PDU>> channelPDUCommunicationsHandlerSupplier) {
+    private Supplier<ChannelHandler<? extends PDU>> injectServerChannelIntoClientHandler(final Supplier<ChannelHandler<? extends PDU>> channelPDUCommunicationsHandlerSupplier) {
         final var channelPDUCommunicationsHandler = Objects.requireNonNull(channelPDUCommunicationsHandlerSupplier.get());
 
         Class<?> clazz = channelPDUCommunicationsHandler.getClass();

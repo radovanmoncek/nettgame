@@ -1,10 +1,10 @@
 package client.modules.player.handlers;
 
-import client.ship.parents.facades.ChannelPDUCommunicationsHandler;
+import client.ship.parents.handlers.ChannelHandler;
 import io.netty.channel.ChannelHandlerContext;
-import server.game.docker.modules.player.pdus.NicknamePDU;
+import server.game.docker.modules.player.pdus.NicknameProtocolDataUnit;
 
-public class PlayerClientHandler extends ChannelPDUCommunicationsHandler<NicknamePDU> {
+public class PlayerClientHandler extends ChannelHandler<NicknameProtocolDataUnit> {
 
     /**
      * Returns a nickname that was assigned to this client by the DOcker Game Server.
@@ -13,10 +13,10 @@ public class PlayerClientHandler extends ChannelPDUCommunicationsHandler<Nicknam
      * @param msg           the message to handle
      */
     @Override
-    protected void channelRead0(ChannelHandlerContext ctx, NicknamePDU msg) {}
+    protected void channelRead0(ChannelHandlerContext ctx, NicknameProtocolDataUnit msg) {}
 
     /**
-     * Sends a {@link NicknamePDU} request to the Docker Game Server.
+     * Sends a {@link NicknameProtocolDataUnit} request to the Docker Game Server.
      * @param newNickname the requested nickname.
      * @throws IllegalArgumentException if the requested nickname length exceeds 8 characters.
      */
@@ -24,7 +24,7 @@ public class PlayerClientHandler extends ChannelPDUCommunicationsHandler<Nicknam
         if (newNickname.length() > 8)
             throw new IllegalArgumentException("Player name's length exceeds 8 characters");
 
-        final var nicknamePDU = new NicknamePDU(newNickname);
+        final var nicknamePDU = new NicknameProtocolDataUnit(newNickname);
 
         unicastPDUToServerChannel(nicknamePDU);
     }

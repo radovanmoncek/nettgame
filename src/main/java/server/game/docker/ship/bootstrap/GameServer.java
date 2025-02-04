@@ -8,8 +8,17 @@ import com.github.dockerjava.core.DefaultDockerClientConfig;
 import com.github.dockerjava.core.DockerClientImpl;
 import com.github.dockerjava.httpclient5.ApacheDockerHttpClient;
 
+/**
+ * <p>
+ *     This class server as a wrapper for the individual Docker Game Container instances.
+ *     It communicates with the Docker Daemon, provisions the containers, and manages their operation / lifecycle.
+ * </p>
+ * <p>
+ *     The default Docker Game Server port number is the port <b>4321</b>.
+ * </p>
+ */
 public class GameServer {
-    private static final String dockerHost = "tcp://localhost:2375";
+    private static final String DOCKER_HOST = "tcp://localhost:2375";
     private static DockerClient dockerClient;
     private static CreateContainerResponse container;
 
@@ -23,7 +32,7 @@ public class GameServer {
         final var defaultDockerClientConfig =
                 DefaultDockerClientConfig
                         .createDefaultConfigBuilder()
-                        .withDockerHost(dockerHost)
+                        .withDockerHost(DOCKER_HOST)
                         .build();
 
         dockerClient = DockerClientImpl.getInstance(defaultDockerClientConfig, new ApacheDockerHttpClient.Builder().dockerHost(defaultDockerClientConfig.getDockerHost()).build());

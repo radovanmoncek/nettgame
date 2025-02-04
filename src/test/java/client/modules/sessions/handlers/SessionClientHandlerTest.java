@@ -4,7 +4,7 @@ import client.ship.bootstrap.GameClient;
 import io.netty.channel.ChannelHandlerContext;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.Test;
-import server.game.docker.modules.session.pdus.SessionPDU;
+import server.game.docker.modules.session.pdus.SessionProtocolDataUnit;
 
 import java.util.concurrent.TimeUnit;
 
@@ -21,7 +21,7 @@ class SessionClientHandlerTest {
                 .withSessionClientHandlerSupplier(() -> sessionClientHandler = new SessionClientHandler(){
 
                     @Override
-                    protected void channelRead0(ChannelHandlerContext ctx, SessionPDU msg) {
+                    protected void channelRead0(ChannelHandlerContext ctx, SessionProtocolDataUnit msg) {
                         authoritativeSessionFlag = msg.sessionFlag();
                     }
                 })
@@ -34,6 +34,6 @@ class SessionClientHandlerTest {
 
         TimeUnit.MILLISECONDS.sleep(500);
 
-        assertEquals(SessionPDU.SessionFlag.START.ordinal(), authoritativeSessionFlag);
+        assertEquals(SessionProtocolDataUnit.SessionFlag.START.ordinal(), authoritativeSessionFlag);
     }
 }

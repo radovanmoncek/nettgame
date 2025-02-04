@@ -6,7 +6,7 @@ import io.netty.channel.ChannelHandlerContext;
 import org.junit.jupiter.api.AfterAll;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.Test;
-import server.game.docker.modules.player.pdus.NicknamePDU;
+import server.game.docker.modules.player.pdus.NicknameProtocolDataUnit;
 
 import java.util.concurrent.TimeUnit;
 
@@ -24,7 +24,7 @@ class PlayerClientHandlerTest {
                 .withPlayerClientHandlerSupplier(() -> playerClientHandler = new PlayerClientHandler(){
 
                     @Override
-                    protected void channelRead0(ChannelHandlerContext ctx, NicknamePDU msg) {
+                    protected void channelRead0(ChannelHandlerContext ctx, NicknameProtocolDataUnit msg) {
                         authoritativeNickname = msg.nickname();
                     }
                 })

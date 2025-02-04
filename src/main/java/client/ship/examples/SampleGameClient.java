@@ -7,7 +7,7 @@ import client.modules.sessions.handlers.SessionClientHandler;
 import client.modules.state.handlers.StateClientHandler;
 import client.ship.bootstrap.GameClient;
 import io.netty.channel.ChannelHandlerContext;
-import server.game.docker.modules.player.pdus.NicknamePDU;
+import server.game.docker.modules.player.pdus.NicknameProtocolDataUnit;
 
 import javax.swing.*;
 import java.awt.*;
@@ -90,7 +90,7 @@ public final class SampleGameClient extends JPanel {
                 .withPlayerClientHandlerSupplier(() -> playerClientHandler = new PlayerClientHandler() {
 
                     @Override
-                    public void channelRead0(ChannelHandlerContext channelHandlerContext, NicknamePDU nicknamePDU) {
+                    public void channelRead0(ChannelHandlerContext channelHandlerContext, NicknameProtocolDataUnit nicknamePDU) {
                         nickname = nicknamePDU.nickname();
                     }
                 })

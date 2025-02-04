@@ -1,30 +1,22 @@
 package client.modules.state.handlers;
 
-import client.modules.state.models.StateRequestPDU;
-import client.ship.parents.facades.ChannelPDUCommunicationsHandler;
+import client.modules.state.models.StateRequestProtocolDataUnit;
+import client.ship.parents.handlers.ChannelHandler;
 import io.netty.channel.ChannelHandlerContext;
-import io.netty.channel.SimpleChannelInboundHandler;
-import server.game.docker.modules.state.pdus.StateResponsePDU;
-
-import java.util.List;
+import container.game.docker.modules.state.models.StateResponseProtocolDataUnit;
 
 /**
- * Example handles {@link StateResponsePDU StateResponsePDUs}.
+ * Example handles {@link StateResponseProtocolDataUnit StateResponsePDUs}.
  */
-public class StateClientHandler extends ChannelPDUCommunicationsHandler<StateResponsePDU> {
+public class StateClientHandler extends ChannelHandler<StateResponseProtocolDataUnit> {
 
     @Override
-    protected void channelRead0(ChannelHandlerContext ctx, StateResponsePDU stateResponsePDU) {
-        System.out.printf("State response received from the server %s\n", stateResponsePDU);
-        receiveState(List.of(new GameEntity(stateResponsePDU.x(), stateResponsePDU.y()), new GameEntity(stateResponsePDU.x2(), stateResponsePDU.y2())));
+    protected void channelRead0(ChannelHandlerContext ctx, StateResponseProtocolDataUnit stateResponsePDU) {
+        System.out.printf("State response received from the server %s\n", stateResponsePDU); //todo: log4j
     }
 
     public void requestState(final Integer x, final Integer y) {
-        unicastPDUToServerChannel(new StateRequestPDU(x, y));
-    }
-
-    public void receiveState(final List<GameEntity> gameEntities) {
-        throw new UnsupportedOperationException("Not supported yet.");
+        unicastPDUToServerChannel(new StateRequestProtocolDataUnit(x, y));
     }
 
     public record GameEntity(Integer x, Integer y) {}

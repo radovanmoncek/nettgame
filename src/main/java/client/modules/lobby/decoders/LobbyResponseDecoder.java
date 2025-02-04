@@ -3,7 +3,7 @@ package client.modules.lobby.decoders;
 import io.netty.buffer.ByteBuf;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.handler.codec.ByteToMessageDecoder;
-import server.game.docker.modules.lobby.pdus.LobbyResponsePDU;
+import container.game.docker.modules.lobby.pdus.LobbyResponseProtocolDataUnit;
 
 import java.nio.charset.Charset;
 import java.util.ArrayList;
@@ -18,7 +18,7 @@ public class LobbyResponseDecoder extends ByteToMessageDecoder {
 
         final var type = in.readUnsignedByte();
 
-        if(type != LobbyResponsePDU.PROTOCOL_IDENTIFIER) {
+        if(type != LobbyResponseProtocolDataUnit.PROTOCOL_IDENTIFIER) {
             in.resetReaderIndex();
             channelHandlerContext.fireChannelRead(in.retain());
             return;
@@ -29,7 +29,7 @@ public class LobbyResponseDecoder extends ByteToMessageDecoder {
             return;
         }
 
-        final var lobbyUpdate = new LobbyResponsePDU((byte) in.readUnsignedByte(), in.readLong(), new ArrayList<>());
+        final var lobbyUpdate = new LobbyResponseProtocolDataUnit((byte) in.readUnsignedByte(), in.readLong(), new ArrayList<>());
         final var lobbyMembers = new ArrayList<String>();
         while (in.readableBytes() >= MAX_USERNAME_LENGTH) {
             lobbyMembers.add(in.toString(in.readerIndex(), MAX_USERNAME_LENGTH, Charset.defaultCharset()).trim());

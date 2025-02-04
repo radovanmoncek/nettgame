@@ -1,27 +1,23 @@
 package client.modules.messages.handlers;
 
-import client.ship.parents.facades.ChannelPDUCommunicationsHandler;
+import client.ship.parents.handlers.ChannelHandler;
 import io.netty.channel.ChannelHandlerContext;
-import server.game.docker.modules.chat.pdus.ChatMessagePDU;
+import container.game.docker.modules.chat.examples.models.ChatMessageProtocolDataUnit;
 
-public class ChatMessageClientHandler extends ChannelPDUCommunicationsHandler<ChatMessagePDU> {
-
-    @Override
-    protected void channelRead0(ChannelHandlerContext ctx, ChatMessagePDU msg) {
-        System.out.printf("Player lobby message received %s\n", msg);
-        receivePlayerLobbyChatMessage(msg.authorNick(), msg.message());
-    }
+public class ChatMessageClientHandler extends ChannelHandler<ChatMessageProtocolDataUnit> {
 
     /**
-     * This method is called when a new chat message is received from the server.
-     * @param playerNickname
-     * @param message
+     * Called when a chat message is received.
+     * @param ctx           the {@link ChannelHandlerContext} which this {@link io.netty.channel.SimpleChannelInboundHandler}
+     *                      belongs to
+     * @param msg           the message to handle
      */
-    public void receivePlayerLobbyChatMessage(final String playerNickname, final String message) {
-        throw new UnsupportedOperationException("Not supported yet.");
+    @Override
+    protected void channelRead0(ChannelHandlerContext ctx, ChatMessageProtocolDataUnit msg) {
+        System.out.printf("Player lobby message received %s\n", msg); // todo: log4j
     }
 
     public void sendPlayerLobbyChatMessage(final String playerNickname, final String message) {
-        unicastPDUToServerChannel(new ChatMessagePDU(playerNickname, message));
+        unicastPDUToServerChannel(new ChatMessageProtocolDataUnit(playerNickname, message));
     }
 }
