@@ -1,4 +1,4 @@
-module server.game.docker {
+module container.game.docker {
     requires io.netty.buffer;
     requires io.netty.transport;
     requires io.netty.handler;
@@ -9,12 +9,5 @@ module server.game.docker {
     requires com.github.dockerjava.transport.httpclient5;
     requires com.github.dockerjava.api;
     requires guava;
-
-    exports server.game.docker.modules.player.facades;
-    exports server.game.docker.modules.chat.facades;
-    exports server.game.docker.modules.state.facades;
-    exports server.game.docker.modules.lobby.facades;
-    exports server.game.docker.modules.session.facades;
-    exports server.game.docker.ship.bootstrap;
-    exports server.game.docker.ship.examples;
+    requires javassist;
 }

@@ -1,9 +1,13 @@
 package container.game.docker.ship.bootstrap;
 
+import container.game.docker.ship.parents.codecs.Decoder;
+import container.game.docker.ship.parents.codecs.Encoder;
 import container.game.docker.ship.parents.handlers.ChannelGroupHandler;
 import container.game.docker.ship.parents.models.ProtocolDataUnit;
 import io.netty.bootstrap.ServerBootstrap;
+import io.netty.channel.Channel;
 import io.netty.channel.ChannelFuture;
+import io.netty.channel.ChannelHandler;
 import io.netty.channel.ChannelOption;
 import io.netty.channel.group.ChannelGroup;
 import io.netty.channel.group.DefaultChannelGroup;
@@ -36,25 +40,20 @@ public final class InstanceContainer {
      * The server port. Defaults to 4321.
      */
     private Integer port;
-    /**
-     * All the client channels connected to this server
-     */
-    private final ChannelGroup managedClients;
-    private final ThreadGroup managedSessions;
-    private ChannelFuture future;
+    private final LinkedList<Supplier<? extends ChannelHandler>> channelGroupHandlerSuppliers;
+    private Channel serverChannel;
     private NioEventLoopGroup bossGroup;
     private NioEventLoopGroup workerGroup;
-    private LinkedList<Supplier<? extends ChannelGroupHandler<? extends ProtocolDataUnit>>> channelGroupHandlerSuppliers;
 
     private InstanceContainer() {
-        managedSessions = new ThreadGroup("Managed Sessions");
-        managedClients = new DefaultChannelGroup(GlobalEventExecutor.INSTANCE);
-        port = 4321;
+
+        channelGroupHandlerSuppliers = new LinkedList<>();
     }
 
     public static InstanceContainer newInstance() {
         if (instance == null)
-            instance = new InstanceContainer();
+            instance = new InstanceContainer()
+                    .withPort(4321);
 
         return instance;
     }
@@ -73,15 +72,23 @@ public final class InstanceContainer {
     }
 
     public InstanceContainer withChannelGroupHandlerSupplier(
-            final Supplier<? extends ChannelGroupHandler<? extends ProtocolDataUnit>> channelGroupHandlerSupplier
+            final Supplier<ChannelGroupHandler<? extends ProtocolDataUnit, ? extends ProtocolDataUnit>> channelGroupHandlerSupplier
     ) {
-         channelGroupHandlerSuppliers.add(() -> {
-            final var channelGroupHandler = channelGroupHandlerSupplier.get();
+         channelGroupHandlerSuppliers.add(channelGroupHandlerSupplier);
 
-            injectChannelGroupHandlerDependencies(channelGroupHandler);
+        return this;
+    }
 
-            return channelGroupHandler;
-        });
+    public InstanceContainer withDecoderSupplier(final Supplier<Decoder<? extends ProtocolDataUnit>> decoderSupplier) {
+
+        channelGroupHandlerSuppliers.add(decoderSupplier);
+
+        return this;
+    }
+
+    public InstanceContainer withEncoderSupplier(final Supplier<Encoder<? extends ProtocolDataUnit>> encoderSupplier) {
+
+        channelGroupHandlerSuppliers.add(encoderSupplier);
 
         return this;
     }
@@ -99,15 +106,16 @@ public final class InstanceContainer {
         final var bootstrap = new ServerBootstrap()
                 .group(bossGroup, workerGroup)
                 .channel(NioServerSocketChannel.class)
-                .childHandler(new InstanceContainerChannelInitializer(
-                ))
+                .childHandler(new InstanceContainerChannelInitializer(channelGroupHandlerSuppliers))
                 .option(ChannelOption.SO_BACKLOG, 128)
                 .childOption(ChannelOption.SO_KEEPALIVE, true);
         try {
-            future = bootstrap.bind(port).sync();
+
+            serverChannel = bootstrap.bind(port).sync().channel();
+
             System.out.printf("GameServer running on port %d\n", port); //todo: log4j
 
-            future.channel().closeFuture().sync();
+            serverChannel.closeFuture().sync();
         } finally {
             shutdownGracefullyAfterNSeconds(shutdownSeconds);
         }
@@ -119,30 +127,13 @@ public final class InstanceContainer {
 
     public void shutdownGracefullyAfterNSeconds(final int seconds) {
         new Timer().schedule(new TimerTask() {
+
             @Override
             public void run() {
-                future.channel().close();
+                serverChannel.close();
                 workerGroup.shutdownGracefully();
                 bossGroup.shutdownGracefully();
             }
         }, (long) seconds * 1000);
-    }
-
-    private void injectChannelGroupHandlerDependencies(ChannelGroupHandler<? extends ProtocolDataUnit> channelGroupHandler) {
-        Class<?> clazz = channelGroupHandler.getClass();
-        while (Stream.of(clazz.getDeclaredFields()).map(Field::getType).noneMatch(ChannelGroup.class::equals)) {
-            clazz = clazz.getSuperclass();
-        }
-
-        Stream.of(clazz.getDeclaredFields())
-                .filter(field -> field.getType().equals(ChannelGroup.class))
-                .forEach(field -> {
-                    field.setAccessible(true);
-                    try {
-                        field.set(channelGroupHandler, managedClients);
-                    } catch (final IllegalAccessException e) {
-                        e.printStackTrace(); //todo: log4j
-                    }
-                });
     }
 }
