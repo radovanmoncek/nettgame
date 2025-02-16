@@ -4,12 +4,15 @@ import client.game.docker.ship.bootstrap.examples.SampleGameClient;
 import client.game.docker.ship.parents.handlers.ChannelHandler;
 import container.game.docker.modules.examples.sessions.models.SessionResponseProtocolDataUnit;
 import container.game.docker.modules.examples.sessions.models.SessionRequestProtocolDataUnit;
+import org.apache.logging.log4j.LogManager;
+import org.apache.logging.log4j.Logger;
 
 import java.awt.*;
 import java.awt.event.KeyAdapter;
 import java.awt.event.KeyEvent;
 
 public class SessionChannelHandler extends ChannelHandler<SessionResponseProtocolDataUnit, SessionRequestProtocolDataUnit> {
+    private static final Logger logger = LogManager.getLogger(SessionChannelHandler.class);
     private final SampleGameClient client;
     private ClientState clientState;
     private int x1, x2, rotationAngle1, y1, y2, rotationAngle2;
@@ -107,7 +110,7 @@ public class SessionChannelHandler extends ChannelHandler<SessionResponseProtoco
                     }
                 };
 
-            case STATE -> {
+            case STATE -> { //todo: proper non-naive implementation (client-side prediction)
 
                 x1 = protocolDataUnit.x1();
                 y1 = protocolDataUnit.y1();
@@ -118,7 +121,7 @@ public class SessionChannelHandler extends ChannelHandler<SessionResponseProtoco
             }
         }
 
-        System.out.printf("Session response received from the server %s\n", protocolDataUnit); //todo: log4j
+        logger.info("Session response received from the server {}", protocolDataUnit);
     }
 
     private void sendPlayerInput(final KeyEvent keyEvent, int x, int y) {

@@ -7,6 +7,8 @@ import io.netty.bootstrap.Bootstrap;
 import io.netty.channel.*;
 import io.netty.channel.nio.NioEventLoopGroup;
 import io.netty.channel.socket.nio.NioSocketChannel;
+import org.apache.logging.log4j.LogManager;
+import org.apache.logging.log4j.Logger;
 
 import java.net.InetAddress;
 import java.util.*;
@@ -23,6 +25,7 @@ import java.util.function.Supplier;
  * </p>
  */
 public final class GameClient {
+    private static final Logger logger = LogManager.getLogger(GameClient.class);
     /**
      * Singleton instance
      */
@@ -85,7 +88,7 @@ public final class GameClient {
                 }
                 catch (final Exception exception) {
 
-                    exception.printStackTrace(); //todo: log4j
+                    logger.error(exception.getMessage(), exception);
                 }
             }
 
@@ -95,17 +98,17 @@ public final class GameClient {
             serverChannel.closeFuture().addListener(future -> {
 
                 if(future.isSuccess())
-                    System.out.println("Successfully disconnected from the instance container");
+                    logger.info("Successfully disconnected from the instance container");
 
                 if(!future.isSuccess())
-                    future.cause().printStackTrace(); //todo: log4j
+                    logger.error(future.cause().getMessage(), future.cause());
 
                 shutdownGracefully();
             });
         }
         catch (final Exception exception) {
 
-            exception.printStackTrace(); //todo: log4j
+            logger.error(exception.getMessage(), exception);
 
             workerGroup.shutdownGracefully();
         }
@@ -170,7 +173,7 @@ public final class GameClient {
 
     public void shutdownGracefullyAfterNSeconds(final int seconds) {
 
-        System.out.println("Shutting down gracefully after " + seconds + " seconds"); //todo: log4j
+        logger.info("Shutting down gracefully after {} seconds", seconds);
 
         new Timer()
                 .schedule(gracefulShutdownTimerTask, (long) seconds * 1000);

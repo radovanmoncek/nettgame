@@ -1,11 +1,14 @@
 package client.game.docker.ship.parents.handlers;
 
+import container.game.docker.ship.parents.models.ProtocolDataUnit;
 import io.netty.channel.Channel;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.SimpleChannelInboundHandler;
-import container.game.docker.ship.parents.models.ProtocolDataUnit;
+import org.apache.logging.log4j.LogManager;
+import org.apache.logging.log4j.Logger;
 
 public abstract class ChannelHandler<P1 extends ProtocolDataUnit, P2 extends ProtocolDataUnit> extends SimpleChannelInboundHandler<P1> {
+    private static final Logger logger = LogManager.getLogger(ChannelHandler.class);
     private Channel serverChannel;
 
     @Override
@@ -24,7 +27,7 @@ public abstract class ChannelHandler<P1 extends ProtocolDataUnit, P2 extends Pro
 
         if(serverChannel == null){
 
-            System.err.println("Couldnt send message to server, channel is null"); // todo: log4j
+            logger.error("Couldn't send message to server, channel is null");
 
             return;
         }

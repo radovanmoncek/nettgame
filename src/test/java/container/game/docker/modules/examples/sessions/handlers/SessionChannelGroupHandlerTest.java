@@ -9,6 +9,8 @@ import container.game.docker.modules.examples.sessions.models.SessionRequestProt
 import container.game.docker.modules.examples.sessions.models.SessionResponseProtocolDataUnit;
 import container.game.docker.ship.bootstrap.examples.SampleInstanceContainer;
 import container.game.docker.ship.parents.models.ProtocolDataUnit;
+import org.apache.logging.log4j.LogManager;
+import org.apache.logging.log4j.Logger;
 import org.junit.jupiter.api.*;
 
 import java.lang.reflect.Method;
@@ -21,6 +23,7 @@ import static org.junit.jupiter.api.Assertions.assertNotNull;
 
 @TestMethodOrder(MethodOrderer.OrderAnnotation.class)
 class SessionChannelGroupHandlerTest {
+    private static final Logger logger = LogManager.getLogger(SessionChannelGroupHandlerTest.class);
     private static GameClient player1, player2;
     private static Method unicastToServerChannel1, unicastToServerChannel2;
     private static ChannelHandler<SessionResponseProtocolDataUnit, SessionRequestProtocolDataUnit> sessionChannelHandler1, sessionChannelHandler2;
@@ -45,9 +48,9 @@ class SessionChannelGroupHandlerTest {
                             unicastToServerChannel1 = getClass()
                                     .getSuperclass()
                                     .getDeclaredMethod("unicastToServerChannel", ProtocolDataUnit.class);
-                        } catch (NoSuchMethodException noSuchMethodException) {
+                        } catch (final NoSuchMethodException noSuchMethodException) {
 
-                            noSuchMethodException.printStackTrace(); //todo: log4j
+                            logger.error(noSuchMethodException.getMessage(), noSuchMethodException);
                         }
 
                         unicastToServerChannel1.setAccessible(true);
@@ -263,9 +266,9 @@ class SessionChannelGroupHandlerTest {
                                                     .getDeclaredMethod("unicastToServerChannel", ProtocolDataUnit.class)
                             )
                                     .setAccessible(true);
-                        } catch (NoSuchMethodException noSuchMethodException) {
+                        } catch (final NoSuchMethodException noSuchMethodException) {
 
-                            noSuchMethodException.printStackTrace(); //todo: log4j
+                            logger.error(noSuchMethodException.getMessage(), noSuchMethodException);
                         }
                     }
 

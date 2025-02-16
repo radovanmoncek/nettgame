@@ -1,6 +1,6 @@
-package container.game.docker.modules.examples.chat.codecs;
+package container.game.docker.modules.examples.chats.codecs;
 
-import container.game.docker.modules.examples.chat.models.ChatMessageProtocolDataUnit;
+import container.game.docker.modules.examples.chats.models.ChatMessageProtocolDataUnit;
 import container.game.docker.ship.parents.codecs.Encoder;
 import container.game.docker.ship.parents.models.ProtocolDataUnit;
 import io.netty.buffer.ByteBuf;

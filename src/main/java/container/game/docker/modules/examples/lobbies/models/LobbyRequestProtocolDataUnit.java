@@ -1,4 +1,4 @@
-package container.game.docker.modules.examples.lobby.models;
+package container.game.docker.modules.examples.lobbies.models;
 
 import container.game.docker.ship.parents.models.ProtocolDataUnit;
 
