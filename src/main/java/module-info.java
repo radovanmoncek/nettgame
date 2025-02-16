@@ -1,11 +1,14 @@
-module server.game.docker {
-    requires javafx.controls;
-    requires javafx.fxml;
+module container.game.docker {
     requires io.netty.buffer;
     requires io.netty.transport;
     requires io.netty.handler;
     requires io.netty.codec;
     requires io.netty.common;
-
-    opens server.game.docker.client.examples.gui to javafx.controls, javafx.fxml, javafx.graphics;
+    requires com.github.dockerjava.core;
+    requires com.github.dockerjava.transport.httpclient5;
+    requires com.github.dockerjava.api;
+    requires guava;
+    requires javassist;
+    requires java.desktop;
+    requires com.fasterxml.jackson.annotation;
 }
