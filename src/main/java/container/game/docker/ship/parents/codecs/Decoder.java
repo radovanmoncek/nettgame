@@ -6,32 +6,44 @@ import io.netty.channel.ChannelHandlerContext;
 import io.netty.handler.codec.ByteToMessageDecoder;
 import io.netty.handler.codec.CorruptedFrameException;
 
-import java.util.Arrays;
+import java.nio.CharBuffer;
+import java.nio.charset.Charset;
 import java.util.List;
+import java.util.Map;
+
+import static container.game.docker.ship.parents.models.ProtocolDataUnit.*;
 
 /**
  * This class provides basic encoding utility.
  */
 public abstract class Decoder<P extends ProtocolDataUnit> extends ByteToMessageDecoder {
-    private static final int headerSize = Byte.BYTES + Long.BYTES;
-    private static final byte MIN_PROTOCOL_IDENTIFIER = 0x1;
-    private static final byte MAX_PROTOCOL_IDENTIFIER = 0x10;
+    private final Class<P> protocolDataUnitClass;
+    private final Map<Byte, Class<? extends ProtocolDataUnit>> protocolIdentifierToProtocolDataUnitBindings;
+
+    public Decoder(
+            final Map<Byte, Class<? extends ProtocolDataUnit>> protocolIdentifierToProtocolDataUnitBindings,
+            final Class<P> protocolDataUnitClass
+    ) {
+
+        this.protocolIdentifierToProtocolDataUnitBindings = protocolIdentifierToProtocolDataUnitBindings;
+        this.protocolDataUnitClass = protocolDataUnitClass;
+    }
 
     @Override
     protected final void decode(final ChannelHandlerContext channelHandlerContext, final ByteBuf in, final List<Object> out) {
 
-        if (in.readableBytes() < headerSize) {
+        if (in.readableBytes() < HEADER_SIZE) {
 
             return;
         }
 
-        byte type;
+        final var protocolIdentifier = in.markReaderIndex().readByte();
 
-        if ((type = in.markReaderIndex().readByte()) != supplyProtocolIdentifier()) {
+        if (!protocolIdentifierToProtocolDataUnitBindings.get(protocolIdentifier).equals(protocolDataUnitClass)) {
 
-            if (type < MIN_PROTOCOL_IDENTIFIER || type > MAX_PROTOCOL_IDENTIFIER) {
+            if (protocolIdentifier < MIN_PROTOCOL_IDENTIFIER || protocolIdentifier > MAX_PROTOCOL_IDENTIFIER) {
 
-                throw new CorruptedFrameException(String.format("Corrupted PDU received: %s", Arrays.toString(in.array())));
+                throw new CorruptedFrameException("Protocol identifier " + protocolIdentifier + " out of range");
             }
 
             channelHandlerContext.fireChannelRead(in.resetReaderIndex().retain());
@@ -47,9 +59,20 @@ public abstract class Decoder<P extends ProtocolDataUnit> extends ByteToMessageD
         }
 
         decodeBodyAfterHeader(in, out);
+
+        in.readerIndex(in.writerIndex());
     }
 
     abstract protected void decodeBodyAfterHeader(final ByteBuf in, final List<? super P> out);
 
-    abstract protected int supplyProtocolIdentifier();
+    @Override
+    public final void exceptionCaught(final ChannelHandlerContext channelHandlerContext, final Throwable cause) {
+
+        cause.printStackTrace(); //todo: log4j
+    }
+
+    public final String decodeString(final ByteBuf in) {
+
+        return in.readCharSequence(in.readInt(), Charset.defaultCharset()).toString().trim();
+    }
 }

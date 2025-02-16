@@ -1,15 +1,20 @@
 package client.game.docker.ship.bootstrap.examples;
 
 import client.game.docker.modules.examples.chats.handlers.ChatChannelHandler;
-import client.game.docker.modules.examples.lobbies.decoders.LobbyResponseDecoder;
-import client.game.docker.modules.examples.lobbies.encoders.LobbyRequestEncoder;
+import client.game.docker.modules.examples.lobbies.codecs.LobbyResponseDecoder;
+import client.game.docker.modules.examples.lobbies.codecs.LobbyRequestEncoder;
 import client.game.docker.modules.examples.lobbies.handlers.LobbyChannelHandler;
-import client.game.docker.modules.examples.sessions.decoders.SessionResponseDecoder;
-import client.game.docker.modules.examples.sessions.encoders.SessionRequestEncoder;
+import client.game.docker.modules.examples.sessions.codecs.SessionResponseDecoder;
+import client.game.docker.modules.examples.sessions.codecs.SessionRequestEncoder;
 import client.game.docker.modules.examples.sessions.handlers.SessionChannelHandler;
 import client.game.docker.ship.bootstrap.GameClient;
-import container.game.docker.modules.examples.chat.decoders.ChatMessageDecoder;
-import container.game.docker.modules.examples.chat.encoders.ChatMessageEncoder;
+import container.game.docker.modules.examples.chat.codecs.ChatMessageDecoder;
+import container.game.docker.modules.examples.chat.codecs.ChatMessageEncoder;
+import container.game.docker.modules.examples.chat.models.ChatMessageProtocolDataUnit;
+import container.game.docker.modules.examples.lobby.models.LobbyRequestProtocolDataUnit;
+import container.game.docker.modules.examples.lobby.models.LobbyResponseProtocolDataUnit;
+import container.game.docker.modules.examples.sessions.models.SessionRequestProtocolDataUnit;
+import container.game.docker.modules.examples.sessions.models.SessionResponseProtocolDataUnit;
 
 import javax.swing.*;
 import java.awt.*;
@@ -30,7 +35,7 @@ public final class SampleGameClient extends JPanel {
 
         onPaint = graphics -> {};
 
-        final var frame = new JFrame("Sample Docker Game Client");
+        final var frame = new JFrame("Example Networked Game Client");
 
         frame.setPreferredSize(new Dimension(800, 600));
         frame.addWindowListener(new WindowAdapter() {
@@ -61,10 +66,14 @@ public final class SampleGameClient extends JPanel {
                 .withEncoder(SessionRequestEncoder::new)
                 .withEncoder(LobbyRequestEncoder::new)
                 .withEncoder(ChatMessageEncoder::new)
+                .registerProtocolDataUnitToProtocolDataUnitBinding((byte) 1, ChatMessageProtocolDataUnit.class)
+                .registerProtocolDataUnitToProtocolDataUnitBinding((byte) 2, LobbyRequestProtocolDataUnit.class)
+                .registerProtocolDataUnitToProtocolDataUnitBinding((byte) 3, LobbyResponseProtocolDataUnit.class)
+                .registerProtocolDataUnitToProtocolDataUnitBinding((byte) 4, SessionRequestProtocolDataUnit.class)
+                .registerProtocolDataUnitToProtocolDataUnitBinding((byte) 5, SessionResponseProtocolDataUnit.class)
                 .run();
 
-        new Thread(
-                () -> {
+        final var runnable = (Runnable) () -> {
 
             while (running) {
 
@@ -79,16 +88,10 @@ public final class SampleGameClient extends JPanel {
                 }
             }
 
-            try {
+            gameClient.shutdownGracefullyAfterNSeconds(0);
+        };
 
-                gameClient.shutdownGracefullyAfterNSeconds(0);
-            } catch (InterruptedException e) {
-
-                e.printStackTrace(); //todo: log4j
-            }
-        },
-                "Client Main Event Loop"
-        )
+        new Thread(runnable, "Client Game Rendering Loop")
                 .start();
     }
 

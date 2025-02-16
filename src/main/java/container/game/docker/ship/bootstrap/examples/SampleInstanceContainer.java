@@ -1,29 +1,40 @@
 package container.game.docker.ship.bootstrap.examples;
 
-import container.game.docker.modules.examples.chat.decoders.ChatMessageDecoder;
-import container.game.docker.modules.examples.chat.encoders.ChatMessageEncoder;
+import container.game.docker.modules.examples.chat.codecs.ChatMessageDecoder;
+import container.game.docker.modules.examples.chat.codecs.ChatMessageEncoder;
 import container.game.docker.modules.examples.chat.handlers.ChatChannelGroupHandler;
-import container.game.docker.modules.examples.lobby.decoder.LobbyRequestDecoder;
-import container.game.docker.modules.examples.lobby.encoders.LobbyResponseEncoder;
+import container.game.docker.modules.examples.chat.models.ChatMessageProtocolDataUnit;
+import container.game.docker.modules.examples.lobby.codecs.LobbyRequestDecoder;
+import container.game.docker.modules.examples.lobby.codecs.LobbyResponseEncoder;
 import container.game.docker.modules.examples.lobby.handlers.LobbyChannelGroupHandler;
-import container.game.docker.modules.examples.session.decoders.SessionRequestDecoder;
-import container.game.docker.modules.examples.session.encoders.SessionResponseEncoder;
-import container.game.docker.modules.examples.session.handlers.SessionChannelGroupHandler;
+import container.game.docker.modules.examples.lobby.models.LobbyRequestProtocolDataUnit;
+import container.game.docker.modules.examples.lobby.models.LobbyResponseProtocolDataUnit;
+import container.game.docker.modules.examples.sessions.codes.SessionRequestDecoder;
+import container.game.docker.modules.examples.sessions.codes.SessionResponseEncoder;
+import container.game.docker.modules.examples.sessions.handlers.SessionChannelGroupHandler;
+import container.game.docker.modules.examples.sessions.models.SessionRequestProtocolDataUnit;
+import container.game.docker.modules.examples.sessions.models.SessionResponseProtocolDataUnit;
 import container.game.docker.ship.bootstrap.InstanceContainer;
 
 public final class SampleInstanceContainer {
 
-    public static void main(String[] args) throws Exception {
-            InstanceContainer.newInstance()
-                    .withDecoderSupplier(SessionRequestDecoder::new)
-                    .withDecoderSupplier(LobbyRequestDecoder::new)
-                    .withDecoderSupplier(ChatMessageDecoder::new)
-                    .withChannelGroupHandlerSupplier(SessionChannelGroupHandler::new)
-                    .withChannelGroupHandlerSupplier(LobbyChannelGroupHandler::new)
-                    .withChannelGroupHandlerSupplier(ChatChannelGroupHandler::new)
-                    .withEncoderSupplier(SessionResponseEncoder::new)
-                    .withEncoderSupplier(LobbyResponseEncoder::new)
-                    .withEncoderSupplier(ChatMessageEncoder::new)
+    public static void main(String[] args) {
+
+        InstanceContainer.newInstance()
+                    .withDecoderFactory(SessionRequestDecoder::new)
+                    .withDecoderFactory(LobbyRequestDecoder::new)
+                    .withDecoderFactory(ChatMessageDecoder::new)
+                    .withChannelGroupHandlerFactory(SessionChannelGroupHandler::new)
+                    .withChannelGroupHandlerFactory(LobbyChannelGroupHandler::new)
+                    .withChannelGroupHandlerFactory(ChatChannelGroupHandler::new)
+                    .withEncoderFactory(SessionResponseEncoder::new)
+                    .withEncoderFactory(LobbyResponseEncoder::new)
+                    .withEncoderFactory(ChatMessageEncoder::new)
+                    .registerProtocolDataUnitIdentifierToProtocolDataUnitBinding((byte) 1, ChatMessageProtocolDataUnit.class)
+                    .registerProtocolDataUnitIdentifierToProtocolDataUnitBinding((byte) 2, LobbyRequestProtocolDataUnit.class)
+                    .registerProtocolDataUnitIdentifierToProtocolDataUnitBinding((byte) 3, LobbyResponseProtocolDataUnit.class)
+                    .registerProtocolDataUnitIdentifierToProtocolDataUnitBinding((byte) 4, SessionRequestProtocolDataUnit.class)
+                    .registerProtocolDataUnitIdentifierToProtocolDataUnitBinding((byte) 5, SessionResponseProtocolDataUnit.class)
                     .run();
     }
 }

@@ -1,13 +1,10 @@
 package client.game.docker.ship.bootstrap;
 
-import client.game.docker.ship.parents.handlers.ChannelHandler;
-import container.game.docker.ship.parents.codecs.Decoder;
-import container.game.docker.ship.parents.codecs.Encoder;
+import container.game.docker.ship.factories.DecoderFactory;
+import container.game.docker.ship.factories.EncoderFactory;
 import container.game.docker.ship.parents.models.ProtocolDataUnit;
 import io.netty.bootstrap.Bootstrap;
-import io.netty.channel.Channel;
-import io.netty.channel.ChannelOption;
-import io.netty.channel.EventLoopGroup;
+import io.netty.channel.*;
 import io.netty.channel.nio.NioEventLoopGroup;
 import io.netty.channel.socket.nio.NioSocketChannel;
 
@@ -29,16 +26,19 @@ public final class GameClient {
     /**
      * Singleton instance
      */
-    private static GameClient INSTANCE;
-    private final LinkedList<Supplier<? extends io.netty.channel.ChannelHandler>> channelHandlerSuppliers;
-    private final EventLoopGroup workerGroup;
-    private InetAddress gameServerAddress;
+    private static GameClient instance;
     private int gameServerPort;
-    private Channel serverChannel;
+    private InetAddress gameServerAddress;
+    private final LinkedList<Supplier<? extends ChannelHandler>> channelHandlerSuppliers;
+    private final Map<Byte, Class<? extends ProtocolDataUnit>> protocolIdentifierToProtocolDataUnitBindings;
+    private final Map<Class<? extends ProtocolDataUnit>, Byte> protocolDataUnitToProtocolIdentifierBindings;
+    private TimerTask gracefulShutdownTimerTask;
 
     private GameClient() {
-        workerGroup = new NioEventLoopGroup();
+
         channelHandlerSuppliers = new LinkedList<>();
+        protocolIdentifierToProtocolDataUnitBindings = new HashMap<>();
+        protocolDataUnitToProtocolIdentifierBindings = new HashMap<>();
     }
 
     /**
@@ -47,15 +47,18 @@ public final class GameClient {
      */
     public void run(int reconnectIntervalSeconds, int failReconnectAfterAttempts) {
 
-        try {
+        final var bootstrap = new Bootstrap();
+        final var workerGroup = new NioEventLoopGroup();
 
-            final var bootstrap = new Bootstrap();
+        try {
 
             bootstrap
                     .group(workerGroup)
                     .channel(NioSocketChannel.class)
                     .option(ChannelOption.SO_KEEPALIVE, true)
                     .handler(new GameClientChannelInitializer(channelHandlerSuppliers));
+
+            Channel serverChannel = null;
 
             for (int i = 0; i < failReconnectAfterAttempts && serverChannel == null; i++) {
 
@@ -66,10 +69,39 @@ public final class GameClient {
                             .sync()
                             .channel();
 
+                    final var serverChannelFinal = serverChannel;
+
+                    gracefulShutdownTimerTask = new TimerTask() {
+
+                        @Override
+                        public void run() {
+
+                            serverChannelFinal.close();
+                            workerGroup.shutdownGracefully();
+                        }
+                    };
+
                     TimeUnit.SECONDS.sleep(reconnectIntervalSeconds);
                 }
-                catch (final Exception ignored) {}
+                catch (final Exception exception) {
+
+                    exception.printStackTrace(); //todo: log4j
+                }
             }
+
+            if(serverChannel == null)
+                throw new Exception("Failed to connect to the instance container");
+
+            serverChannel.closeFuture().addListener(future -> {
+
+                if(future.isSuccess())
+                    System.out.println("Successfully disconnected from the instance container");
+
+                if(!future.isSuccess())
+                    future.cause().printStackTrace(); //todo: log4j
+
+                shutdownGracefully();
+            });
         }
         catch (final Exception exception) {
 
@@ -81,12 +113,12 @@ public final class GameClient {
 
     public static GameClient newInstance() throws Exception {
 
-        if (Objects.isNull(INSTANCE))
-            INSTANCE = new GameClient()
+        if (Objects.isNull(instance))
+            instance = new GameClient()
                     .withServerPort(4321)
-                    .withGameServerAddress(InetAddress.getLocalHost());
+                    .withInstanceContainerAddress(InetAddress.getLocalHost());
 
-        return INSTANCE;
+        return instance;
     }
 
     public GameClient withServerPort(final int serverPort) {
@@ -96,51 +128,61 @@ public final class GameClient {
         return this;
     }
 
-    public GameClient withGameServerAddress(final InetAddress gameServerAddress) {
+    public GameClient withInstanceContainerAddress(final InetAddress gameServerAddress) {
 
         this.gameServerAddress = gameServerAddress;
 
         return this;
     }
 
-    public GameClient withChannelHandler(final Supplier<ChannelHandler<? extends ProtocolDataUnit, ? extends ProtocolDataUnit>> channelHandlerSupplier) {
+    public GameClient withChannelHandler(final Supplier<ChannelHandler> channelHandlerSupplier) {
 
         channelHandlerSuppliers.add(channelHandlerSupplier);
 
         return this;
     }
 
-    public GameClient withEncoder(final Supplier<Encoder<? extends ProtocolDataUnit>> encoderSupplier) {
+    public GameClient withEncoder(final EncoderFactory encoderFactory) {
 
-        channelHandlerSuppliers.add(encoderSupplier);
-
-        return this;
-    }
-
-    public GameClient withDecoder(final Supplier<Decoder<? extends ProtocolDataUnit>> decoderSupplier) {
-
-        channelHandlerSuppliers.add(decoderSupplier);
+        channelHandlerSuppliers.add(() -> encoderFactory.apply(protocolDataUnitToProtocolIdentifierBindings));
 
         return this;
     }
 
-    public void shutdownGracefullyAfterNSeconds(final int seconds) throws InterruptedException {
+    public GameClient withDecoder(final DecoderFactory decoderFactory) {
 
-        new Timer().schedule(new TimerTask() {
+        channelHandlerSuppliers.add(() -> decoderFactory.apply(protocolIdentifierToProtocolDataUnitBindings));
 
-            @Override
-            public void run() {
+        return this;
+    }
 
-                serverChannel.close();
-            }
-        }, (long) seconds * 1000);
+    public GameClient registerProtocolDataUnitToProtocolDataUnitBinding(
+            final Byte protocolIdentifier,
+            final Class<? extends ProtocolDataUnit> protocolDataUnit
+    ) {
 
-        serverChannel.closeFuture().sync();
+        protocolIdentifierToProtocolDataUnitBindings.put(protocolIdentifier, protocolDataUnit);
 
-        workerGroup.shutdownGracefully();
+        protocolDataUnitToProtocolIdentifierBindings.put(protocolDataUnit, protocolIdentifier);
+
+        return this;
+    }
+
+    public void shutdownGracefullyAfterNSeconds(final int seconds) {
+
+        System.out.println("Shutting down gracefully after " + seconds + " seconds"); //todo: log4j
+
+        new Timer()
+                .schedule(gracefulShutdownTimerTask, (long) seconds * 1000);
     }
 
     public void run() {
+
         run(0, 10);
+    }
+
+    public void shutdownGracefully() {
+
+        shutdownGracefullyAfterNSeconds(0);
     }
 }
