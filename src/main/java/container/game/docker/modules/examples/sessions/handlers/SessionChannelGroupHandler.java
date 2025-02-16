@@ -7,6 +7,8 @@ import container.game.docker.ship.examples.concurrent.SubHandler;
 import container.game.docker.ship.data.structures.MultiValueTypeMap;
 import container.game.docker.ship.examples.functions.TriFunction;
 import container.game.docker.ship.parents.handlers.ChannelGroupHandler;
+import org.apache.logging.log4j.LogManager;
+import org.apache.logging.log4j.Logger;
 
 import java.util.UUID;
 import java.util.concurrent.ConcurrentHashMap;
@@ -16,6 +18,7 @@ import java.util.concurrent.TimeUnit;
  * Example game session handler.
  */
 public final class SessionChannelGroupHandler extends ChannelGroupHandler<SessionRequestProtocolDataUnit, SessionResponseProtocolDataUnit> {
+    private static final Logger logger = LogManager.getLogger(SessionChannelGroupHandler.class);
     private static final int maxNickNameLength = 8, xBound = 800, yBound = 600, moveDelta = 4;
     private static final ConcurrentHashMap<UUID, MultiValueTypeMap> sessionData;
     private static final ThreadGroup subHandlers;
@@ -28,21 +31,23 @@ public final class SessionChannelGroupHandler extends ChannelGroupHandler<Sessio
         subHandlers = new ThreadGroup("Game Sessions");
     }
 
+    private static final String sessionUUIDProperty = "sessionUUID";
+
     @Override
     protected void playerChannelRead(final SessionRequestProtocolDataUnit sessionRequestProtocolDataUnit, final MultiValueTypeMap playerSession) {
 
-        final var playerChannelIdOptional = playerSession.getChannelId("playerChannelId");
+        final var playerChannelIdOptional = playerSession.getChannelId(playerChannelIdProperty);
 
         if (playerChannelIdOptional.isEmpty()) {
 
-            System.err.println("Cannot process request, player channel id is empty"); //todo: log4j
+            logger.error("Cannot process request, player channel id is empty, this should never happen");
 
             return;
         }
 
         final var playerChannelId = playerChannelIdOptional.get();
 
-        final var playerSessionUUIDOptional = playerSession.getUUID("sessionUUID");
+        final var playerSessionUUIDOptional = playerSession.getUUID(sessionUUIDProperty);
 
         if (sessionRequestProtocolDataUnit.nickname().length() > maxNickNameLength) {
 
@@ -51,7 +56,7 @@ public final class SessionChannelGroupHandler extends ChannelGroupHandler<Sessio
                     playerChannelId
             );
 
-            System.err.println("Invalid nickname length"); //todo: log4j
+            logger.info("Invalid nickname length {}", sessionRequestProtocolDataUnit.nickname().length());
 
             return;
         }
@@ -60,17 +65,11 @@ public final class SessionChannelGroupHandler extends ChannelGroupHandler<Sessio
 
             case START -> {
 
-                System
-                        .out
-                        .printf(
-                                "A client with ChannelId %s has requested a new username: %s\n",
-                                playerSession.get("playerChannelId"),
-                                sessionRequestProtocolDataUnit.nickname()
-                        ); //todo: log4j
+                logger.info("A player with ChannelId {} has requested a new username: {}", playerChannelId, sessionRequestProtocolDataUnit.nickname());
 
-                System.out.printf("A player has requested session start %s \n", sessionRequestProtocolDataUnit); //todo: log4j
+                logger.info("A player has requested session start {}", sessionRequestProtocolDataUnit);
 
-                if (playerSession.containsKey("sessionUUID")) {
+                if (playerSession.containsKey(sessionUUIDProperty)) {
 
                     return;
                 }
@@ -85,7 +84,7 @@ public final class SessionChannelGroupHandler extends ChannelGroupHandler<Sessio
 
             case STOP -> {
 
-                System.out.printf("A player has requested session end %s \n", sessionRequestProtocolDataUnit); //todo: log4j
+                logger.info("A player has requested session end {}", sessionRequestProtocolDataUnit);
 
                 playerSession.put("sessionStopped", true);
             }
@@ -126,7 +125,7 @@ public final class SessionChannelGroupHandler extends ChannelGroupHandler<Sessio
                 gameSession.put("player2Session", playerSession);
                 gameSession.put("secondPlayerJoined", true);
 
-                System.out.println("A player has requested session join " + sessionUUID); // todo: log4j
+                logger.info("A player has requested session join {}", sessionUUID);
             }
 
             case STATE -> {
@@ -368,7 +367,7 @@ public final class SessionChannelGroupHandler extends ChannelGroupHandler<Sessio
 
                 default -> {
 
-                    System.err.println("Invalid session flag: " + sessionFlag); //todo: log4j
+                    logger.error("Invalid session flag: {}, this should never occur", sessionFlag);
 
                     return false;
                 }
@@ -411,7 +410,7 @@ public final class SessionChannelGroupHandler extends ChannelGroupHandler<Sessio
                         TimeUnit.MILLISECONDS.sleep(1);
                     } catch (InterruptedException interruptedException) {
 
-                        interruptedException.printStackTrace(); //todo: log4j
+                        logger.error(interruptedException.getMessage(), interruptedException);
 
                         return;
                     }
@@ -457,7 +456,7 @@ public final class SessionChannelGroupHandler extends ChannelGroupHandler<Sessio
                         TimeUnit.MILLISECONDS.sleep(33);
                     } catch (final InterruptedException interruptedException) {
 
-                        interruptedException.printStackTrace(); //todo: log4j
+                        logger.error(interruptedException.getMessage(), interruptedException);
 
                         player1Session.put("sessionStopped", true);
 
@@ -478,7 +477,7 @@ public final class SessionChannelGroupHandler extends ChannelGroupHandler<Sessio
 
                 shortToLongUUIDs.remove(sessionUUID.toString().substring(0, 8));
 
-                System.out.printf("Session %s has ended\n", sessionUUID); //todo: log4j
+                logger.info("Session {} has ended", sessionUUID);
             }
         };
 
@@ -487,6 +486,6 @@ public final class SessionChannelGroupHandler extends ChannelGroupHandler<Sessio
         sessionThread.setName(subHandler.supplyName());
         sessionThread.start();
 
-        System.out.println("Game Session " + subHandler.sessionUUID + " Thread started"); //todo: log4j
+        logger.warn("Game Session {} Thread started", subHandler.sessionUUID);
     }
 }

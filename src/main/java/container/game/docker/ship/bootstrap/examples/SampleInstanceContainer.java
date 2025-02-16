@@ -1,14 +1,14 @@
 package container.game.docker.ship.bootstrap.examples;
 
-import container.game.docker.modules.examples.chat.codecs.ChatMessageDecoder;
-import container.game.docker.modules.examples.chat.codecs.ChatMessageEncoder;
-import container.game.docker.modules.examples.chat.handlers.ChatChannelGroupHandler;
-import container.game.docker.modules.examples.chat.models.ChatMessageProtocolDataUnit;
-import container.game.docker.modules.examples.lobby.codecs.LobbyRequestDecoder;
-import container.game.docker.modules.examples.lobby.codecs.LobbyResponseEncoder;
-import container.game.docker.modules.examples.lobby.handlers.LobbyChannelGroupHandler;
-import container.game.docker.modules.examples.lobby.models.LobbyRequestProtocolDataUnit;
-import container.game.docker.modules.examples.lobby.models.LobbyResponseProtocolDataUnit;
+import container.game.docker.modules.examples.chats.codecs.ChatMessageDecoder;
+import container.game.docker.modules.examples.chats.codecs.ChatMessageEncoder;
+import container.game.docker.modules.examples.chats.handlers.ChatChannelGroupHandler;
+import container.game.docker.modules.examples.chats.models.ChatMessageProtocolDataUnit;
+import container.game.docker.modules.examples.lobbies.codecs.LobbyRequestDecoder;
+import container.game.docker.modules.examples.lobbies.codecs.LobbyResponseEncoder;
+import container.game.docker.modules.examples.lobbies.handlers.LobbyChannelGroupHandler;
+import container.game.docker.modules.examples.lobbies.models.LobbyRequestProtocolDataUnit;
+import container.game.docker.modules.examples.lobbies.models.LobbyResponseProtocolDataUnit;
 import container.game.docker.modules.examples.sessions.codes.SessionRequestDecoder;
 import container.game.docker.modules.examples.sessions.codes.SessionResponseEncoder;
 import container.game.docker.modules.examples.sessions.handlers.SessionChannelGroupHandler;

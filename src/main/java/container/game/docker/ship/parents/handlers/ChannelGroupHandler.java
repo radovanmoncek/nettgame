@@ -9,12 +9,16 @@ import io.netty.channel.group.ChannelGroup;
 import container.game.docker.ship.parents.models.ProtocolDataUnit;
 import io.netty.channel.group.DefaultChannelGroup;
 import io.netty.util.concurrent.GlobalEventExecutor;
+import org.apache.logging.log4j.LogManager;
+import org.apache.logging.log4j.Logger;
 
 import java.util.List;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.stream.Stream;
 
 public abstract class ChannelGroupHandler<P1 extends ProtocolDataUnit, P2 extends ProtocolDataUnit> extends SimpleChannelInboundHandler<P1> {
+    private static final Logger logger = LogManager.getLogger(ChannelGroupHandler.class);
+    protected static final String playerChannelIdProperty = "playerChannelId";
     /**
      * All the client channels connected to this server
      */
@@ -41,9 +45,9 @@ public abstract class ChannelGroupHandler<P1 extends ProtocolDataUnit, P2 extend
         if(!players.add(channelHandlerContext.channel()))
             return;
 
-        playerSessions.put(channelHandlerContext.channel().id(), MultiValueTypeMap.of("playerChannelId", channelHandlerContext.channel().id()));
+        playerSessions.put(channelHandlerContext.channel().id(), MultiValueTypeMap.of(playerChannelIdProperty, channelHandlerContext.channel().id()));
 
-        System.out.printf("Player with ChannelId %s has connected\n", channelHandlerContext.channel().id()); //todo: log4j
+        logger.info("Player with ChannelId {} has connected", channelHandlerContext.channel().id());
     }
 
     @Override
@@ -60,13 +64,13 @@ public abstract class ChannelGroupHandler<P1 extends ProtocolDataUnit, P2 extend
 
         playerDisconnected(playerSessions.get(channelHandlerContext.channel().id()));
 
-        System.out.printf("Player with ChannelId %s has disconnected\n", channelHandlerContext.channel().id()); //todo: log4j
+        logger.info("Player with ChannelId {} has disconnected", channelHandlerContext.channel().id());
     }
 
     @Override
     public final void channelRegistered(final ChannelHandlerContext channelHandlerContext) {
 
-//        todo:
+        logger.info("Player Channel with ChannelId {} has registered", channelHandlerContext.channel().id());
     }
 
     abstract protected void playerDisconnected(final MultiValueTypeMap playerSession);
@@ -80,7 +84,7 @@ public abstract class ChannelGroupHandler<P1 extends ProtocolDataUnit, P2 extend
 
         if (clientChannel == null) {
 
-            System.err.println("Client channel is null"); //todo: log4j
+            logger.error("Client channel is null");
 
             return;
         }
@@ -101,6 +105,6 @@ public abstract class ChannelGroupHandler<P1 extends ProtocolDataUnit, P2 extend
     @Override
     public void exceptionCaught(final ChannelHandlerContext channelHandlerContext, final Throwable cause) {
 
-        cause.printStackTrace(); //todo: log4j
+        logger.error(cause.getMessage(), cause);
     }
 }

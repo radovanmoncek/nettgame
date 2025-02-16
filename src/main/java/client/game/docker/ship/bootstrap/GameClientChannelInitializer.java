@@ -6,11 +6,14 @@ import io.netty.channel.ChannelInitializer;
 import io.netty.channel.socket.SocketChannel;
 import io.netty.handler.logging.LogLevel;
 import io.netty.handler.logging.LoggingHandler;
+import org.apache.logging.log4j.LogManager;
+import org.apache.logging.log4j.Logger;
 
 import java.util.LinkedList;
 import java.util.function.Supplier;
 
 public final class GameClientChannelInitializer extends ChannelInitializer<SocketChannel> {
+    private static final Logger logger = LogManager.getLogger(GameClientChannelInitializer.class);
     private final LinkedList<Supplier<? extends ChannelHandler>> channelHandlerSuppliers;
 
     public GameClientChannelInitializer(final LinkedList<Supplier<? extends ChannelHandler>> channelHandlerSuppliers) {
@@ -29,6 +32,6 @@ public final class GameClientChannelInitializer extends ChannelInitializer<Socke
     @Override
     public void exceptionCaught(final ChannelHandlerContext channelHandlerContext, final Throwable cause) {
 
-        cause.printStackTrace(); //todo: log4j
+        logger.error(cause.getMessage(), cause);
     }
 }

@@ -8,13 +8,15 @@ import client.game.docker.modules.examples.sessions.codecs.SessionResponseDecode
 import client.game.docker.modules.examples.sessions.codecs.SessionRequestEncoder;
 import client.game.docker.modules.examples.sessions.handlers.SessionChannelHandler;
 import client.game.docker.ship.bootstrap.GameClient;
-import container.game.docker.modules.examples.chat.codecs.ChatMessageDecoder;
-import container.game.docker.modules.examples.chat.codecs.ChatMessageEncoder;
-import container.game.docker.modules.examples.chat.models.ChatMessageProtocolDataUnit;
-import container.game.docker.modules.examples.lobby.models.LobbyRequestProtocolDataUnit;
-import container.game.docker.modules.examples.lobby.models.LobbyResponseProtocolDataUnit;
+import container.game.docker.modules.examples.chats.codecs.ChatMessageDecoder;
+import container.game.docker.modules.examples.chats.codecs.ChatMessageEncoder;
+import container.game.docker.modules.examples.chats.models.ChatMessageProtocolDataUnit;
+import container.game.docker.modules.examples.lobbies.models.LobbyRequestProtocolDataUnit;
+import container.game.docker.modules.examples.lobbies.models.LobbyResponseProtocolDataUnit;
 import container.game.docker.modules.examples.sessions.models.SessionRequestProtocolDataUnit;
 import container.game.docker.modules.examples.sessions.models.SessionResponseProtocolDataUnit;
+import org.apache.logging.log4j.LogManager;
+import org.apache.logging.log4j.Logger;
 
 import javax.swing.*;
 import java.awt.*;
@@ -25,6 +27,7 @@ import java.util.concurrent.TimeUnit;
 import java.util.function.Consumer;
 
 public final class SampleGameClient extends JPanel {
+    private static final Logger logger = LogManager.getLogger(SampleGameClient.class);
     private final GameClient gameClient;
     private boolean running;
     private Consumer<Graphics> onPaint;
@@ -82,9 +85,9 @@ public final class SampleGameClient extends JPanel {
                     repaint();
 
                     TimeUnit.MILLISECONDS.sleep(30); // todo: proper fps system (timeDeltaTime) !!!!
-                } catch (InterruptedException e) {
+                } catch (InterruptedException interruptedException) {
 
-                    e.printStackTrace(); // todo: log4j
+                    logger.error(interruptedException.getMessage(), interruptedException);
                 }
             }
 

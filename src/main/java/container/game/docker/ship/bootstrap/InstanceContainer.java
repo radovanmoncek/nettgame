@@ -9,6 +9,8 @@ import io.netty.channel.ChannelHandler;
 import io.netty.channel.ChannelOption;
 import io.netty.channel.nio.NioEventLoopGroup;
 import io.netty.channel.socket.nio.NioServerSocketChannel;
+import org.apache.logging.log4j.LogManager;
+import org.apache.logging.log4j.Logger;
 
 import java.util.*;
 import java.util.function.Function;
@@ -28,6 +30,7 @@ import java.util.function.Supplier;
  * </p>
  */
 public final class InstanceContainer {
+    private static final Logger logger = LogManager.getLogger(InstanceContainer.class);
     /**
      * Singleton instance
      */
@@ -98,11 +101,19 @@ public final class InstanceContainer {
             final Class<? extends ProtocolDataUnit> protocolDataUnit
     ) {
 
-        if (protocolIdentifierToProtocolDataUnitBindings.containsKey(protocolIdentifier))
-            throw new IllegalArgumentException("Protocol identifier " + protocolIdentifier + " already registered."); //todo: log4j
+        if (protocolIdentifierToProtocolDataUnitBindings.containsKey(protocolIdentifier)) {
 
-        if (protocolIdentifier < ProtocolDataUnit.MIN_PROTOCOL_IDENTIFIER || ProtocolDataUnit.MAX_PROTOCOL_IDENTIFIER < protocolIdentifier)
-            throw new IllegalArgumentException("Protocol identifier " + protocolIdentifier + " is out of bounds."); // todo: log4j
+            logger.error("Protocol identifier {} already registered.", protocolIdentifier);
+
+            return this;
+        }
+
+        if (protocolIdentifier < ProtocolDataUnit.MIN_PROTOCOL_IDENTIFIER || ProtocolDataUnit.MAX_PROTOCOL_IDENTIFIER < protocolIdentifier) {
+
+            logger.error("Protocol identifier {} is out of bounds.", protocolIdentifier);
+
+            return this;
+        }
 
         protocolIdentifierToProtocolDataUnitBindings.put(protocolIdentifier, protocolDataUnit);
 
@@ -131,7 +142,7 @@ public final class InstanceContainer {
 
             final var serverChannel = bootstrap.bind(port).sync().channel();
 
-            System.out.printf("GameServer running on port %d\n", port); //todo: log4j
+            logger.info("GameServer running on port {}", port);
 
             gracefulShutdownTask = new TimerTask() {
 
@@ -148,7 +159,7 @@ public final class InstanceContainer {
         }
         catch (final InterruptedException interruptedException) {
 
-            interruptedException.printStackTrace(); //todo: log4j
+            logger.error(interruptedException.getMessage(), interruptedException);
         }
     }
 
@@ -159,7 +170,7 @@ public final class InstanceContainer {
 
     public void shutdownGracefullyAfterNSeconds(final int seconds) {
 
-        System.out.println("Shutting down gracefully after " + seconds + " seconds"); //todo: log4j
+        logger.warn("Shutting down gracefully after {} seconds", seconds);
 
         new Timer()
                 .schedule(gracefulShutdownTask, (long) seconds * 1000);

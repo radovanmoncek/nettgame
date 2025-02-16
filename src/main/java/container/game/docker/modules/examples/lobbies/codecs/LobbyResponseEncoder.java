@@ -1,6 +1,6 @@
-package container.game.docker.modules.examples.lobby.codecs;
+package container.game.docker.modules.examples.lobbies.codecs;
 
-import container.game.docker.modules.examples.lobby.models.LobbyResponseProtocolDataUnit;
+import container.game.docker.modules.examples.lobbies.models.LobbyResponseProtocolDataUnit;
 import container.game.docker.ship.parents.codecs.Encoder;
 import container.game.docker.ship.parents.models.ProtocolDataUnit;
 import io.netty.buffer.ByteBuf;

@@ -5,8 +5,9 @@ import io.netty.buffer.ByteBuf;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.handler.codec.ByteToMessageDecoder;
 import io.netty.handler.codec.CorruptedFrameException;
+import org.apache.logging.log4j.LogManager;
+import org.apache.logging.log4j.Logger;
 
-import java.nio.CharBuffer;
 import java.nio.charset.Charset;
 import java.util.List;
 import java.util.Map;
@@ -17,6 +18,7 @@ import static container.game.docker.ship.parents.models.ProtocolDataUnit.*;
  * This class provides basic encoding utility.
  */
 public abstract class Decoder<P extends ProtocolDataUnit> extends ByteToMessageDecoder {
+    private static final Logger logger = LogManager.getLogger(Decoder.class);
     private final Class<P> protocolDataUnitClass;
     private final Map<Byte, Class<? extends ProtocolDataUnit>> protocolIdentifierToProtocolDataUnitBindings;
 
@@ -68,7 +70,7 @@ public abstract class Decoder<P extends ProtocolDataUnit> extends ByteToMessageD
     @Override
     public final void exceptionCaught(final ChannelHandlerContext channelHandlerContext, final Throwable cause) {
 
-        cause.printStackTrace(); //todo: log4j
+        logger.error(cause.getMessage(), cause);
     }
 
     public final String decodeString(final ByteBuf in) {

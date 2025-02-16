@@ -9,6 +9,6 @@ module container.game.docker {
     requires com.github.dockerjava.api;
     requires guava;
     requires javassist;
+    requires org.apache.logging.log4j;
     requires java.desktop;
-    requires com.fasterxml.jackson.annotation;
 }

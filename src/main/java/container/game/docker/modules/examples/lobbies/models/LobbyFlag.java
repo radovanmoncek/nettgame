@@ -1,4 +1,4 @@
-package container.game.docker.modules.examples.lobby.models;
+package container.game.docker.modules.examples.lobbies.models;
 
 public enum LobbyFlag {
 
@@ -10,5 +10,6 @@ public enum LobbyFlag {
     LEAVE,
     INFO,
     MEMBER_JOINED,
-    MEMBER_LEFT
+    MEMBER_LEFT,
+    INVALID
 }

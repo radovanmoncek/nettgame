@@ -1,4 +1,4 @@
-package container.game.docker.modules.examples.lobby.models;
+package container.game.docker.modules.examples.lobbies.models;
 
 import container.game.docker.ship.parents.models.ProtocolDataUnit;
 
@@ -10,4 +10,10 @@ public record LobbyResponseProtocolDataUnit(
         String memberNickname1,
         String memberNickname2,
         String lobbyUUID
-) implements ProtocolDataUnit {}
+) implements ProtocolDataUnit {
+
+    public static LobbyResponseProtocolDataUnit newINVALID() {
+
+        return new LobbyResponseProtocolDataUnit(LobbyFlag.INVALID, null, null, null);
+    }
+}
