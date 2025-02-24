@@ -1,6 +1,8 @@
 package container.game.docker.ship.parents.handlers;
 
-import container.game.docker.ship.data.structures.MultiValueTypeMap;
+import container.game.docker.ship.parents.creators.Creator;
+import container.game.docker.ship.parents.models.PlayerSessionData;
+import container.game.docker.ship.parents.products.Product;
 import io.netty.channel.Channel;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.ChannelId;
@@ -16,14 +18,18 @@ import java.util.List;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.stream.Stream;
 
-public abstract class ChannelGroupHandler<P1 extends ProtocolDataUnit, P2 extends ProtocolDataUnit> extends SimpleChannelInboundHandler<P1> {
+public abstract class ChannelGroupHandler<P1 extends ProtocolDataUnit, P2 extends ProtocolDataUnit> extends SimpleChannelInboundHandler<P1> implements Product {
     private static final Logger logger = LogManager.getLogger(ChannelGroupHandler.class);
-    protected static final String playerChannelIdProperty = "playerChannelId";
+    private Creator playerSessionDataCreator;
     /**
      * All the client channels connected to this server
      */
     private static final ChannelGroup players;
-    private static final ConcurrentHashMap<ChannelId, MultiValueTypeMap> playerSessions;
+    /**
+     * Data session kept for every player during the duration of their connection to the InstanceContainer.
+     * Each player specific session is shared withing, and between each, and all registered handlers.
+     */
+    private static final ConcurrentHashMap<ChannelId, PlayerSessionData> playerSessions;
 
     static {
 
@@ -37,7 +43,7 @@ public abstract class ChannelGroupHandler<P1 extends ProtocolDataUnit, P2 extend
         playerChannelRead(protocolDataUnit, playerSessions.get(channelHandlerContext.channel().id()));
     }
 
-    abstract protected void playerChannelRead(final P1 protocolDataUnit, final MultiValueTypeMap playerSession);
+    abstract protected void playerChannelRead(final P1 protocolDataUnit, final PlayerSessionData playerSession);
 
     @Override
     public final void handlerAdded(final ChannelHandlerContext channelHandlerContext) {
@@ -45,7 +51,11 @@ public abstract class ChannelGroupHandler<P1 extends ProtocolDataUnit, P2 extend
         if(!players.add(channelHandlerContext.channel()))
             return;
 
-        playerSessions.put(channelHandlerContext.channel().id(), MultiValueTypeMap.of(playerChannelIdProperty, channelHandlerContext.channel().id()));
+        final var playerSessionData = (PlayerSessionData) playerSessionDataCreator.newProduct();
+
+        playerSessionData.placePlayerChannelId(channelHandlerContext.channel().id());
+
+        playerSessions.put(channelHandlerContext.channel().id(), playerSessionData);
 
         logger.info("Player with ChannelId {} has connected", channelHandlerContext.channel().id());
     }
@@ -73,7 +83,7 @@ public abstract class ChannelGroupHandler<P1 extends ProtocolDataUnit, P2 extend
         logger.info("Player Channel with ChannelId {} has registered", channelHandlerContext.channel().id());
     }
 
-    abstract protected void playerDisconnected(final MultiValueTypeMap playerSession);
+    abstract protected void playerDisconnected(final PlayerSessionData playerSession);
 
     protected final void unicastToClientChannel(final P2 protocolDataUnit, final ChannelId channelId) {
 

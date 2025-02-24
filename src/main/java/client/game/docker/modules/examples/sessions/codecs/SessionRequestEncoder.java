@@ -9,11 +9,6 @@ import java.util.Map;
 
 public class SessionRequestEncoder extends Encoder<SessionRequestProtocolDataUnit> {
 
-    public SessionRequestEncoder(final Map<Class<? extends ProtocolDataUnit>, Byte> classByteMap) {
-
-        super(classByteMap);
-    }
-
     @Override
     protected void encodeBodyAfterHeader(final SessionRequestProtocolDataUnit protocolDataUnit, final ByteBuf out) {
 

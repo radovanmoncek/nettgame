@@ -1,20 +1,22 @@
 package container.game.docker.ship.parents.codecs;
 
 import container.game.docker.ship.parents.models.ProtocolDataUnit;
+import container.game.docker.ship.parents.products.Product;
 import io.netty.buffer.ByteBuf;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.handler.codec.MessageToByteEncoder;
 
 import java.nio.CharBuffer;
 import java.nio.charset.Charset;
+import java.util.HashMap;
 import java.util.Map;
 
-public abstract class Encoder<P extends ProtocolDataUnit> extends MessageToByteEncoder<P> {
+public abstract class Encoder<P extends ProtocolDataUnit> extends MessageToByteEncoder<P> implements Product {
     private final Map<Class<? extends ProtocolDataUnit>, Byte> protocolDataUnitToProtocolIdentifierBindings;
 
-    public Encoder(final Map<Class<? extends ProtocolDataUnit>, Byte> protocolDataUnitToProtocolIdentifierBindings) {
+    public Encoder() {
 
-        this.protocolDataUnitToProtocolIdentifierBindings = protocolDataUnitToProtocolIdentifierBindings;
+        this.protocolDataUnitToProtocolIdentifierBindings = new HashMap<>();
     }
 
     @Override

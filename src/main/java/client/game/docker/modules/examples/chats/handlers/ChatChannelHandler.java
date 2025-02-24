@@ -12,12 +12,8 @@ import javax.swing.*;
  */
 public class ChatChannelHandler extends ChannelHandler<ChatMessageProtocolDataUnit, ChatMessageProtocolDataUnit> {
     private static final Logger logger = LogManager.getLogger(ChatChannelHandler.class);
-    private final JPanel client;
 
-    public ChatChannelHandler(final JPanel client) {
-
-        this.client = client;
-    }
+    public ChatChannelHandler() {}
 
     @Override
     protected void serverChannelRead(final ChatMessageProtocolDataUnit protocolDataUnit) {

@@ -11,9 +11,9 @@ import java.util.Map;
 
 public class LobbyResponseDecoder extends Decoder<LobbyResponseProtocolDataUnit> {
 
-    public LobbyResponseDecoder(final Map<Byte, Class<? extends ProtocolDataUnit>> protocolIdentifierToProtocolDataUnitBindings) {
+    public LobbyResponseDecoder() {
 
-        super(protocolIdentifierToProtocolDataUnitBindings, LobbyResponseProtocolDataUnit.class);
+        super(LobbyResponseProtocolDataUnit.class);
     }
 
     @Override

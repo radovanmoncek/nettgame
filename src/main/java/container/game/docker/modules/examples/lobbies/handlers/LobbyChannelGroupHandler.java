@@ -1,9 +1,10 @@
 package container.game.docker.modules.examples.lobbies.handlers;
 
 import container.game.docker.modules.examples.lobbies.models.LobbyResponseProtocolDataUnit;
-import container.game.docker.ship.data.structures.MultiValueTypeMap;
+import container.game.docker.ship.examples.models.ExampleNetworkedGamePlayerSessionData;
 import container.game.docker.ship.parents.handlers.ChannelGroupHandler;
 import container.game.docker.modules.examples.lobbies.models.LobbyRequestProtocolDataUnit;
+import container.game.docker.ship.parents.models.PlayerSessionData;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 
@@ -12,21 +13,23 @@ import java.util.concurrent.ConcurrentHashMap;
 
 public final class LobbyChannelGroupHandler extends ChannelGroupHandler<LobbyRequestProtocolDataUnit, LobbyResponseProtocolDataUnit> {
     private static final Logger logger = LogManager.getLogger(LobbyChannelGroupHandler.class);
-    private static final String lobbyUUIDProperty = "lobbyUUID";
-    private static final String lobbyMember1SessionProperty = "lobbyMember1";
-    private static final ConcurrentHashMap<UUID, MultiValueTypeMap> lobbyData = new ConcurrentHashMap<>();
+    private static final ConcurrentHashMap<UUID, ExampleNetworkedGamePlayerSessionData> lobbyData = new ConcurrentHashMap<>();
 
     @Override
-    public void playerChannelRead(final LobbyRequestProtocolDataUnit lobbyRequestProtocolDataUnit, final MultiValueTypeMap playerSession) {
+    protected void playerChannelRead(LobbyRequestProtocolDataUnit protocolDataUnit, PlayerSessionData playerSession) {
+        playerChannelRead(protocolDataUnit, (ExampleNetworkedGamePlayerSessionData) playerSession);
+    }
 
-        final var playerChannelIdOptional = playerSession.getChannelId(playerChannelIdProperty);
+    public void playerChannelRead(final LobbyRequestProtocolDataUnit lobbyRequestProtocolDataUnit, final ExampleNetworkedGamePlayerSessionData playerSession) {
+
+        final var playerChannelIdOptional = playerSession.retrievePlayerChannelId();
 
         if(playerChannelIdOptional.isEmpty())
             return;
 
         final var playerChannelId = playerChannelIdOptional.get();
 
-        switch (lobbyRequestProtocolDataUnit.lobbyFlag()) {
+        /*switch (lobbyRequestProtocolDataUnit.lobbyFlag()) {
 
             case CREATE -> {
 
@@ -41,7 +44,7 @@ public final class LobbyChannelGroupHandler extends ChannelGroupHandler<LobbyReq
 
                 final var newLobbyUUID = UUID.randomUUID();
 
-                lobbyData.put(newLobbyUUID, MultiValueTypeMap.of(lobbyMember1SessionProperty, playerSession));
+                lobbyData.put(newLobbyUUID, ExampleNetworkedGamePlayerSessionData.of(lobbyMember1SessionProperty, playerSession));
 
                 playerSession.put(lobbyUUIDProperty, newLobbyUUID);
             }
@@ -75,9 +78,9 @@ public final class LobbyChannelGroupHandler extends ChannelGroupHandler<LobbyReq
 
 
             }
-        }
+        }*/
     }
 
     @Override
-    public void playerDisconnected(final MultiValueTypeMap playerSession) {}
+    public void playerDisconnected(final PlayerSessionData playerSession) {}
 }

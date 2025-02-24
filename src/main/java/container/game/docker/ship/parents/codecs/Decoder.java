@@ -1,6 +1,7 @@
 package container.game.docker.ship.parents.codecs;
 
 import container.game.docker.ship.parents.models.ProtocolDataUnit;
+import container.game.docker.ship.parents.products.Product;
 import io.netty.buffer.ByteBuf;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.handler.codec.ByteToMessageDecoder;
@@ -9,6 +10,7 @@ import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 
 import java.nio.charset.Charset;
+import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
@@ -17,17 +19,14 @@ import static container.game.docker.ship.parents.models.ProtocolDataUnit.*;
 /**
  * This class provides basic encoding utility.
  */
-public abstract class Decoder<P extends ProtocolDataUnit> extends ByteToMessageDecoder {
+public abstract class Decoder<P extends ProtocolDataUnit> extends ByteToMessageDecoder implements Product {
     private static final Logger logger = LogManager.getLogger(Decoder.class);
     private final Class<P> protocolDataUnitClass;
     private final Map<Byte, Class<? extends ProtocolDataUnit>> protocolIdentifierToProtocolDataUnitBindings;
 
-    public Decoder(
-            final Map<Byte, Class<? extends ProtocolDataUnit>> protocolIdentifierToProtocolDataUnitBindings,
-            final Class<P> protocolDataUnitClass
-    ) {
+    public Decoder(final Class<P> protocolDataUnitClass) {
 
-        this.protocolIdentifierToProtocolDataUnitBindings = protocolIdentifierToProtocolDataUnitBindings;
+        this.protocolIdentifierToProtocolDataUnitBindings = new HashMap<>();
         this.protocolDataUnitClass = protocolDataUnitClass;
     }
 

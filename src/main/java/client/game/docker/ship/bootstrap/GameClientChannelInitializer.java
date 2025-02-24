@@ -10,23 +10,20 @@ import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 
 import java.util.LinkedList;
-import java.util.function.Supplier;
 
 public final class GameClientChannelInitializer extends ChannelInitializer<SocketChannel> {
     private static final Logger logger = LogManager.getLogger(GameClientChannelInitializer.class);
-    private final LinkedList<Supplier<? extends ChannelHandler>> channelHandlerSuppliers;
+    private final LinkedList<ChannelHandler> channelHandlers;
 
-    public GameClientChannelInitializer(final LinkedList<Supplier<? extends ChannelHandler>> channelHandlerSuppliers) {
+    public GameClientChannelInitializer(final LinkedList<ChannelHandler> channelHandlers) {
 
-        this.channelHandlerSuppliers = channelHandlerSuppliers;
+        this.channelHandlers = channelHandlers;
     }
 
     @Override
     protected void initChannel(final SocketChannel socketChannel) {
 
-        socketChannel.pipeline().addFirst(new LoggingHandler(LogLevel.INFO));
-
-        channelHandlerSuppliers.stream().map(Supplier::get).forEach(socketChannel.pipeline()::addLast);
+        channelHandlers.forEach(socketChannel.pipeline()::addLast);
     }
 
     @Override

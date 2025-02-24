@@ -1,19 +1,25 @@
 package client.game.docker.ship.bootstrap;
 
-import container.game.docker.ship.factories.DecoderFactory;
-import container.game.docker.ship.factories.EncoderFactory;
+import container.game.docker.ship.parents.codecs.Decoder;
+import container.game.docker.ship.parents.codecs.Encoder;
 import container.game.docker.ship.parents.models.ProtocolDataUnit;
 import io.netty.bootstrap.Bootstrap;
 import io.netty.channel.*;
 import io.netty.channel.nio.NioEventLoopGroup;
+import io.netty.channel.nio.NioIoHandle;
+import io.netty.channel.nio.NioIoHandler;
 import io.netty.channel.socket.nio.NioSocketChannel;
+import io.netty.handler.logging.LogLevel;
+import io.netty.handler.logging.LoggingHandler;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 
 import java.net.InetAddress;
+import java.nio.channels.spi.SelectorProvider;
 import java.util.*;
+import java.util.concurrent.Executors;
+import java.util.concurrent.ThreadFactory;
 import java.util.concurrent.TimeUnit;
-import java.util.function.Supplier;
 
 /**
  * <p>
@@ -32,14 +38,14 @@ public final class GameClient {
     private static GameClient instance;
     private int gameServerPort;
     private InetAddress gameServerAddress;
-    private final LinkedList<Supplier<? extends ChannelHandler>> channelHandlerSuppliers;
+    private final LinkedList<ChannelHandler> channelHandlers;
     private final Map<Byte, Class<? extends ProtocolDataUnit>> protocolIdentifierToProtocolDataUnitBindings;
     private final Map<Class<? extends ProtocolDataUnit>, Byte> protocolDataUnitToProtocolIdentifierBindings;
     private TimerTask gracefulShutdownTimerTask;
 
     private GameClient() {
 
-        channelHandlerSuppliers = new LinkedList<>();
+        channelHandlers = new LinkedList<>(List.of(new LoggingHandler(LogLevel.INFO)));
         protocolIdentifierToProtocolDataUnitBindings = new HashMap<>();
         protocolDataUnitToProtocolIdentifierBindings = new HashMap<>();
     }
@@ -51,7 +57,7 @@ public final class GameClient {
     public void run(int reconnectIntervalSeconds, int failReconnectAfterAttempts) {
 
         final var bootstrap = new Bootstrap();
-        final var workerGroup = new NioEventLoopGroup();
+        final var workerGroup = new MultiThreadIoEventLoopGroup(NioIoHandler.newFactory());
 
         try {
 
@@ -59,7 +65,7 @@ public final class GameClient {
                     .group(workerGroup)
                     .channel(NioSocketChannel.class)
                     .option(ChannelOption.SO_KEEPALIVE, true)
-                    .handler(new GameClientChannelInitializer(channelHandlerSuppliers));
+                    .handler(new GameClientChannelInitializer(channelHandlers));
 
             Channel serverChannel = null;
 
@@ -114,17 +120,20 @@ public final class GameClient {
         }
     }
 
-    public static GameClient newInstance() throws Exception {
+    public static GameClient newInstance() {
 
         if (Objects.isNull(instance))
             instance = new GameClient()
                     .withServerPort(4321)
-                    .withInstanceContainerAddress(InetAddress.getLocalHost());
+                    .withInstanceContainerAddress(InetAddress.getLoopbackAddress());
 
         return instance;
     }
 
     public GameClient withServerPort(final int serverPort) {
+
+        if(serverPort <= 1024 || serverPort > 65535)
+            throw new IllegalArgumentException("Server port must be between 1024 and 65535");
 
         this.gameServerPort = serverPort;
 
@@ -138,23 +147,49 @@ public final class GameClient {
         return this;
     }
 
-    public GameClient withChannelHandler(final Supplier<ChannelHandler> channelHandlerSupplier) {
+    public GameClient withChannelHandler(final ChannelHandler channelHandler) {
 
-        channelHandlerSuppliers.add(channelHandlerSupplier);
-
-        return this;
-    }
-
-    public GameClient withEncoder(final EncoderFactory encoderFactory) {
-
-        channelHandlerSuppliers.add(() -> encoderFactory.apply(protocolDataUnitToProtocolIdentifierBindings));
+        channelHandlers.add(channelHandler);
 
         return this;
     }
 
-    public GameClient withDecoder(final DecoderFactory decoderFactory) {
+    public GameClient withEncoder(final Encoder<? extends ProtocolDataUnit> encoder) {
 
-        channelHandlerSuppliers.add(() -> decoderFactory.apply(protocolIdentifierToProtocolDataUnitBindings));
+        try {
+
+            final var encoderClass = encoder.getClass().isAnonymousClass() ? encoder.getClass().getSuperclass().getSuperclass() : encoder.getClass().getSuperclass();
+
+            final var bindingsField = encoderClass.getDeclaredField("protocolDataUnitToProtocolIdentifierBindings");
+
+            bindingsField.setAccessible(true);
+            bindingsField.set(encoder, protocolDataUnitToProtocolIdentifierBindings);
+        } catch (final Exception exception) {
+
+            logger.error(new Exception("Failed to inject bindings into encoder, expect incorrect operation", exception));
+        }
+
+        channelHandlers.add(encoder);
+
+        return this;
+    }
+
+    public GameClient withDecoder(final Decoder<? extends ProtocolDataUnit> decoder) {
+
+        try{
+
+            final var decoderClass = decoder.getClass().isAnonymousClass() ? decoder.getClass().getSuperclass().getSuperclass() : decoder.getClass().getSuperclass();
+            final var bindingsField = decoderClass.getDeclaredField("protocolIdentifierToProtocolDataUnitBindings");
+
+            bindingsField.setAccessible(true);
+            bindingsField.set(decoder, protocolIdentifierToProtocolDataUnitBindings);
+        }
+        catch (final Exception exception) {
+
+            logger.error(new Exception("Failed to inject bindings into decoder, expect incorrect operation", exception));
+        }
+
+        channelHandlers.add(decoder);
 
         return this;
     }

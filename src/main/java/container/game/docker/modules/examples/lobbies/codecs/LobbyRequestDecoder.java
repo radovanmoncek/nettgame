@@ -12,9 +12,9 @@ import java.util.Map;
 
 public final class LobbyRequestDecoder extends Decoder<LobbyRequestProtocolDataUnit> {
 
-    public LobbyRequestDecoder(final Map<Byte, Class<? extends ProtocolDataUnit>> protocolIdentifierToProtocolDataUnitBindings) {
+    public LobbyRequestDecoder() {
 
-        super(protocolIdentifierToProtocolDataUnitBindings, LobbyRequestProtocolDataUnit.class);
+        super(LobbyRequestProtocolDataUnit.class);
     }
 
     @Override

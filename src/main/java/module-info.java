@@ -11,4 +11,6 @@ module container.game.docker {
     requires javassist;
     requires org.apache.logging.log4j;
     requires java.desktop;
+    requires org.hibernate.orm.core;
+    requires jdk.compiler;
 }

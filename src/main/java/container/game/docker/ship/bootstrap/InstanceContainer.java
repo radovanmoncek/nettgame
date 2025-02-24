@@ -1,20 +1,21 @@
 package container.game.docker.ship.bootstrap;
 
+import container.game.docker.ship.examples.creators.ServiceCreator;
 import container.game.docker.ship.parents.codecs.Decoder;
 import container.game.docker.ship.parents.codecs.Encoder;
+import container.game.docker.ship.parents.creators.Creator;
 import container.game.docker.ship.parents.handlers.ChannelGroupHandler;
 import container.game.docker.ship.parents.models.ProtocolDataUnit;
+import container.game.docker.ship.parents.products.Product;
 import io.netty.bootstrap.ServerBootstrap;
-import io.netty.channel.ChannelHandler;
 import io.netty.channel.ChannelOption;
-import io.netty.channel.nio.NioEventLoopGroup;
+import io.netty.channel.MultiThreadIoEventLoopGroup;
+import io.netty.channel.nio.NioIoHandler;
 import io.netty.channel.socket.nio.NioServerSocketChannel;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 
 import java.util.*;
-import java.util.function.Function;
-import java.util.function.Supplier;
 
 /**
  * <p>
@@ -40,9 +41,10 @@ public final class InstanceContainer {
      */
     private Integer port;
     private TimerTask gracefulShutdownTask;
-    private final LinkedList<Supplier<? extends ChannelHandler>> channelGroupHandlerSuppliers;
+    private final LinkedList<Creator> channelGroupHandlerSuppliers;
     private final Map<Byte, Class<? extends ProtocolDataUnit>> protocolIdentifierToProtocolDataUnitBindings;
     private final Map<Class<? extends ProtocolDataUnit>, Byte> protocolDataUnitToProtocolIdentifierBindings;
+    private Creator playerSessionDataCreator;
 
     private InstanceContainer() {
 
@@ -65,7 +67,7 @@ public final class InstanceContainer {
         if (port <= 1024 || port > 65535)
             throw new IllegalArgumentException(
                 """
-                    Port number must not belong to the interval [1, 1024], which is a reserved port pool, or be lesser than its lowest bound.
+                    Port number must not belong to the interval [-Inf, 1024] U [65535, Inf], which is a reserved port pool, or be lesser than its lowest bound.
                 """
             );
 
@@ -74,24 +76,106 @@ public final class InstanceContainer {
         return this;
     }
 
-    public InstanceContainer withChannelGroupHandlerFactory(
-            final Supplier<ChannelGroupHandler<? extends ProtocolDataUnit, ? extends ProtocolDataUnit>> channelGroupHandlerSupplier
-    ) {
-         channelGroupHandlerSuppliers.add(channelGroupHandlerSupplier);
+    public InstanceContainer withPlayerSessionDataCreator(final Creator playerSessionDataCreator) {
+
+        this.playerSessionDataCreator = playerSessionDataCreator;
 
         return this;
     }
 
-    public InstanceContainer withDecoderFactory(final Function<Map<Byte, Class<? extends ProtocolDataUnit>>, Decoder<? extends ProtocolDataUnit>> decoderFactory) {
+    public InstanceContainer withChannelGroupHandlerCreator(final Creator channelGroupHandlerCreator) {
 
-        channelGroupHandlerSuppliers.add(() -> decoderFactory.apply(protocolIdentifierToProtocolDataUnitBindings));
+        channelGroupHandlerSuppliers.add(new Creator() {
+
+            @Override
+            public Product newProduct() {
+
+                final var channelGroupHandler = (ChannelGroupHandler<?, ?>) channelGroupHandlerCreator.newProduct();
+
+                try {
+
+                    final var playerSessionDataCreator = channelGroupHandler
+                            .getClass()
+                            .getSuperclass()
+                            .getDeclaredField("playerSessionDataCreator");
+
+                    playerSessionDataCreator.setAccessible(true);
+                    playerSessionDataCreator.set(channelGroupHandler, InstanceContainer.this.playerSessionDataCreator);
+                }
+                catch (final Exception exception) {
+
+                    logger.error(new Exception("Failed to inject ChannelGroupHandler, expect incorrect operation", exception));
+                }
+
+                return channelGroupHandler;
+            }
+        });
 
         return this;
     }
 
-    public InstanceContainer withEncoderFactory(final Function<Map<Class<? extends ProtocolDataUnit>, Byte>, Encoder<? extends ProtocolDataUnit>> encoderFactory) {
+    public InstanceContainer withDecoderCreator(final Creator decoderCreator) {
 
-        channelGroupHandlerSuppliers.add(() -> encoderFactory.apply(protocolDataUnitToProtocolIdentifierBindings));
+        channelGroupHandlerSuppliers.add(new Creator(){
+
+            @Override
+            public Product newProduct() {
+
+                final var decoder = (Decoder<?>) decoderCreator.newProduct();
+
+                try {
+
+                    final var bindingsField = decoder
+                            .getClass()
+                            .getSuperclass()
+                            .getDeclaredField("protocolIdentifierToProtocolDataUnitBindings");
+
+                    bindingsField.setAccessible(true);
+                    bindingsField.set(decoder, protocolIdentifierToProtocolDataUnitBindings);
+                }
+                catch (final Exception exception) {
+
+                    logger.error(new Exception("Unable to inject bindings, expect incorrect operation", exception));
+                }
+
+                return decoder;
+            }
+        });
+
+        return this;
+    }
+
+    public InstanceContainer withEncoderCreator(final Creator encoderCreator) {
+
+        channelGroupHandlerSuppliers.add(new Creator() {
+
+            @Override
+            public Product newProduct() {
+
+                final Encoder<?> encoder = (Encoder<?>) encoderCreator.newProduct();
+
+                try {
+
+                    final var bindingsField = encoder
+                            .getClass()
+                            .getSuperclass()
+                            .getDeclaredField("protocolDataUnitToProtocolIdentifierBindings");
+
+                    bindingsField.setAccessible(true);
+                    bindingsField.set(encoder, protocolDataUnitToProtocolIdentifierBindings);
+                } catch (final Exception exception) {
+
+                    logger.error(new Exception("Unable to inject bindings, expect incorrect operation", exception));
+                }
+
+                return encoder;
+            }
+        });
+
+        return this;
+    }
+
+    public InstanceContainer withServiceCreator(final ServiceCreator serviceCreator) {
 
         return this;
     }
@@ -130,8 +214,8 @@ public final class InstanceContainer {
      * @param shutdownSeconds the number of seconds before this {@link InstanceContainer} is gracefully shutdown.
      */
     public void run(int shutdownSeconds) {
-        final var bossGroup = new NioEventLoopGroup();
-        final var workerGroup = new NioEventLoopGroup();
+        final var bossGroup = new MultiThreadIoEventLoopGroup(NioIoHandler.newFactory());
+        final var workerGroup = new MultiThreadIoEventLoopGroup(NioIoHandler.newFactory());
         final var bootstrap = new ServerBootstrap()
                 .group(bossGroup, workerGroup)
                 .channel(NioServerSocketChannel.class)
@@ -155,7 +239,9 @@ public final class InstanceContainer {
                 }
             };
 
-            serverChannel.closeFuture().addListener(future -> shutdownGracefullyAfterNSeconds(shutdownSeconds));
+            serverChannel
+                    .closeFuture()
+                    .addListener(future -> shutdownGracefullyAfterNSeconds(shutdownSeconds));
         }
         catch (final InterruptedException interruptedException) {
 

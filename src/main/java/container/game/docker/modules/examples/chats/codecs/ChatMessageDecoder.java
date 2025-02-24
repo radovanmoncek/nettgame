@@ -11,9 +11,9 @@ import java.util.Map;
 
 public final class ChatMessageDecoder extends Decoder<ChatMessageProtocolDataUnit> {
 
-    public ChatMessageDecoder(final Map<Byte, Class<? extends ProtocolDataUnit>> protocolIdentifierToProtocolDataUnitBindings) {
+    public ChatMessageDecoder() {
 
-        super(protocolIdentifierToProtocolDataUnitBindings, ChatMessageProtocolDataUnit.class);
+        super(ChatMessageProtocolDataUnit.class);
     }
 
     @Override

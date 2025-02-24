@@ -11,9 +11,9 @@ import java.util.Map;
 
 public final class SessionRequestDecoder extends Decoder<SessionRequestProtocolDataUnit> {
 
-    public SessionRequestDecoder(final Map<Byte, Class<? extends ProtocolDataUnit>> protocolIdentifierToProtocolDataUnitBindings) {
+    public SessionRequestDecoder() {
 
-        super(protocolIdentifierToProtocolDataUnitBindings, SessionRequestProtocolDataUnit.class);
+        super(SessionRequestProtocolDataUnit.class);
     }
 
     @Override

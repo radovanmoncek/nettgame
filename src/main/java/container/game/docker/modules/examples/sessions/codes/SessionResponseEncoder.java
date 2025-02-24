@@ -10,12 +10,7 @@ import java.util.Map;
 /**
  * Example.
  */
-public class SessionResponseEncoder extends Encoder<SessionResponseProtocolDataUnit> {
-
-    public SessionResponseEncoder(final Map<Class<? extends ProtocolDataUnit>, Byte> protocolDataUnitToProtocolIdentifierBindings) {
-
-        super(protocolDataUnitToProtocolIdentifierBindings);
-    }
+public final class SessionResponseEncoder extends Encoder<SessionResponseProtocolDataUnit> {
 
     @Override
     protected void encodeBodyAfterHeader(final SessionResponseProtocolDataUnit protocolDataUnit, final ByteBuf out) {

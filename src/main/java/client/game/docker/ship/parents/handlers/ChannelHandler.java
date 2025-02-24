@@ -35,5 +35,14 @@ public abstract class ChannelHandler<P1 extends ProtocolDataUnit, P2 extends Pro
         serverChannel.writeAndFlush(protocolDataUnit);
     }
 
+    protected final boolean disconnectFromInstanceContainer() throws InterruptedException {
+
+        serverChannel.close();
+
+        final var afterChannelClosed = serverChannel.closeFuture().sync();
+
+        return afterChannelClosed.isSuccess();
+    }
+
     abstract protected void serverChannelRead(final P1 protocolDataUnit);
 }

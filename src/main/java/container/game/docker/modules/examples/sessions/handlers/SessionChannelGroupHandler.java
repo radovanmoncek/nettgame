@@ -3,40 +3,44 @@ package container.game.docker.modules.examples.sessions.handlers;
 import container.game.docker.modules.examples.sessions.models.SessionFlag;
 import container.game.docker.modules.examples.sessions.models.SessionRequestProtocolDataUnit;
 import container.game.docker.modules.examples.sessions.models.SessionResponseProtocolDataUnit;
-import container.game.docker.ship.examples.concurrent.SubHandler;
-import container.game.docker.ship.data.structures.MultiValueTypeMap;
-import container.game.docker.ship.examples.functions.TriFunction;
+import container.game.docker.ship.examples.models.ExampleNetworkedGamePlayerSessionData;
 import container.game.docker.ship.parents.handlers.ChannelGroupHandler;
+import container.game.docker.ship.parents.models.PlayerSessionData;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 
+import java.util.Objects;
 import java.util.UUID;
 import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.Executors;
 import java.util.concurrent.TimeUnit;
+import java.util.function.BiConsumer;
+import java.util.function.Supplier;
 
 /**
  * Example game session handler.
  */
 public final class SessionChannelGroupHandler extends ChannelGroupHandler<SessionRequestProtocolDataUnit, SessionResponseProtocolDataUnit> {
     private static final Logger logger = LogManager.getLogger(SessionChannelGroupHandler.class);
-    private static final int maxNickNameLength = 8, xBound = 800, yBound = 600, moveDelta = 4;
-    private static final ConcurrentHashMap<UUID, MultiValueTypeMap> sessionData;
-    private static final ThreadGroup subHandlers;
+    private static final int maxNickNameLength = 8, xBound = 2000, yBound = 2000, moveDelta = 8;
+    private static final ConcurrentHashMap<UUID, SessionData> sessionData;
     private static final ConcurrentHashMap<String, UUID> shortToLongUUIDs;
 
     static {
 
         sessionData = new ConcurrentHashMap<>();
         shortToLongUUIDs = new ConcurrentHashMap<>();
-        subHandlers = new ThreadGroup("Game Sessions");
     }
 
-    private static final String sessionUUIDProperty = "sessionUUID";
-
     @Override
-    protected void playerChannelRead(final SessionRequestProtocolDataUnit sessionRequestProtocolDataUnit, final MultiValueTypeMap playerSession) {
+    protected void playerChannelRead(SessionRequestProtocolDataUnit protocolDataUnit, PlayerSessionData playerSession) {
 
-        final var playerChannelIdOptional = playerSession.getChannelId(playerChannelIdProperty);
+        playerChannelRead(protocolDataUnit, (ExampleNetworkedGamePlayerSessionData) playerSession);
+    }
+
+    private void playerChannelRead(final SessionRequestProtocolDataUnit sessionRequestProtocolDataUnit, final ExampleNetworkedGamePlayerSessionData playerSession) {
+
+        final var playerChannelIdOptional = playerSession.retrievePlayerChannelId();
 
         if (playerChannelIdOptional.isEmpty()) {
 
@@ -47,7 +51,7 @@ public final class SessionChannelGroupHandler extends ChannelGroupHandler<Sessio
 
         final var playerChannelId = playerChannelIdOptional.get();
 
-        final var playerSessionUUIDOptional = playerSession.getUUID(sessionUUIDProperty);
+        final var playerSessionUUIDOptional = playerSession.retrieveSessionUUID();
 
         if (sessionRequestProtocolDataUnit.nickname().length() > maxNickNameLength) {
 
@@ -69,15 +73,16 @@ public final class SessionChannelGroupHandler extends ChannelGroupHandler<Sessio
 
                 logger.info("A player has requested session start {}", sessionRequestProtocolDataUnit);
 
-                if (playerSession.containsKey(sessionUUIDProperty)) {
+                if (playerSession.retrieveSessionUUID().isPresent()) {
 
                     return;
                 }
 
-                playerSession.put("x", 0);
-                playerSession.put("y", 0);
-                playerSession.put("rotationAngle", 0);
-                playerSession.put("nickname", sessionRequestProtocolDataUnit.nickname());
+                playerSession.placeX(xBound / 2);
+                playerSession.placeY(yBound / 2);
+                playerSession.placeRotationAngle(0);
+                playerSession.placeNickname(sessionRequestProtocolDataUnit.nickname());
+                playerSession.placeWantsSessionToStop(false);
 
                 createAndStartSession(new SessionHandler(), playerSession);
             }
@@ -86,7 +91,7 @@ public final class SessionChannelGroupHandler extends ChannelGroupHandler<Sessio
 
                 logger.info("A player has requested session end {}", sessionRequestProtocolDataUnit);
 
-                playerSession.put("sessionStopped", true);
+                playerSession.placeWantsSessionToStop(true);
             }
 
             case JOIN -> {
@@ -107,32 +112,32 @@ public final class SessionChannelGroupHandler extends ChannelGroupHandler<Sessio
                     return;
                 }
 
-                playerSession.put("sessionUUID", sessionUUID);
-                playerSession.put("x", 0);
-                playerSession.put("y", 0);
-                playerSession.put("rotationAngle", 0);
-                playerSession.put("nickname", sessionRequestProtocolDataUnit.nickname());
+                playerSession.placeSessionUUID(sessionUUID);
+                playerSession.placeX(xBound / 2);
+                playerSession.placeY(yBound / 2);
+                playerSession.placeRotationAngle(0);
+                playerSession.placeNickname(sessionRequestProtocolDataUnit.nickname());
 
                 final var gameSession = sessionData.get(sessionUUID);
 
-                if (gameSession == null || gameSession.containsKey("player2Session")){
+                if (gameSession == null || gameSession.player2Session != null){
 
                     unicastToClientChannel(SessionResponseProtocolDataUnit.newINVALID(), playerChannelId);
 
                     return;
                 }
 
-                gameSession.put("player2Session", playerSession);
-                gameSession.put("secondPlayerJoined", true);
+                gameSession.secondPlayerJoined = true;
+                gameSession.player2Session = playerSession;
 
                 logger.info("A player has requested session join {}", sessionUUID);
             }
 
             case STATE -> {
 
-                final var xOptional = playerSession.getInteger("x");
-                final var yOptional = playerSession.getInteger("y");
-                final var rotationAngleOptional = playerSession.getInteger("rotationAngle");
+                final var xOptional = playerSession.retrieveX();
+                final var yOptional = playerSession.retrieveY();
+                final var rotationAngleOptional = playerSession.retrieveRotationAngle();
 
                 if (xOptional.isEmpty() || yOptional.isEmpty() || rotationAngleOptional.isEmpty())
                     return;
@@ -173,47 +178,54 @@ public final class SessionChannelGroupHandler extends ChannelGroupHandler<Sessio
                     return;
                 }
 
-                playerSession.put("x", sessionRequestProtocolDataUnit.x());
-                playerSession.put("y", sessionRequestProtocolDataUnit.y());
-                playerSession.put("rotationAngle", sessionRequestProtocolDataUnit.rotationAngle());
+                playerSession.placeX(sessionRequestProtocolDataUnit.x());
+                playerSession.placeY(sessionRequestProtocolDataUnit.y());
+                playerSession.placeRotationAngle(sessionRequestProtocolDataUnit.rotationAngle());
             }
         }
     }
 
     @Override
-    protected void playerDisconnected(final MultiValueTypeMap playerSession) {
-
-        playerSession.put("sessionStopped", true);
+    protected void playerDisconnected(PlayerSessionData playerSession) {
+        playerDisconnected((ExampleNetworkedGamePlayerSessionData) playerSession);
     }
 
-    private final class SessionHandler implements TriFunction<MultiValueTypeMap, MultiValueTypeMap, SessionFlag, Boolean> {
+    private void playerDisconnected(final ExampleNetworkedGamePlayerSessionData playerSession) {
+
+        playerSession.placeWantsSessionToStop(true);
+    }
+
+    private final class SessionHandler implements BiConsumer<SessionFlag, SessionData> {
         private int lastGameStateSum = 0;
 
         @Override
-        public Boolean apply(final MultiValueTypeMap player1Session, final MultiValueTypeMap player2Session, final SessionFlag sessionFlag) {
+        public void accept(final SessionFlag sessionFlag, final SessionData sessionData) {
 
-            final var sessionUUIDOptional = player1Session.getUUID("sessionUUID");
+            final var player1Session = sessionData.player1Session;
+            final var player2Session = Objects.requireNonNullElse(sessionData.player2Session, new ExampleNetworkedGamePlayerSessionData());
+
+            final var sessionUUIDOptional = player1Session.retrieveSessionUUID();
 
             if (sessionUUIDOptional.isEmpty()) {
 
-                return true;
+                return;
             }
 
             switch (sessionFlag) {
 
                 case STATE -> {
 
-                    if (player1Session.getBoolean("sessionStopped").orElse(false))
-                        return true;
+                    if (player1Session.retrieveWantsSessionToStop().isPresent() && player1Session.retrieveWantsSessionToStop().get())
+                        return;
 
-                    final var x1Optional = player1Session.getInteger("x");
-                    final var y1Optional = player1Session.getInteger("y");
-                    final var rotationAngle1Optional = player1Session.getInteger("rotationAngle");
-                    final var player1ChannelIdOptional = player1Session.getChannelId("playerChannelId");
-                    final var x2Optional = player2Session.getInteger("x");
-                    final var y2Optional = player2Session.getInteger("y");
-                    final var rotationAngle2Optional = player2Session.getInteger("rotationAngle");
-                    final var player2ChannelIdOptional = player2Session.getChannelId("playerChannelId");
+                    final var x1Optional = player1Session.retrieveX();
+                    final var y1Optional = player1Session.retrieveY();
+                    final var rotationAngle1Optional = player1Session.retrieveRotationAngle();
+                    final var player1ChannelIdOptional = player1Session.retrievePlayerChannelId();
+                    final var x2Optional = player2Session.retrieveX();
+                    final var y2Optional = player2Session.retrieveY();
+                    final var rotationAngle2Optional = player2Session.retrieveRotationAngle();
+                    final var player2ChannelIdOptional = player2Session.retrievePlayerChannelId();
 
                     if (
                             x1Optional.isEmpty()
@@ -222,7 +234,7 @@ public final class SessionChannelGroupHandler extends ChannelGroupHandler<Sessio
                                     || player1ChannelIdOptional.isEmpty()
                     ) {
 
-                        return false;
+                        return;
                     }
 
                     final var player1ChannelId = player1ChannelIdOptional.get();
@@ -240,7 +252,7 @@ public final class SessionChannelGroupHandler extends ChannelGroupHandler<Sessio
                                         + rotationAngle1Optional.get();
 
                         if (lastGameStateSum == currentGameStateSum)
-                            return false;
+                            return;
 
                         lastGameStateSum = currentGameStateSum;
 
@@ -253,11 +265,9 @@ public final class SessionChannelGroupHandler extends ChannelGroupHandler<Sessio
                                 0
                         );
 
-                        SessionChannelGroupHandler.this.unicastToClientChannel(sessionResponseProtocolDataUnit, player1ChannelId);
+                        unicastToClientChannel(sessionResponseProtocolDataUnit, player1ChannelId);
 
-                        return player1Session
-                                .getBoolean("sessionStopped")
-                                .orElse(false);
+                        return;
                     }
 
                     final var currentGameStateSum =
@@ -269,7 +279,7 @@ public final class SessionChannelGroupHandler extends ChannelGroupHandler<Sessio
                             + rotationAngle2Optional.get();
 
                     if(currentGameStateSum == lastGameStateSum)
-                        return false;
+                        return;
 
                     lastGameStateSum = currentGameStateSum;
 
@@ -283,23 +293,16 @@ public final class SessionChannelGroupHandler extends ChannelGroupHandler<Sessio
                             rotationAngle2Optional.get()
                     );
 
-                    SessionChannelGroupHandler.this.multicastToClientChannelIds(sessionResponseProtocolDataUnit, player1ChannelId, player2ChannelId);
-
-                    return !player1Session
-                            .getBoolean("sessionStopped")
-                            .orElse(false)
-                            && player2Session
-                            .getBoolean("sessionStopped")
-                            .orElse(false);
+                    multicastToClientChannelIds(sessionResponseProtocolDataUnit, player1ChannelId, player2ChannelId);
                 }
 
                 case START -> {
 
-                    final var xOptional = player1Session.getInteger("x");
-                    final var yOptional = player1Session.getInteger("y");
-                    final var rotationAngleOptional = player1Session.getInteger("rotationAngle");
-                    final var nicknameOptional = player1Session.getString("nickname");
-                    final var player1ChannelIdOptional = player1Session.getChannelId("playerChannelId");
+                    final var xOptional = player1Session.retrieveX();
+                    final var yOptional = player1Session.retrieveY();
+                    final var rotationAngleOptional = player1Session.retrieveRotationAngle();
+                    final var nicknameOptional = player1Session.retrieveNickname();
+                    final var player1ChannelIdOptional = player1Session.retrievePlayerChannelId();
 
                     if (
                             xOptional.isEmpty()
@@ -309,44 +312,40 @@ public final class SessionChannelGroupHandler extends ChannelGroupHandler<Sessio
                                     || player1ChannelIdOptional.isEmpty()
                     ) {
 
-                        return false;
+                        return;
                     }
 
                     final var player1ChannelId = player1ChannelIdOptional.get();
 
-                    player1Session.put("sessionUUID", sessionUUIDOptional.get());
+                    player1Session.placeSessionUUID(sessionUUIDOptional.get());
 
                     final var sessionResponseProtocolDataUnit = SessionResponseProtocolDataUnit.newSTART(
                             nicknameOptional.get(),
                             sessionUUIDOptional.get().toString().substring(0, 8)
                     );
 
-                    SessionChannelGroupHandler.this.unicastToClientChannel(sessionResponseProtocolDataUnit, player1ChannelId);
-
-                    return false;
+                    unicastToClientChannel(sessionResponseProtocolDataUnit, player1ChannelId);
                 }
 
                 case STOP -> {
 
-                    final var player1ChannelIdOptional = player1Session.getChannelId("playerChannelId");
+                    final var player1ChannelIdOptional = player1Session.retrievePlayerChannelId();
 
                     if (player1ChannelIdOptional.isEmpty())
-                        return false;
+                        return;
 
-                    SessionChannelGroupHandler.this.unicastToClientChannel(SessionResponseProtocolDataUnit.newSTOP(), player1ChannelIdOptional.get());
+                    unicastToClientChannel(SessionResponseProtocolDataUnit.newSTOP(), player1ChannelIdOptional.get());
 
-                    player1Session.put("sessionStopped", false);
-                    player1Session.remove("sessionUUID");
-
-                    return true;
+                    player1Session.placeWantsSessionToStop(false);
+                    player1Session.placeSessionUUID(null);
                 }
 
                 case JOIN -> {
 
-                    final var player1ChannelIdOptional = player1Session.getChannelId("playerChannelId");
-                    final var player2ChannelIdOptional = player2Session.getChannelId("playerChannelId");
-                    final var nickname1Optional = player1Session.getString("nickname");
-                    final var nickname2Optional = player2Session.getString("nickname");
+                    final var player1ChannelIdOptional = player1Session.retrievePlayerChannelId();
+                    final var player2ChannelIdOptional = player2Session.retrievePlayerChannelId();
+                    final var nickname1Optional = player1Session.retrieveNickname();
+                    final var nickname2Optional = player2Session.retrieveNickname();
 
                     if(
                             nickname1Optional.isEmpty()
@@ -354,47 +353,36 @@ public final class SessionChannelGroupHandler extends ChannelGroupHandler<Sessio
                             || player1ChannelIdOptional.isEmpty()
                             || player2ChannelIdOptional.isEmpty()
                     )
-                        return false;
+                        return;
 
                     multicastToClientChannelIds(
                             SessionResponseProtocolDataUnit.newJOIN(nickname1Optional.get(), nickname2Optional.get()),
                             player1ChannelIdOptional.get(),
                             player2ChannelIdOptional.get()
                     );
-
-                    return false;
                 }
 
-                default -> {
-
-                    logger.error("Invalid session flag: {}, this should never occur", sessionFlag);
-
-                    return false;
-                }
+                default -> logger.error("Invalid session flag received from player: {}, this should never occur", sessionFlag);
             }
         }
     }
 
     private void createAndStartSession(
-            final TriFunction<MultiValueTypeMap, MultiValueTypeMap, SessionFlag, Boolean> isStopped,
-            final MultiValueTypeMap player1Session
+            final SessionHandler sessionAction,
+            final ExampleNetworkedGamePlayerSessionData player1Session
     ) {
 
-        final var subHandler = new SubHandler() {
+        final var sessionRunnable = new Runnable() {
             private final UUID sessionUUID = UUID.randomUUID();
-
-            @Override
-            public String supplyName() {
-
-                return String.format("Game Session Thread %s", sessionUUID);
-            }
 
             @Override
             public void run() {
 
                 shortToLongUUIDs.put(sessionUUID.toString().substring(0, 8), sessionUUID);
 
-                final var gameSession = MultiValueTypeMap.of("player1Session", player1Session, new MultiValueTypeMap());
+                final var gameSession = new SessionData();
+
+                gameSession.player1Session = player1Session;
 
                 sessionData.put(sessionUUID, gameSession);
 
@@ -404,8 +392,12 @@ public final class SessionChannelGroupHandler extends ChannelGroupHandler<Sessio
 
                     try {
 
-                        if (failureThreshold++ >= 250)
+                        if (failureThreshold++ >= 250) {
+
+                            logger.error("Session failure threshold exceeded 250 milliseconds");
+
                             return;
+                        }
 
                         TimeUnit.MILLISECONDS.sleep(1);
                     } catch (InterruptedException interruptedException) {
@@ -416,62 +408,52 @@ public final class SessionChannelGroupHandler extends ChannelGroupHandler<Sessio
                     }
                 }
 
-                player1Session.put("sessionUUID", sessionUUID);
-                player1Session.put(
-                        "sessionStopped",
-                        isStopped
-                                .apply(
-                                        player1Session,
-                                        gameSession
-                                                .getMultiTypePropertyHashMap("player2Session")
-                                                .orElse(new MultiValueTypeMap()),
-                                        SessionFlag.START
-                                )
-                );
+                player1Session.placeSessionUUID(sessionUUID);
+                
+                sessionAction.accept(SessionFlag.START, gameSession);
 
-                while (
-                        !isStopped
-                                .apply(
-                                        player1Session,
-                                        gameSession.getMultiTypePropertyHashMap("player2Session").orElse(new MultiValueTypeMap()),
-                                        SessionFlag.STATE
-                                )
-                ) {
+                final var sessionStopConditionSupplier = (Supplier<Boolean>) () -> {
+
+                    final var player1Session = gameSession.player1Session;
+                    final var player2Session = gameSession.player2Session;
+
+                    if(player1Session == null || player2Session == null)
+                        return player1Session != null && player1Session.retrieveWantsSessionToStop().isPresent() && player1Session.retrieveWantsSessionToStop().get();
+
+                    final var stop1 = player1Session.retrieveWantsSessionToStop();
+                    final var stop2 = player2Session.retrieveWantsSessionToStop();
+
+                    if(stop1.isEmpty() || stop2.isEmpty())
+                        return false;
+
+                    return stop1.get() && stop2.get();
+                };
+
+                while (!sessionStopConditionSupplier.get()) {
 
                     try {
 
-                        final var secondPlayerJoined = gameSession.getBoolean("secondPlayerJoined");
+                        if (gameSession.secondPlayerJoined) {
 
-                        if (secondPlayerJoined.isPresent() && secondPlayerJoined.get()) {
+                            gameSession.secondPlayerJoined = false;
 
-                            gameSession.remove("secondPlayerJoined");
-
-                            isStopped.apply(
-                                    player1Session,
-                                    gameSession.getMultiTypePropertyHashMap("player2Session").orElse(new MultiValueTypeMap()),
-                                    SessionFlag.JOIN
-                            );
+                            sessionAction.accept(SessionFlag.JOIN, gameSession);
                         }
-
+                        
+                        sessionAction.accept(SessionFlag.STATE, gameSession);
+                        
                         TimeUnit.MILLISECONDS.sleep(33);
                     } catch (final InterruptedException interruptedException) {
 
                         logger.error(interruptedException.getMessage(), interruptedException);
 
-                        player1Session.put("sessionStopped", true);
+                        player1Session.placeWantsSessionToStop(true);
 
                         break;
                     }
                 }
 
-                player1Session.put(
-                        "sessionStopped",
-                        isStopped.apply(
-                                player1Session,
-                                sessionData.get(sessionUUID).getMultiTypePropertyHashMap("player2Session").orElse(new MultiValueTypeMap()),
-                                SessionFlag.STOP
-                        )
-                );
+                sessionAction.accept(SessionFlag.STOP, gameSession);
 
                 sessionData.remove(sessionUUID);
 
@@ -481,11 +463,19 @@ public final class SessionChannelGroupHandler extends ChannelGroupHandler<Sessio
             }
         };
 
-        final var sessionThread = new Thread(subHandlers, subHandler);
+        final var sessionThread = Executors
+                .defaultThreadFactory()
+                .newThread(sessionRunnable);
 
-        sessionThread.setName(subHandler.supplyName());
+        sessionThread.setName(String.format("Game session %s", sessionRunnable.sessionUUID));
         sessionThread.start();
 
-        logger.warn("Game Session {} Thread started", subHandler.sessionUUID);
+        logger.warn("Game Session {} Thread started", sessionRunnable.sessionUUID);
+    }
+
+    private static class SessionData {
+        private boolean secondPlayerJoined;
+        private ExampleNetworkedGamePlayerSessionData player1Session;
+        private ExampleNetworkedGamePlayerSessionData player2Session;
     }
 }

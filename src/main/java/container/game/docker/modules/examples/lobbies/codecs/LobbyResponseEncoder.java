@@ -9,11 +9,6 @@ import java.util.Map;
 
 public final class LobbyResponseEncoder extends Encoder<LobbyResponseProtocolDataUnit> {
 
-    public LobbyResponseEncoder(Map<Class<? extends ProtocolDataUnit>, Byte> protocolDataUnitToProtocolIdentifierBindings) {
-
-        super(protocolDataUnitToProtocolIdentifierBindings);
-    }
-
     @Override
     public void encodeBodyAfterHeader(final LobbyResponseProtocolDataUnit protocolDataUnit, final ByteBuf out) {
 

@@ -12,11 +12,6 @@ import java.util.Map;
 
 public final class ChatMessageEncoder extends Encoder<ChatMessageProtocolDataUnit> {
 
-    public ChatMessageEncoder(final Map<Class<? extends ProtocolDataUnit>, Byte> classByteMap) {
-
-        super(classByteMap);
-    }
-
     @Override
     public void encodeBodyAfterHeader(final ChatMessageProtocolDataUnit protocolDataUnit, final ByteBuf out) {
 

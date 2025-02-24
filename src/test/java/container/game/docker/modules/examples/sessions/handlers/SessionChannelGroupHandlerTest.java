@@ -28,7 +28,7 @@ class SessionChannelGroupHandlerTest {
     private static Method unicastToServerChannel1, unicastToServerChannel2;
     private static ChannelHandler<SessionResponseProtocolDataUnit, SessionRequestProtocolDataUnit> sessionChannelHandler1, sessionChannelHandler2;
     private static Queue<SessionResponseProtocolDataUnit> sessionResponseProtocolDataUnitQueue1, sessionResponseProtocolDataUnitQueue2;
-    private static int x1 = 0, y1 = 0, x2 = 0, y2 = 0;
+    private static int x1 = 1000, y1 = 1000, x2 = 1000, y2 = 1000;
 
     @BeforeAll
     static void setup() throws Exception {
@@ -38,8 +38,8 @@ class SessionChannelGroupHandlerTest {
         sessionResponseProtocolDataUnitQueue1 = new LinkedList<>();
 
         (player1 = GameClient.newInstance())
-                .withDecoder(SessionResponseDecoder::new)
-                .withChannelHandler(() -> sessionChannelHandler1 = new ChannelHandler<>() {
+                .withDecoder(new SessionResponseDecoder())
+                .withChannelHandler(sessionChannelHandler1 = new ChannelHandler<>() {
 
                     {
 
@@ -62,7 +62,7 @@ class SessionChannelGroupHandlerTest {
                         sessionResponseProtocolDataUnitQueue1.offer(protocolDataUnit);
                     }
                 })
-                .withEncoder(SessionRequestEncoder::new)
+                .withEncoder(new SessionRequestEncoder())
                 .registerProtocolDataUnitToProtocolDataUnitBinding((byte) 4, SessionRequestProtocolDataUnit.class)
                 .registerProtocolDataUnitToProtocolDataUnitBinding((byte) 5, SessionResponseProtocolDataUnit.class)
                 .run(1, 9999);
@@ -103,7 +103,7 @@ class SessionChannelGroupHandlerTest {
 
         blockUntilSessionResponseReceived();
 
-        final var sessionResponseProtocolDataUnit = sessionResponseProtocolDataUnitQueue1.poll();
+        var sessionResponseProtocolDataUnit = sessionResponseProtocolDataUnitQueue1.poll();
 
         assertNotNull(sessionResponseProtocolDataUnit);
 
@@ -112,6 +112,17 @@ class SessionChannelGroupHandlerTest {
         assertNotNull(sessionResponseProtocolDataUnit.sessionUUID());
 
         assertEquals("Test", sessionResponseProtocolDataUnit.nickname1());
+
+        blockUntilSessionResponseReceived();
+
+        sessionResponseProtocolDataUnit = sessionResponseProtocolDataUnitQueue1.poll();
+
+        assertNotNull(sessionResponseProtocolDataUnit);
+
+        assertEquals(SessionFlag.STATE, sessionResponseProtocolDataUnit.sessionFlag());
+        assertEquals(1000, sessionResponseProtocolDataUnit.x1());
+        assertEquals(1000, sessionResponseProtocolDataUnit.y1());
+        assertEquals(0, sessionResponseProtocolDataUnit.rotationAngle1());
     }
 
     @AfterAll
@@ -124,7 +135,7 @@ class SessionChannelGroupHandlerTest {
     @Order(3)
     void sessionValidStateWithinBoundsTest() throws Exception {
 
-        unicastToServerChannel1.invoke(sessionChannelHandler1, SessionRequestProtocolDataUnit.newSTATE(4, 4, 90));
+        unicastToServerChannel1.invoke(sessionChannelHandler1, SessionRequestProtocolDataUnit.newSTATE(1008, 1008, 90));
 
         blockUntilSessionResponseReceived();
 
@@ -133,8 +144,8 @@ class SessionChannelGroupHandlerTest {
         assertNotNull(sessionResponseProtocolDataUnit);
 
         assertEquals(SessionFlag.STATE, sessionResponseProtocolDataUnit.sessionFlag());
-        assertEquals(4, sessionResponseProtocolDataUnit.x1());
-        assertEquals(4, sessionResponseProtocolDataUnit.y1());
+        assertEquals(1008, sessionResponseProtocolDataUnit.x1());
+        assertEquals(1008, sessionResponseProtocolDataUnit.y1());
         assertEquals(90, sessionResponseProtocolDataUnit.rotationAngle1());
     }
 
@@ -172,7 +183,7 @@ class SessionChannelGroupHandlerTest {
     @Order(6)
     void sessionValidStateMoveDeltaTest() throws Exception {
 
-        unicastToServerChannel1.invoke(sessionChannelHandler1, SessionRequestProtocolDataUnit.newSTATE(0, 4, 180));
+        unicastToServerChannel1.invoke(sessionChannelHandler1, SessionRequestProtocolDataUnit.newSTATE(1000, 1008, 180));
 
         blockUntilSessionResponseReceived();
 
@@ -181,11 +192,11 @@ class SessionChannelGroupHandlerTest {
         assertNotNull(sessionResponseProtocolDataUnit);
 
         assertEquals(SessionFlag.STATE, sessionResponseProtocolDataUnit.sessionFlag());
-        assertEquals(0, sessionResponseProtocolDataUnit.x1());
-        assertEquals(4, sessionResponseProtocolDataUnit.y1());
+        assertEquals(1000, sessionResponseProtocolDataUnit.x1());
+        assertEquals(1008, sessionResponseProtocolDataUnit.y1());
         assertEquals(180, sessionResponseProtocolDataUnit.rotationAngle1());
 
-        unicastToServerChannel1.invoke(sessionChannelHandler1, SessionRequestProtocolDataUnit.newSTATE(4, 4, 270));
+        unicastToServerChannel1.invoke(sessionChannelHandler1, SessionRequestProtocolDataUnit.newSTATE(1008, 1008, 270));
 
         blockUntilSessionResponseReceived();
 
@@ -194,8 +205,8 @@ class SessionChannelGroupHandlerTest {
         assertNotNull(sessionResponseProtocolDataUnit);
 
         assertEquals(SessionFlag.STATE, sessionResponseProtocolDataUnit.sessionFlag());
-        assertEquals(4, sessionResponseProtocolDataUnit.x1());
-        assertEquals(4, sessionResponseProtocolDataUnit.y1());
+        assertEquals(1008, sessionResponseProtocolDataUnit.x1());
+        assertEquals(1008, sessionResponseProtocolDataUnit.y1());
         assertEquals(270, sessionResponseProtocolDataUnit.rotationAngle1());
     }
 
@@ -243,7 +254,7 @@ class SessionChannelGroupHandlerTest {
 
     @Test
     @Order(9)
-    void  joinSessionTest() throws Exception {
+    void joinSessionTest() throws Exception {
 
         final var instanceField = GameClient.class.getDeclaredField("instance");
 
@@ -253,8 +264,8 @@ class SessionChannelGroupHandlerTest {
         sessionResponseProtocolDataUnitQueue2 = new LinkedList<>();
 
         (player2 = GameClient.newInstance())
-                .withDecoder(SessionResponseDecoder::new)
-                .withChannelHandler(() -> sessionChannelHandler2 = new ChannelHandler<>() {
+                .withDecoder(new SessionResponseDecoder())
+                .withChannelHandler(sessionChannelHandler2 = new ChannelHandler<>() {
 
                     {
 
@@ -278,7 +289,7 @@ class SessionChannelGroupHandlerTest {
                         sessionResponseProtocolDataUnitQueue2.offer(protocolDataUnit);
                     }
                 })
-                .withEncoder(SessionRequestEncoder::new)
+                .withEncoder(new SessionRequestEncoder())
                 .registerProtocolDataUnitToProtocolDataUnitBinding((byte) 4, SessionRequestProtocolDataUnit.class)
                 .registerProtocolDataUnitToProtocolDataUnitBinding((byte) 5, SessionResponseProtocolDataUnit.class)
                 .run(1, 9999);
@@ -290,7 +301,7 @@ class SessionChannelGroupHandlerTest {
 
         blockUntilSessionResponseReceived();
 
-        final var sessionResponseProtocolDataUnit = SessionChannelGroupHandlerTest.sessionResponseProtocolDataUnitQueue1.poll();
+        var sessionResponseProtocolDataUnit = sessionResponseProtocolDataUnitQueue1.poll();
 
         assertNotNull(sessionResponseProtocolDataUnit);
 
@@ -298,9 +309,19 @@ class SessionChannelGroupHandlerTest {
 
         assertNotNull(sessionResponseProtocolDataUnit.sessionUUID());
 
+        final var sessionUUID = sessionResponseProtocolDataUnit.sessionUUID();
+
+        blockUntilSessionResponseReceived();
+
+        sessionResponseProtocolDataUnit = sessionResponseProtocolDataUnitQueue1.poll();
+
+        assertNotNull(sessionResponseProtocolDataUnit);
+
+        assertEquals(SessionFlag.STATE, sessionResponseProtocolDataUnit.sessionFlag());
+
         unicastToServerChannel2.invoke(
                 sessionChannelHandler2,
-                SessionRequestProtocolDataUnit.newJOIN("Test2", sessionResponseProtocolDataUnit.sessionUUID())
+                SessionRequestProtocolDataUnit.newJOIN("Test2", sessionUUID)
         );
 
         while (sessionResponseProtocolDataUnitQueue2.isEmpty())
@@ -317,13 +338,27 @@ class SessionChannelGroupHandlerTest {
 
         blockUntilSessionResponseReceived();
 
-        var sessionResponseProtocolDataUnit2 = SessionChannelGroupHandlerTest.sessionResponseProtocolDataUnitQueue1.poll();
+        var sessionResponseProtocolDataUnit2 = sessionResponseProtocolDataUnitQueue1.poll();
 
         assertNotNull(sessionResponseProtocolDataUnit2);
 
         assertEquals(SessionFlag.JOIN, sessionResponseProtocolDataUnit2.sessionFlag());
         assertEquals("Test", sessionResponseProtocolDataUnit2.nickname1());
         assertEquals("Test2", sessionResponseProtocolDataUnit2.nickname2());
+
+        blockUntilSessionResponseReceived();
+
+        while(sessionResponseProtocolDataUnitQueue2.isEmpty())
+            TimeUnit.MILLISECONDS.sleep(33);
+
+        sessionResponseProtocolDataUnit = sessionResponseProtocolDataUnitQueue1.poll();
+        sessionResponseProtocolDataUnit1 = sessionResponseProtocolDataUnitQueue2.poll();
+
+        assertNotNull(sessionResponseProtocolDataUnit);
+        assertNotNull(sessionResponseProtocolDataUnit1);
+
+        assertEquals(SessionFlag.STATE, sessionResponseProtocolDataUnit.sessionFlag());
+        assertEquals(SessionFlag.STATE, sessionResponseProtocolDataUnit.sessionFlag());
     }
 
     @RepeatedTest(100)
@@ -332,7 +367,7 @@ class SessionChannelGroupHandlerTest {
 
         unicastToServerChannel1.invoke(
                 sessionChannelHandler1,
-                SessionRequestProtocolDataUnit.newSTATE(x1 + 4, y1, 90)
+                SessionRequestProtocolDataUnit.newSTATE(x1 + 8, y1, 90)
         );
 
         blockUntilSessionResponseReceived();
@@ -344,6 +379,7 @@ class SessionChannelGroupHandlerTest {
         assertEquals(SessionFlag.STATE, sessionResponseProtocolDataUnit1.sessionFlag());
 
         while (sessionResponseProtocolDataUnitQueue2.isEmpty()) {
+
             TimeUnit.MILLISECONDS.sleep(33);
         }
 
@@ -352,10 +388,10 @@ class SessionChannelGroupHandlerTest {
         assertNotNull(sessionResponseProtocolDataUnit2);
 
         assertEquals(SessionFlag.STATE, sessionResponseProtocolDataUnit2.sessionFlag());
-        assertEquals(x1 + 4, sessionResponseProtocolDataUnit1.x1());
+        assertEquals(x1 + 8, sessionResponseProtocolDataUnit1.x1());
         assertEquals(y1, sessionResponseProtocolDataUnit1.y1());
         assertEquals(90, sessionResponseProtocolDataUnit1.rotationAngle1());
-        assertEquals(x1 + 4, sessionResponseProtocolDataUnit2.x1());
+        assertEquals(x1 + 8, sessionResponseProtocolDataUnit2.x1());
         assertEquals(y1, sessionResponseProtocolDataUnit2.y1());
         assertEquals(90, sessionResponseProtocolDataUnit2.rotationAngle1());
 
@@ -364,7 +400,7 @@ class SessionChannelGroupHandlerTest {
 
         unicastToServerChannel2.invoke(
                 sessionChannelHandler2,
-                SessionRequestProtocolDataUnit.newSTATE(x2, y2 + 4, 90)
+                SessionRequestProtocolDataUnit.newSTATE(x2, y2 + 8, 90)
         );
 
         while (sessionResponseProtocolDataUnitQueue2.isEmpty()) {
@@ -385,10 +421,10 @@ class SessionChannelGroupHandlerTest {
 
         assertEquals(SessionFlag.STATE, sessionResponseProtocolDataUnit1.sessionFlag());
         assertEquals(x2, sessionResponseProtocolDataUnit1.x2());
-        assertEquals(y2 + 4, sessionResponseProtocolDataUnit1.y2());
+        assertEquals(y2 + 8, sessionResponseProtocolDataUnit1.y2());
         assertEquals(90, sessionResponseProtocolDataUnit1.rotationAngle1());
         assertEquals(x2, sessionResponseProtocolDataUnit2.x2());
-        assertEquals(y2 + 4, sessionResponseProtocolDataUnit2.y2());
+        assertEquals(y2 + 8, sessionResponseProtocolDataUnit2.y2());
         assertEquals(90, sessionResponseProtocolDataUnit2.rotationAngle1());
 
         x2 = sessionResponseProtocolDataUnit2.x2();

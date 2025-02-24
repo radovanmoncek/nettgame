@@ -8,12 +8,9 @@ import container.game.docker.modules.examples.lobbies.models.LobbyResponseProtoc
 import javax.swing.*;
 
 public class LobbyChannelHandler extends ChannelHandler<LobbyResponseProtocolDataUnit, LobbyRequestProtocolDataUnit> {
-    private final JPanel client;
 
-    public LobbyChannelHandler(final SampleGameClient sampleGameClient) {
 
-        client = sampleGameClient;
-    }
+    public LobbyChannelHandler() {}
 
     @Override
     protected void serverChannelRead(final LobbyResponseProtocolDataUnit lobbyUpdate) {}

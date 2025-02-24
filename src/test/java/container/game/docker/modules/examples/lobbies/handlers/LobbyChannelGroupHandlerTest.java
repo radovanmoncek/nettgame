@@ -20,12 +20,10 @@ class LobbyChannelGroupHandlerTest {
     private static Method unicastToServerChannel;
 
     @BeforeAll
-    static void setup() throws Exception {
-
-        final var sampleGameClient = new SampleGameClient();
+    static void setup() {
 
         (gameClient = GameClient.newInstance())
-                .withChannelHandler(() -> new LobbyChannelHandler(sampleGameClient) {
+                .withChannelHandler(new LobbyChannelHandler() {
 
                     {
 
@@ -58,7 +56,7 @@ class LobbyChannelGroupHandlerTest {
     }
 
     @AfterAll
-    static void tearDown() throws Exception {
+    static void tearDown() {
 
         gameClient.shutdownGracefullyAfterNSeconds(0);
     }
