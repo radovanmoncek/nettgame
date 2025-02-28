@@ -13,4 +13,6 @@ module container.game.docker {
     requires java.desktop;
     requires org.hibernate.orm.core;
     requires jdk.compiler;
+    requires jakarta.persistence;
+    requires flatbuffers.java;
 }

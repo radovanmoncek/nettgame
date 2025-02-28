@@ -31,3 +31,6 @@ target
 
 # MANIFEST.MF
 MANIFEST.MF
+
+#.env
+.env

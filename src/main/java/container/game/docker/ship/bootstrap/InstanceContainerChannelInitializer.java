@@ -15,18 +15,18 @@ import java.util.LinkedList;
 public final class InstanceContainerChannelInitializer extends ChannelInitializer<SocketChannel> {
     private static final Logger logger = LogManager.getLogger(InstanceContainerChannelInitializer.class);
     private final LinkedList<Creator> channelGroupHandlerSuppliers;
+    private final LinkedList<ChannelHandler> initialHandlers;
 
-    public InstanceContainerChannelInitializer(LinkedList<Creator> channelHandlerSuppliers) {
+    public InstanceContainerChannelInitializer(final LinkedList<ChannelHandler> initialHandlers, final LinkedList<Creator> channelHandlerSuppliers) {
 
+        this.initialHandlers = initialHandlers;
         this.channelGroupHandlerSuppliers = channelHandlerSuppliers;
     }
 
     @Override
     public void initChannel(final SocketChannel socketChannel) {
 
-        socketChannel
-                .pipeline()
-                .addFirst(new LoggingHandler(LogLevel.INFO));
+        initialHandlers.forEach(socketChannel.pipeline()::addLast);
 
         channelGroupHandlerSuppliers
                 .stream()

@@ -1,16 +1,24 @@
 package container.game.docker.ship.parents.services;
 
+import container.game.docker.ship.parents.repositories.Repository;
+
 import java.util.List;
 
-public interface Service<T> {
+public abstract class Service<T> {
+    protected final Repository<T> repository;
 
-    T findByIdentifier(final Long identifier);
+    protected Service(Class<T> persistableClass) {
 
-    List<T> findAll();
+        repository = new Repository<>(persistableClass);
+    }
 
-    T store(final T entity);
+    public abstract T findByIdentifier(final Long identifier);
 
-    T update(final Long identifier, final T entity);
+    public abstract List<T> findAll();
 
-    T delete(final Long identifier);
+    public abstract T store(final T entity);
+
+    public abstract T update(final Long identifier, final T entity);
+
+    public abstract T delete(final Long identifier);
 }

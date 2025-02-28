@@ -1,34 +1,29 @@
 package container.game.docker.ship.bootstrap.examples;
 
-import container.game.docker.modules.examples.chats.models.ChatMessageProtocolDataUnit;
-import container.game.docker.modules.examples.lobbies.models.LobbyRequestProtocolDataUnit;
-import container.game.docker.modules.examples.lobbies.models.LobbyResponseProtocolDataUnit;
-import container.game.docker.modules.examples.sessions.models.SessionRequestProtocolDataUnit;
-import container.game.docker.modules.examples.sessions.models.SessionResponseProtocolDataUnit;
-import container.game.docker.ship.bootstrap.InstanceContainer;
+import container.game.docker.ship.builders.InstanceContainerBootstrapBuilder;
+import container.game.docker.ship.examples.compiled.schemas.ChatMessage;
+import container.game.docker.ship.examples.compiled.schemas.GameState;
+import container.game.docker.ship.examples.compiled.schemas.GameStateRequest;
 import container.game.docker.ship.examples.creators.*;
+import io.netty.handler.logging.LogLevel;
+
+import java.net.InetAddress;
 
 public final class SampleInstanceContainer {
 
     public static void main(String[] args) {
 
-        InstanceContainer
-                .newInstance()
-                .withPlayerSessionDataCreator(new PlayerSessionDataCreator())
-                .withDecoderCreator(new SessionRequestDecoderFactory())
-                .withDecoderCreator(new LobbyRequestDecoderCreator())
-                .withDecoderCreator(new ChatMessageDecoderCreator())
-                .withChannelGroupHandlerCreator(new SessionChannelGroupHandlerCreator())
-                .withChannelGroupHandlerCreator(new LobbyChannelGroupHandlerCreator())
-                .withChannelGroupHandlerCreator(new ChatChannelGroupHandlerCreator())
-                .withEncoderCreator(new SessionResponseEncoderCreator())
-                .withEncoderCreator(new LobbyResponseEncoderCreator())
-                .withEncoderCreator(new ChatMessageEncoderCreator())
-                .registerProtocolDataUnitIdentifierToProtocolDataUnitBinding((byte) 1, ChatMessageProtocolDataUnit.class)
-                .registerProtocolDataUnitIdentifierToProtocolDataUnitBinding((byte) 2, LobbyRequestProtocolDataUnit.class)
-                .registerProtocolDataUnitIdentifierToProtocolDataUnitBinding((byte) 3, LobbyResponseProtocolDataUnit.class)
-                .registerProtocolDataUnitIdentifierToProtocolDataUnitBinding((byte) 4, SessionRequestProtocolDataUnit.class)
-                .registerProtocolDataUnitIdentifierToProtocolDataUnitBinding((byte) 5, SessionResponseProtocolDataUnit.class)
+        new InstanceContainerBootstrapBuilder()
+                .buildPort(4321)
+                .buildInternetProtocolAddress(InetAddress.getLoopbackAddress())
+                .buildChannelHandlerCreator(new SessionRequestDecoderFactory())
+                .buildChannelHandlerCreator(new SessionChannelGroupHandlerCreator())
+                .buildChannelHandlerCreator(new SessionResponseEncoderCreator())
+                .buildLogLevel(LogLevel.INFO)
+                .buildProtocolSchema((byte) 'G', GameState.class)
+                .buildProtocolSchema((byte) 'g', GameStateRequest.class)
+                .buildProtocolSchema((byte) 'm', ChatMessage.class)
+                .build()
                 .run();
     }
 }

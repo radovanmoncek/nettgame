@@ -1,0 +1,19 @@
+version: "1.0"
+
+services:
+  game-server:
+    image: docker-game-server:latest
+    ports:
+      - "4321:4321"
+
+  game-server-data:
+    image: mysql:8.0
+    environment:
+      - MYSQL_ROOT_PASSWORD
+    volumes:
+      - mysql:/var/lib/mysql
+    ports:
+      - "3306:3306"
+
+volumes:
+  mysql:
