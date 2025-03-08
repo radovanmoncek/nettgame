@@ -54,5 +54,11 @@
             <artifactId>flatbuffers-java</artifactId>
             <version>25.2.10</version>
         </dependency>
+        <!-- https://mvnrepository.com/artifact/com.mysql/mysql-connector-j -->
+        <dependency>
+            <groupId>com.mysql</groupId>
+            <artifactId>mysql-connector-j</artifactId>
+            <version>9.2.0</version>
+        </dependency>
     </dependencies>
 </project>

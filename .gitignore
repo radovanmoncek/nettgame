@@ -34,3 +34,12 @@ MANIFEST.MF
 
 #.env
 .env
+
+#.iml
+*.iml
+
+#.properties
+*.properties
+
+#.xml
+log4j2.xml

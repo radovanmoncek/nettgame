@@ -2,18 +2,25 @@ version: "1.0"
 
 services:
   game-server:
+    container_name: "game-server"
+    build:
+      context: ./
+      dockerfile: game_server.dockerfile
     image: docker-game-server:latest
     ports:
       - "4321:4321"
+    depends_on:
+      - game-server-data
 
   game-server-data:
+    container_name: "game-server-data"
     image: mysql:8.0
     environment:
       - MYSQL_ROOT_PASSWORD
     volumes:
-      - mysql:/var/lib/mysql
+      - game-server-persistent-data:/var/lib/mysql
     ports:
       - "3306:3306"
 
 volumes:
-  mysql:
+  game-server-persistent-data:

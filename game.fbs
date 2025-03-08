@@ -21,7 +21,7 @@ table Game {
 
 ///Reponse to players
 table GameState {
-    game:Game;
+    cz:Game;
     player1:Player;
     player2:Player;
 }
