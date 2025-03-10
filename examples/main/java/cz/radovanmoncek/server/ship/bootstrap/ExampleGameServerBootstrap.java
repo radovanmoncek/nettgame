@@ -1,7 +1,6 @@
 package cz.radovanmoncek.server.ship.bootstrap;
 
-import cz.radovanmoncek.server.modules.games.models.GameHistory;
-import cz.radovanmoncek.server.modules.games.services.ExampleGameHistoryService;
+import cz.radovanmoncek.server.modules.games.models.ExampleGameHistoryPersistableModel;
 import cz.radovanmoncek.server.ship.creators.GameStateRequestFlatBuffersDecoderCreator;
 import cz.radovanmoncek.ship.builders.GameServerBootstrapBuilder;
 import cz.radovanmoncek.server.ship.creators.ExampleGameSessionHandlerCreator;
@@ -17,8 +16,7 @@ public final class ExampleGameServerBootstrap {
                 .buildChannelHandlerCreator(new GameStateRequestFlatBuffersDecoderCreator())
                 .buildChannelHandlerCreator(new ExampleGameSessionHandlerCreator())
                 .buildChannelHandlerCreator(new GameStateFlatBuffersEncoderCreator())
-                .buildPersistableClass(GameHistory.class)
-                .buildService(new ExampleGameHistoryService())
+                .buildPersistableModel(new ExampleGameHistoryPersistableModel())
                 .build()
                 .run();
     }

@@ -1,9 +1,10 @@
 package cz.radovanmoncek.ship.builders;
 
 import cz.radovanmoncek.ship.bootstrap.GameServerBootstrap;
+import cz.radovanmoncek.ship.creators.MySQLRepositoryCreator;
 import cz.radovanmoncek.ship.parents.builders.Builder;
 import cz.radovanmoncek.ship.parents.creators.ChannelHandlerCreator;
-import cz.radovanmoncek.ship.parents.services.Service;
+import cz.radovanmoncek.ship.parents.models.PersistableModel;
 import io.netty.handler.logging.LogLevel;
 
 import java.net.InetAddress;
@@ -57,16 +58,9 @@ public class GameServerBootstrapBuilder implements Builder<GameServerBootstrap> 
         return this;
     }
 
-    public GameServerBootstrapBuilder buildPersistableClass(Class<?> persistableClass){
+    public GameServerBootstrapBuilder buildPersistableModel(PersistableModel persistableModel){
 
-        result.addPersistableClass(persistableClass);
-
-        return this;
-    }
-
-    public GameServerBootstrapBuilder buildService(Service<?> service){
-
-        result.addService(service);
+        result.addPersistableModel(persistableModel);
 
         return this;
     }
@@ -81,6 +75,13 @@ public class GameServerBootstrapBuilder implements Builder<GameServerBootstrap> 
     public GameServerBootstrapBuilder buildShutdownDelay(int i) {
 
         result.setShutdownTimeout(i);
+
+        return this;
+    }
+
+    public GameServerBootstrapBuilder buildRepositoryCreator(MySQLRepositoryCreator mySQLRepositoryCreator) {
+
+        result.setRepositoryCreator(mySQLRepositoryCreator);
 
         return this;
     }

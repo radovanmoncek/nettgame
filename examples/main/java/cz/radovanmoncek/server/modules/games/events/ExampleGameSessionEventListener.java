@@ -1,5 +1,6 @@
 package cz.radovanmoncek.server.modules.games.events;
 
+import cz.radovanmoncek.server.modules.games.models.ExampleGameHistoryPersistableModel;
 import cz.radovanmoncek.server.modules.games.models.GameStateFlatBufferSerializable;
 import cz.radovanmoncek.server.ship.compiled.schemas.GameStateRequest;
 import cz.radovanmoncek.server.ship.compiled.schemas.GameStatus;
@@ -10,6 +11,8 @@ import io.netty.util.AttributeKey;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 
+import java.sql.Timestamp;
+import java.time.Instant;
 import java.util.LinkedList;
 import java.util.Objects;
 import java.util.UUID;
@@ -23,12 +26,15 @@ public class ExampleGameSessionEventListener extends GameSessionEventListener {
     private static final int xBound = 2000, yBound = 2000, moveDelta = 8;
     private final UUID gameUUID;
     private final Channel hostChannel;
+    private final ExampleGameHistoryPersistableModel historyPersistableModel;
     private int lastGameSum = 0;
 
-    public ExampleGameSessionEventListener(Channel hostChannel) {
+    public ExampleGameSessionEventListener(Channel hostChannel, ExampleGameHistoryPersistableModel historyPersistableModel) {
+
+        this.historyPersistableModel = historyPersistableModel;
+        this.hostChannel = hostChannel;
 
         gameUUID = UUID.randomUUID();
-        this.hostChannel = hostChannel;
     }
 
     @Override
@@ -262,6 +268,9 @@ public class ExampleGameSessionEventListener extends GameSessionEventListener {
     @Override
     public void onEnded(GameSessionContext context) {
 
+        final var storedGameHistory = historyPersistableModel.store(gameUUID.toString(), Timestamp.from(Instant.now()));
+
+        logger.info("Persisted game history: {} and ended game session", storedGameHistory);
     }
 
     @Override

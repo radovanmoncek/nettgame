@@ -2,7 +2,7 @@ package cz.radovanmoncek.server.modules.games.handlers;
 
 import cz.radovanmoncek.server.modules.games.events.ExampleGameSessionEventListener;
 import cz.radovanmoncek.server.modules.games.models.GameStateFlatBufferSerializable;
-import cz.radovanmoncek.server.modules.games.services.ExampleGameHistoryService;
+import cz.radovanmoncek.server.modules.games.models.ExampleGameHistoryPersistableModel;
 import cz.radovanmoncek.server.ship.compiled.schemas.GameStatus;
 import cz.radovanmoncek.server.ship.compiled.schemas.GameStateRequest;
 import cz.radovanmoncek.ship.injection.annotations.AttributeInjectee;
@@ -22,7 +22,7 @@ import java.util.concurrent.ConcurrentLinkedQueue;
 public class ExampleGameSessionChannelGroupHandler extends GameSessionChannelGroupHandler<GameStateRequest> {
     @SuppressWarnings("unused")
     @AttributeInjectee
-    private ExampleGameHistoryService exampleGameHistoryService;
+    private ExampleGameHistoryPersistableModel exampleGameHistoryPersistableModel;
     private static final Logger logger = LogManager.getLogger(ExampleGameSessionChannelGroupHandler.class);
     private static final AttributeKey<Queue<GameStateRequest>> playerStateQueueAttribute = AttributeKey.valueOf("gameStateRequestQueue");
     private static final int maxNickNameLength = 8;
@@ -59,7 +59,7 @@ public class ExampleGameSessionChannelGroupHandler extends GameSessionChannelGro
                         .attr(playerStateQueueAttribute)
                         .set(new ConcurrentLinkedQueue<>(List.of(gameStateRequest)));
 
-                startGameSession(new ExampleGameSessionEventListener(playerChannel), List.of(new AbstractMap.SimpleEntry<>(GameSessionConfigurationOption.MAX_PLAYERS, 2)));
+                startGameSession(new ExampleGameSessionEventListener(playerChannel, exampleGameHistoryPersistableModel), List.of(new AbstractMap.SimpleEntry<>(GameSessionConfigurationOption.MAX_PLAYERS, 2)));
             }
 
             case GameStatus.STOP_SESSION, GameStatus.STATE_CHANGE -> {

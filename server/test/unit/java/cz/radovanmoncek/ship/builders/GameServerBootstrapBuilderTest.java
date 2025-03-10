@@ -1,6 +1,6 @@
 package cz.radovanmoncek.ship.builders;
 
-import cz.radovanmoncek.ship.parents.services.Service;
+import cz.radovanmoncek.ship.parents.models.PersistableModel;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
@@ -46,33 +46,32 @@ class GameServerBootstrapBuilderTest {
     }
 
     @Test
-    void buildService() {
+    void buildPersistableModel() {
 
         gameServerBootstrapBuilder
-                .buildService(new Service<>(Object.class) {
-
+                .buildPersistableModel(new PersistableModel() {
                     @Override
-                    public Object findByIdentifier(Long identifier) {
+                    public PersistableModel findByIdentifier(Long identifier) {
                         return null;
                     }
 
                     @Override
-                    public List<Object> findAll() {
+                    public List<PersistableModel> findAll() {
                         return List.of();
                     }
 
                     @Override
-                    public Object store(Object entity) {
+                    public PersistableModel store() {
                         return null;
                     }
 
                     @Override
-                    public Object update(Long identifier, Object entity) {
+                    public PersistableModel update() {
                         return null;
                     }
 
                     @Override
-                    public Object delete(Long identifier) {
+                    public PersistableModel delete(Long identifier) {
                         return null;
                     }
                 })

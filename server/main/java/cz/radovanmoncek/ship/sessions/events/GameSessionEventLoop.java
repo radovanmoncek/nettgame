@@ -23,6 +23,7 @@ public class GameSessionEventLoop implements Runnable {
     private final Map.Entry<GameSessionEventListener, GameSessionContext> gameSessionListenerEntry;
     private final GameSessionEventListener gameSessionEventListener;
     private final ConcurrentLinkedQueue<Map.Entry<GameSessionEventListener, GameSessionContext>> gameSessionListeners;
+    private boolean endedCheck;
 
     public GameSessionEventLoop(
             GameSessionContext gameSessionContext,
@@ -42,6 +43,8 @@ public class GameSessionEventLoop implements Runnable {
         this.gameSessionListenerEntry = gameSessionListenerEntry;
         this.gameSessionListeners = gameSessionListeners;
         this.gameSessionEventListener = gameSessionEventListener;
+
+        endedCheck = false;
     }
 
     @Override
@@ -115,18 +118,27 @@ public class GameSessionEventLoop implements Runnable {
 
                 TimeUnit.MILLISECONDS.sleep(33); //todo: better tick rate server mechanism
             }
+
+            gameSessionListeners.remove(gameSessionListenerEntry); //todo: resolve externally in bootstrap
+
+            logger.info("GameSessionEventLoop end {} {}", contextConnections, gameSessionListeners); //todo: debug
+
+            if (endedCheck) {
+
+                logger.error("GameSessionEventLoop stopped more than once, THIS SHOULD NEVER HAPPEN!");
+
+                return;
+            }
+
+            gameSessionEventListener.onEnded(gameSessionContext);
+
+            endedCheck = true;
         } catch (final Exception exception) {
 
             logger.error(exception.getMessage(), exception);
 
             gameSessionEventListener.onErrorThrown(gameSessionContext, exception);
         }
-
-        gameSessionEventListener.onEnded(gameSessionContext);
-
-        gameSessionListeners.remove(gameSessionListenerEntry); //todo: resolve externally in bootstrap
-
-        logger.info("Session has ended");
     }
 
     private Object retrieveOption(GameSessionConfigurationOption gameSessionConfigurationOption) {

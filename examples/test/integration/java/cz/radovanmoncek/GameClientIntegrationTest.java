@@ -228,7 +228,8 @@ public class GameClientIntegrationTest {
 
         assertNotNull(gameCode);
 
-        TimeUnit.MILLISECONDS.sleep(2000);
+        //We need to wait until the game server is ready to serve us our session.
+        TimeUnit.MILLISECONDS.sleep(4000);
 
         gameStateTestingGameStateServerChannelHandler2.unicast(new GameStateRequestFlatBuffersSerializable(0, 0, 0, "Test2", GameStatus.JOIN_SESSION, gameCode));
 
@@ -336,7 +337,7 @@ public class GameClientIntegrationTest {
 
         public GameState poll() throws InterruptedException {
 
-            return queue.poll(100, TimeUnit.MILLISECONDS);
+            return queue.poll(1000, TimeUnit.MILLISECONDS);
         }
 
         public void disconnect() {

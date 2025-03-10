@@ -1,10 +1,9 @@
 package cz.radovanmoncek.ship.bootstrap;
 
-import cz.radovanmoncek.ship.injection.annotations.AttributeInjectee;
-import cz.radovanmoncek.ship.injection.exceptions.InjectionException;
+import cz.radovanmoncek.ship.injection.services.ChannelHandlerInjectionService;
 import cz.radovanmoncek.ship.parents.creators.ChannelHandlerCreator;
-import cz.radovanmoncek.ship.repositories.Repository;
-import cz.radovanmoncek.ship.parents.services.Service;
+import cz.radovanmoncek.ship.parents.creators.RepositoryCreator;
+import cz.radovanmoncek.ship.parents.models.PersistableModel;
 import io.netty.bootstrap.ServerBootstrap;
 import io.netty.channel.*;
 import io.netty.channel.nio.NioIoHandler;
@@ -14,7 +13,6 @@ import io.netty.handler.logging.LogLevel;
 import io.netty.handler.logging.LoggingHandler;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
-import org.hibernate.SessionFactory;
 import org.hibernate.boot.MetadataSources;
 import org.hibernate.boot.registry.StandardServiceRegistryBuilder;
 
@@ -28,12 +26,12 @@ import java.util.concurrent.TimeUnit;
  * A game and platform independent game server that is meant to run within a Docker container.
  * </p>
  * <p>
- *     This game server is build as an extension of the Netty Java framework providing potential
- *     implementors with useful features for networked game development.
+ * This game server is build as an extension of the Netty Java framework providing potential
+ * implementors with useful features for networked game development.
  * </p>
  * <p>
- *     This class should not be instantiated directly, for that, please refer to: {@link cz.radovanmoncek.ship.builders.GameServerBootstrapBuilder}
- *     and {@link cz.radovanmoncek.ship.directors.GameServerBootstrapDirector}.
+ * This class should not be instantiated directly, for that, please refer to: {@link cz.radovanmoncek.ship.builders.GameServerBootstrapBuilder}
+ * and {@link cz.radovanmoncek.ship.directors.GameServerBootstrapDirector}.
  * </p>
  * <p>
  * The default port number is the port <b>4321</b>.
@@ -41,11 +39,12 @@ import java.util.concurrent.TimeUnit;
  * <p>
  * The address defaults to localhost / 127.0.0.1.
  * </p>
- * @apiNote <p>
- *     The <a href=https://refcatoring.guru>Singleton</a> design pattern has been made use of,
- *     meaning this may only be instantiated, at most, <b>once</b> per runtime.
- * </p>
+ *
  * @author Radovan Monček
+ * @apiNote <p>
+ * The <a href=https://refcatoring.guru>Singleton</a> design pattern has been made use of,
+ * meaning this may only be instantiated, at most, <b>once</b> per runtime.
+ * </p>
  * @since 1.0
  */
 public final class GameServerBootstrap {
@@ -62,11 +61,22 @@ public final class GameServerBootstrap {
      * Defaults to localhost / 127.0.0.1.
      */
     private InetAddress address;
+    /**
+     * General {@link ChannelHandler}s that will be added to the front of the {@link ChannelPipeline}.
+     */
     private final LinkedList<ChannelHandler> initialHandlers;
+    /**
+     * Creators of the "actual" business logic handlers.
+     */
     private final LinkedList<ChannelHandlerCreator> channelHandlerCreators;
-    private final LinkedList<Class<?>> persistableClasses;
-    private final LinkedList<Service<?>> services;
-    private SessionFactory sessionFactory;
+    /**
+     * Data storage solution that is automatically injected into business logic handlers.
+     */
+    private final LinkedList<PersistableModel> persistableModels;
+    /**
+     * Creator of the specific repository soluttion that is currently in use.
+     */
+    private RepositoryCreator repositoryCreator;
     /**
      * The number of seconds before this {@link GameServerBootstrap} is gracefully shutdown.
      */
@@ -75,8 +85,7 @@ public final class GameServerBootstrap {
     private GameServerBootstrap() {
 
         channelHandlerCreators = new LinkedList<>();
-        persistableClasses = new LinkedList<>();
-        services = new LinkedList<>();
+        persistableModels = new LinkedList<>();
         initialHandlers = new LinkedList<>();
         port = 4321;
         address = InetAddress.getLoopbackAddress();
@@ -99,14 +108,14 @@ public final class GameServerBootstrap {
         this.port = port;
     }
 
-    public void addPersistableClass(final Class<?> persistableClass) {
+    public void setRepositoryCreator(RepositoryCreator repositoryCreator) {
 
-        persistableClasses.add(persistableClass);
+        this.repositoryCreator = repositoryCreator;
     }
 
-    public void addService(final Service<?> service) {
+    public void addPersistableModel(final PersistableModel persistableModel) {
 
-        services.add(service);
+        persistableModels.add(persistableModel);
     }
 
     public void addChannelHandlerCreator(final ChannelHandlerCreator channelHandlerCreator) {
@@ -119,109 +128,7 @@ public final class GameServerBootstrap {
         initialHandlers.offer(new LoggingHandler(logLevel));
     }
 
-    private LinkedList<ChannelHandlerCreator> returnInjectedChannelHandlerCreators() {
-
-        logger.warn("Starting ChannelHandler injection");
-
-        final var injectedChannelHandlerCreators = new LinkedList<ChannelHandlerCreator>();
-
-        for (final var channelHandlerCreator : channelHandlerCreators) {
-
-            injectedChannelHandlerCreators.add(new ChannelHandlerCreator() {
-
-                @Override
-                public ChannelHandler newProduct() {
-
-                    final var channelHandler = channelHandlerCreator.newProduct();
-
-                    Class<?> clazz = channelHandler.getClass();
-
-                    while (clazz.getSuperclass() != ChannelHandlerAdapter.class) {
-
-                        final var declaredFields = clazz.getDeclaredFields();
-                        final StringBuilder injectionExceptionReason = new StringBuilder("Failed to inject");
-
-                        for (final var field : declaredFields) {
-
-                            try {
-
-                                if (field.isAnnotationPresent(AttributeInjectee.class)) {
-
-                                    Service<?> serviceToInject = null;
-
-                                    for (final var service : services) {
-
-                                        if (service.getClass().equals(field.getType())) {
-
-                                            serviceToInject = service;
-
-                                            break;
-                                        }
-                                    }
-
-                                    injectionExceptionReason.append(String.format(" %s into %s", channelHandler, field));
-
-                                    if (serviceToInject == null) {
-
-                                        throw new InjectionException(injectionExceptionReason.toString());
-                                    }
-
-                                    Class<?> serviceClazz = serviceToInject.getClass();
-
-                                    while (serviceClazz.getSuperclass() != Service.class) {
-
-                                        serviceClazz = serviceClazz.getSuperclass();
-                                    }
-
-                                    serviceClazz = serviceClazz.getSuperclass();
-
-                                    for (final var serviceField : serviceClazz.getDeclaredFields()) {
-
-                                        if (serviceField.getType().equals(Repository.class)) {
-
-                                            final var repository = serviceField.get(serviceToInject);
-
-                                            for (final var repositoryField : repository.getClass().getDeclaredFields()) {
-
-                                                if (repositoryField.isAnnotationPresent(AttributeInjectee.class)) {
-
-                                                    repositoryField.setAccessible(true);
-                                                    repositoryField.set(repository, sessionFactory);
-                                                }
-                                            }
-                                        }
-                                    }
-
-                                    field.setAccessible(true);
-                                    field.set(channelHandler, serviceToInject);
-
-                                    logger.debug("Injecting {} into {}", channelHandler, field);
-                                }
-                            } catch (final Exception exception) {
-
-                                logger.error(new InjectionException(injectionExceptionReason.append(", expect incorrect operation!").toString(), exception));
-
-                                break;
-                            }
-                        }
-
-                        clazz = clazz.getSuperclass();
-                    }
-
-                    return channelHandler;
-                }
-            });
-        }
-
-        return injectedChannelHandlerCreators;
-    }
-
-    /**
-     * <p>
-     * Runs this {@link GameServerBootstrap}, and does not block the current thread, meaning, it returns immediately after being called.
-     * </p>
-     */
-    public void run() {
+    public void run0() {
 
         final var bossGroup = new MultiThreadIoEventLoopGroup(NioIoHandler.newFactory());
         final var workerGroup = new MultiThreadIoEventLoopGroup(NioIoHandler.newFactory());
@@ -231,52 +138,34 @@ public final class GameServerBootstrap {
                 .option(ChannelOption.SO_BACKLOG, 128)
                 .childOption(ChannelOption.SO_KEEPALIVE, true);
 
-        bootstrap.childHandler(new ChannelInitializer<SocketChannel>() {
-
-            @Override
-            protected void initChannel(SocketChannel ch) {
-
-                initialHandlers.forEach(ch.pipeline()::addLast);
-
-                returnInjectedChannelHandlerCreators()
-                        .stream()
-                        .map(ChannelHandlerCreator::newProduct)
-                        .forEach(ch.pipeline()::addLast);
-            }
-        });
-
         try (
                 final var registry = new StandardServiceRegistryBuilder().build();
                 final var sessionFactory = new MetadataSources(registry)
-                        .addAnnotatedClasses(persistableClasses.toArray(Class[]::new))
+                        .addAnnotatedClasses(persistableModels.stream().map(Object::getClass).toArray(Class[]::new))
                         .buildMetadata()
                         .buildSessionFactory()
         ) {
 
-            this.sessionFactory = sessionFactory;
+            bootstrap.childHandler(new ChannelInitializer<SocketChannel>() {
 
-            final var keepAliveSessionFactoryRunnable = (Runnable) () -> {
+                @Override
+                protected void initChannel(SocketChannel ch) {
 
-                while (!sessionFactory.isClosed()) {
+                    initialHandlers.forEach(ch.pipeline()::addLast);
 
-                    try {
-
-                        logger.debug("SessionFactory heart beat");
-
-                        TimeUnit.MINUTES.sleep(1);
-                    } catch (final InterruptedException interruptedException) {
-
-                        logger.error(interruptedException.getMessage(), interruptedException);
-                    }
+                    new ChannelHandlerInjectionService(
+                            sessionFactory,
+                            channelHandlerCreators,
+                            repositoryCreator,
+                            persistableModels
+                    )
+                            .returnInjectedChannelHandlerCreators()
+                            .stream()
+                            .map(ChannelHandlerCreator::newProduct)
+                            .forEach(ch.pipeline()::addLast);
                 }
-            };
+            });
 
-            final var keepAliveSessionFactoryThread = Executors
-                    .defaultThreadFactory()
-                    .newThread(keepAliveSessionFactoryRunnable);
-
-            keepAliveSessionFactoryThread.setName("SessionFactory heart beat");
-            keepAliveSessionFactoryThread.start();
 
             bootstrap
                     .bind(address, port)
@@ -315,6 +204,18 @@ public final class GameServerBootstrap {
                         logger.error(future.cause().getMessage(), future.cause());
                     });
 
+            while (!sessionFactory.isClosed()) {
+
+                try {
+
+                    logger.debug("SessionFactory heart beat");
+
+                    TimeUnit.MINUTES.sleep(1);
+                } catch (final InterruptedException interruptedException) {
+
+                    logger.error(interruptedException.getMessage(), interruptedException);
+                }
+            }
         } catch (final InterruptedException interruptedException) {
 
             logger.error(interruptedException.getMessage(), interruptedException);
@@ -328,5 +229,21 @@ public final class GameServerBootstrap {
 
     public void setShutdownTimeout(int shutdownTimeout) {
         this.shutdownTimeout = shutdownTimeout;
+    }
+
+    /**
+     * <p>
+     * Runs this {@link GameServerBootstrap}, and does not block the current thread, meaning, it returns immediately after being called.
+     * </p>
+     */
+    public void run() {
+
+        final var keepAliveSessionFactoryRunnable = (Runnable) this::run0;
+        final var keepAliveSessionFactoryThread = Executors
+                .defaultThreadFactory()
+                .newThread(keepAliveSessionFactoryRunnable);
+
+        keepAliveSessionFactoryThread.setName("SessionFactory heart beat");
+        keepAliveSessionFactoryThread.start();
     }
 }
