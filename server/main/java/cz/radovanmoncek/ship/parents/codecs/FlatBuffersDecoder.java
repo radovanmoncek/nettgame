@@ -1,7 +1,6 @@
 package cz.radovanmoncek.ship.parents.codecs;
 
 import com.google.flatbuffers.Table;
-import cz.radovanmoncek.ship.injection.annotations.InjectDecoderBindings;
 import io.netty.buffer.ByteBuf;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.handler.codec.ByteToMessageDecoder;
@@ -10,25 +9,23 @@ import org.apache.logging.log4j.Logger;
 
 import java.nio.ByteBuffer;
 import java.util.List;
-import java.util.Map;
-
-import static cz.radovanmoncek.ship.parents.models.FlatBufferSerializable.*;
 
 /**
  * This class provides basic encoding utility for a given FlatBuffers {@link Table}.
+ * <p>
+ * Structure:
+ * </p>
+ * <pre>
+ *     ---------------------------------------------------------
+ *     |         Length 0x8    |        your header            |
+ *     ---------------------------------------------------------
+ *     |                        your body                      |
+ *     ---------------------------------------------------------
+ * </pre>
  */
-public abstract class FlatBuffersDecoder<Schema extends Table> extends ByteToMessageDecoder {
+public abstract class FlatBuffersDecoder<FlatBuffersSchema extends Table> extends ByteToMessageDecoder {
     private static final Logger logger = LogManager.getLogger(FlatBuffersDecoder.class);
-    private static final int HEADER_SIZE = Byte.BYTES + Long.BYTES;
-    private final Class<Schema> schemaClass;
-    @SuppressWarnings("unused")
-    @InjectDecoderBindings
-    private Map<Byte, Class<? extends Table>> magicByteToFlatBuffersSchemaBindings;
-
-    protected FlatBuffersDecoder(final Class<Schema> schemaClass) {
-
-        this.schemaClass = schemaClass;
-    }
+    private static final int HEADER_SIZE = Long.BYTES;
 
     @Override
     protected void decode(final ChannelHandlerContext channelHandlerContext, final ByteBuf in, final List<Object> out) {
@@ -38,16 +35,7 @@ public abstract class FlatBuffersDecoder<Schema extends Table> extends ByteToMes
             return;
         }
 
-        final var magicByte = in
-                .markReaderIndex()
-                .readByte();
-
-        if (!magicByteToFlatBuffersSchemaBindings.getOrDefault(magicByte, Table.class).equals(schemaClass)) {
-
-            channelHandlerContext.fireChannelRead(in.resetReaderIndex().retain());
-
-            return;
-        }
+        in.markReaderIndex();
 
         if (in.readableBytes() < in.readLong()) {
 
@@ -56,6 +44,8 @@ public abstract class FlatBuffersDecoder<Schema extends Table> extends ByteToMes
             return;
         }
 
+        in.markReaderIndex();
+
         if (in.readableBytes() == 0) {
 
             logger.warn("Received an empty flat buffer");
@@ -63,12 +53,33 @@ public abstract class FlatBuffersDecoder<Schema extends Table> extends ByteToMes
             return;
         }
 
+        final var headerNIOBuffer = in.nioBuffer();
+
+        if (!decodeHeader(headerNIOBuffer)) {
+
+            channelHandlerContext.fireChannelRead(in.resetReaderIndex().retain());
+
+            return;
+        }
+
+        in.readerIndex(in.readerIndex() + headerNIOBuffer.position());
+
         out.add(decodeBodyAfterHeader(in.nioBuffer()));
 
         in.readerIndex(in.writerIndex());
     }
 
-    abstract protected Schema decodeBodyAfterHeader(final ByteBuffer in);
+    /**
+     * <p>
+     *     Determine whether to continue decoding this {@link ByteBuffer}, or pass it down the {@link io.netty.channel.ChannelPipeline}.
+     * </p>
+     * <i>Inspired by {@link io.netty.channel.SimpleChannelInboundHandler#acceptInboundMessage(Object)}.</i>
+     * @param in the {@link ByteBuffer} that is being decoded.
+     * @return {@code true} if this is the desired data, {@code false} otherwise.
+     */
+    abstract protected boolean decodeHeader(final ByteBuffer in);
+
+    abstract protected FlatBuffersSchema decodeBodyAfterHeader(final ByteBuffer in);
 
     @Override
     public final void exceptionCaught(final ChannelHandlerContext channelHandlerContext, final Throwable cause) {

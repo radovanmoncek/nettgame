@@ -7,9 +7,10 @@ import java.nio.ByteBuffer;
 
 public final class GameStateRequestFlatBuffersDecoder extends FlatBuffersDecoder<GameStateRequest> {
 
-    public GameStateRequestFlatBuffersDecoder() {
+    @Override
+    protected boolean decodeHeader(ByteBuffer in) {
 
-        super(GameStateRequest.class);
+        return in.get() == 'g';
     }
 
     @Override

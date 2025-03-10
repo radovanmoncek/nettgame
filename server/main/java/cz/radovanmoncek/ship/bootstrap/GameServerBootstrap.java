@@ -1,19 +1,14 @@
 package cz.radovanmoncek.ship.bootstrap;
 
-import cz.radovanmoncek.ship.injection.annotations.InjectDecoderBindings;
-import cz.radovanmoncek.ship.injection.annotations.InjectEncoderBindings;
-import cz.radovanmoncek.ship.injection.annotations.InjectService;
-import cz.radovanmoncek.ship.injection.annotations.InjectSessionFactory;
+import cz.radovanmoncek.ship.injection.annotations.AttributeInjectee;
 import cz.radovanmoncek.ship.injection.exceptions.InjectionException;
 import cz.radovanmoncek.ship.parents.creators.ChannelHandlerCreator;
 import cz.radovanmoncek.ship.repositories.Repository;
 import cz.radovanmoncek.ship.parents.services.Service;
 import io.netty.bootstrap.ServerBootstrap;
-import io.netty.channel.ChannelHandler;
-import io.netty.channel.ChannelHandlerAdapter;
-import io.netty.channel.ChannelOption;
-import io.netty.channel.MultiThreadIoEventLoopGroup;
+import io.netty.channel.*;
 import io.netty.channel.nio.NioIoHandler;
+import io.netty.channel.socket.SocketChannel;
 import io.netty.channel.socket.nio.NioServerSocketChannel;
 import io.netty.handler.logging.LogLevel;
 import io.netty.handler.logging.LoggingHandler;
@@ -27,16 +22,18 @@ import java.net.InetAddress;
 import java.util.*;
 import java.util.concurrent.Executors;
 import java.util.concurrent.TimeUnit;
-import java.util.function.BiConsumer;
 
 /**
  * <p>
  * A game and platform independent game server that is meant to run within a Docker container.
- * Multiple containers may be run in parallel on a single physical platform.
  * </p>
  * <p>
- * This class makes use of the <a href=https://refcatoring.guru>Singleton</a> design pattern,
- * meaning it may only be instantiated at most <b>once</b> per runtime.
+ *     This game server is build as an extension of the Netty Java framework providing potential
+ *     implementors with useful features for networked game development.
+ * </p>
+ * <p>
+ *     This class should not be instantiated directly, for that, please refer to: {@link cz.radovanmoncek.ship.builders.GameServerBootstrapBuilder}
+ *     and {@link cz.radovanmoncek.ship.directors.GameServerBootstrapDirector}.
  * </p>
  * <p>
  * The default port number is the port <b>4321</b>.
@@ -44,6 +41,12 @@ import java.util.function.BiConsumer;
  * <p>
  * The address defaults to localhost / 127.0.0.1.
  * </p>
+ * @apiNote <p>
+ *     The <a href=https://refcatoring.guru>Singleton</a> design pattern has been made use of,
+ *     meaning this may only be instantiated, at most, <b>once</b> per runtime.
+ * </p>
+ * @author Radovan Monček
+ * @since 1.0
  */
 public final class GameServerBootstrap {
     private static final Logger logger = LogManager.getLogger(GameServerBootstrap.class);
@@ -52,33 +55,34 @@ public final class GameServerBootstrap {
      */
     private static GameServerBootstrap instance;
     /**
-     * The server port. Defaults to 4321.
+     * Defaults to 4321.
      */
     private Integer port;
     /**
-     * The address of this InstanceContainer. Defaults to localhost / 127.0.0.1.
+     * Defaults to localhost / 127.0.0.1.
      */
     private InetAddress address;
-    private TimerTask gracefulShutdownTask;
     private final LinkedList<ChannelHandler> initialHandlers;
-    private final LinkedList<ChannelHandlerCreator> channelHandlerChannelHandlerCreators;
+    private final LinkedList<ChannelHandlerCreator> channelHandlerCreators;
     private final LinkedList<Class<?>> persistableClasses;
     private final LinkedList<Service<?>> services;
     private SessionFactory sessionFactory;
-    private final Map<Byte, Class<?>> magicBytesToFlatBufferSerializablesBindings;
+    /**
+     * The number of seconds before this {@link GameServerBootstrap} is gracefully shutdown.
+     */
+    private int shutdownTimeout;
 
     private GameServerBootstrap() {
 
-        channelHandlerChannelHandlerCreators = new LinkedList<>();
+        channelHandlerCreators = new LinkedList<>();
         persistableClasses = new LinkedList<>();
         services = new LinkedList<>();
         initialHandlers = new LinkedList<>();
-        magicBytesToFlatBufferSerializablesBindings = new HashMap<>();
         port = 4321;
         address = InetAddress.getLoopbackAddress();
     }
 
-    public static GameServerBootstrap newInstance() {
+    public static GameServerBootstrap returnNewInstance() {
 
         return Objects.requireNonNullElse(instance, instance = new GameServerBootstrap());
     }
@@ -88,7 +92,7 @@ public final class GameServerBootstrap {
         if (port <= 1024 || port > 65535)
             throw new IllegalArgumentException(
                     """
-                                Port number must not belong to the interval [-Inf, 1024] U [65535, Inf], which is a reserved port pool, or be lesser than its lowest bound.
+                            Port number must not belong to the interval (-Inf, 1024] U [65535, Inf), which is a reserved port pool, or be lesser than its lowest bound.
                             """
             );
 
@@ -107,7 +111,7 @@ public final class GameServerBootstrap {
 
     public void addChannelHandlerCreator(final ChannelHandlerCreator channelHandlerCreator) {
 
-        channelHandlerChannelHandlerCreators.add(channelHandlerCreator);
+        channelHandlerCreators.add(channelHandlerCreator);
     }
 
     public void setLogLevel(final LogLevel logLevel) {
@@ -121,7 +125,7 @@ public final class GameServerBootstrap {
 
         final var injectedChannelHandlerCreators = new LinkedList<ChannelHandlerCreator>();
 
-        for (final var channelHandlerCreator : channelHandlerChannelHandlerCreators) {
+        for (final var channelHandlerCreator : channelHandlerCreators) {
 
             injectedChannelHandlerCreators.add(new ChannelHandlerCreator() {
 
@@ -141,7 +145,7 @@ public final class GameServerBootstrap {
 
                             try {
 
-                                if (field.isAnnotationPresent(InjectService.class)) {
+                                if (field.isAnnotationPresent(AttributeInjectee.class)) {
 
                                     Service<?> serviceToInject = null;
 
@@ -179,7 +183,7 @@ public final class GameServerBootstrap {
 
                                             for (final var repositoryField : repository.getClass().getDeclaredFields()) {
 
-                                                if (repositoryField.isAnnotationPresent(InjectSessionFactory.class)) {
+                                                if (repositoryField.isAnnotationPresent(AttributeInjectee.class)) {
 
                                                     repositoryField.setAccessible(true);
                                                     repositoryField.set(repository, sessionFactory);
@@ -190,26 +194,6 @@ public final class GameServerBootstrap {
 
                                     field.setAccessible(true);
                                     field.set(channelHandler, serviceToInject);
-
-                                    logger.debug("Injecting {} into {}", channelHandler, field);
-                                }
-
-                                if(field.isAnnotationPresent(InjectDecoderBindings.class)) {
-
-                                    field.setAccessible(true);
-                                    field.set(channelHandler, magicBytesToFlatBufferSerializablesBindings);
-
-                                    injectionExceptionReason.append(String.format(" %s into %s", channelHandler, field));
-
-                                    logger.debug("Injecting {} into {}", channelHandler, field);
-                                }
-
-                                if(field.isAnnotationPresent(InjectEncoderBindings.class)) {
-
-                                    field.setAccessible(true);
-                                    field.set(channelHandler, invertMagicByteToFlatBufferSerializableBindings());
-
-                                    injectionExceptionReason.append(String.format(" %s into %s", channelHandler, field));
 
                                     logger.debug("Injecting {} into {}", channelHandler, field);
                                 }
@@ -232,49 +216,34 @@ public final class GameServerBootstrap {
         return injectedChannelHandlerCreators;
     }
 
-    public void registerMagicByteToFlatBufferSerializableBinding(
-            final Byte magicByte,
-            final Class<?> flatBufferSerializable
-    ) {
-
-        if (magicBytesToFlatBufferSerializablesBindings.containsKey(magicByte)) {
-
-            logger.warn("Binding of {} to {} already registered.", magicByte, magicBytesToFlatBufferSerializablesBindings.get(magicByte));
-
-            return;
-        }
-
-        magicBytesToFlatBufferSerializablesBindings.put(magicByte, flatBufferSerializable);
-    }
-
-    private Map<Class<?>, Byte> invertMagicByteToFlatBufferSerializableBindings() {
-
-        final var invertedMagicByteToFlatBufferSerializableBindings = new HashMap<Class<?>, Byte>();
-        final BiConsumer<Byte, Class<?>> inversionBiConsumer =
-                (magicByte, flatBufferSerializable) -> invertedMagicByteToFlatBufferSerializableBindings.put(flatBufferSerializable, magicByte);
-
-        magicBytesToFlatBufferSerializablesBindings.forEach(inversionBiConsumer);
-
-        return invertedMagicByteToFlatBufferSerializableBindings;
-    }
-
     /**
      * <p>
      * Runs this {@link GameServerBootstrap}, and does not block the current thread, meaning, it returns immediately after being called.
      * </p>
-     *
-     * @param shutdownSeconds the number of seconds before this {@link GameServerBootstrap} is gracefully shutdown.
      */
-    public void run(int shutdownSeconds) {
+    public void run() {
 
         final var bossGroup = new MultiThreadIoEventLoopGroup(NioIoHandler.newFactory());
         final var workerGroup = new MultiThreadIoEventLoopGroup(NioIoHandler.newFactory());
         final var bootstrap = new ServerBootstrap()
                 .group(bossGroup, workerGroup)
                 .channel(NioServerSocketChannel.class)
-                .childHandler(new GameServerChannelInitializer(initialHandlers, returnInjectedChannelHandlerCreators()))
                 .option(ChannelOption.SO_BACKLOG, 128)
                 .childOption(ChannelOption.SO_KEEPALIVE, true);
+
+        bootstrap.childHandler(new ChannelInitializer<SocketChannel>() {
+
+            @Override
+            protected void initChannel(SocketChannel ch) {
+
+                initialHandlers.forEach(ch.pipeline()::addLast);
+
+                returnInjectedChannelHandlerCreators()
+                        .stream()
+                        .map(ChannelHandlerCreator::newProduct)
+                        .forEach(ch.pipeline()::addLast);
+            }
+        });
 
         try (
                 final var registry = new StandardServiceRegistryBuilder().build();
@@ -309,62 +278,55 @@ public final class GameServerBootstrap {
             keepAliveSessionFactoryThread.setName("SessionFactory heart beat");
             keepAliveSessionFactoryThread.start();
 
-            final var serverChannel = bootstrap
-                    .bind(port)
+            bootstrap
+                    .bind(address, port)
                     .sync()
-                    .channel();
-
-            logger.info("GameServer running on port {}", port);
-
-            gracefulShutdownTask = new TimerTask() {
-
-                @Override
-                public void run() {
-
-                    serverChannel.close();
-                    bossGroup.shutdownGracefully();
-                    workerGroup.shutdownGracefully();
-                    sessionFactory.close();
-                }
-            };
-
-            serverChannel
-                    .closeFuture()
-                    .addListener(future -> {
+                    .addListener((ChannelFutureListener) future -> {
 
                         if (future.isSuccess()) {
 
-                            logger.warn("GameServer stopped successfully.");
+                            logger.info("GameServer running on port {}", port);
+
+                            future
+                                    .channel()
+                                    .closeFuture()
+                                    .addListener(closeFuture -> {
+
+                                        if (future.isSuccess()) {
+
+                                            logger.warn("Graceful shutdown in {} seconds", shutdownTimeout);
+
+                                            TimeUnit.SECONDS.sleep(shutdownTimeout);
+
+                                            bossGroup.shutdownGracefully();
+                                            workerGroup.shutdownGracefully();
+                                            sessionFactory.close();
+
+                                            logger.warn("GameServer stopped successfully.");
+                                        } else {
+
+                                            logger.error("GameServer failed to stop", future.cause());
+                                        }
+                                    });
+
+                            return;
                         }
 
-                        else {
-
-                            logger.error("GameServer failed to stop", future.cause());
-                        }
-
-                        shutdownGracefullyAfterNSeconds(shutdownSeconds);
+                        logger.error(future.cause().getMessage(), future.cause());
                     });
+
         } catch (final InterruptedException interruptedException) {
 
             logger.error(interruptedException.getMessage(), interruptedException);
         }
     }
 
-    public void run() {
-
-        run(0);
-    }
-
-    public void shutdownGracefullyAfterNSeconds(final int seconds) {
-
-        logger.warn("Shutting down gracefully after {} seconds", seconds);
-
-        new Timer()
-                .schedule(gracefulShutdownTask, (long) seconds * 1000);
-    }
-
     public void setInternetProtocolAddress(InetAddress address) {
 
         this.address = address;
+    }
+
+    public void setShutdownTimeout(int shutdownTimeout) {
+        this.shutdownTimeout = shutdownTimeout;
     }
 }

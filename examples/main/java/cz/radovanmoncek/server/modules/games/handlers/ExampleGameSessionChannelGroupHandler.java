@@ -5,7 +5,7 @@ import cz.radovanmoncek.server.modules.games.models.GameStateFlatBufferSerializa
 import cz.radovanmoncek.server.modules.games.services.ExampleGameHistoryService;
 import cz.radovanmoncek.server.ship.compiled.schemas.GameStatus;
 import cz.radovanmoncek.server.ship.compiled.schemas.GameStateRequest;
-import cz.radovanmoncek.ship.injection.annotations.InjectService;
+import cz.radovanmoncek.ship.injection.annotations.AttributeInjectee;
 import cz.radovanmoncek.ship.parents.handlers.GameSessionChannelGroupHandler;
 import cz.radovanmoncek.ship.sessions.models.GameSessionConfigurationOption;
 import io.netty.channel.ChannelHandlerContext;
@@ -21,7 +21,7 @@ import java.util.concurrent.ConcurrentLinkedQueue;
 
 public class ExampleGameSessionChannelGroupHandler extends GameSessionChannelGroupHandler<GameStateRequest> {
     @SuppressWarnings("unused")
-    @InjectService
+    @AttributeInjectee
     private ExampleGameHistoryService exampleGameHistoryService;
     private static final Logger logger = LogManager.getLogger(ExampleGameSessionChannelGroupHandler.class);
     private static final AttributeKey<Queue<GameStateRequest>> playerStateQueueAttribute = AttributeKey.valueOf("gameStateRequestQueue");

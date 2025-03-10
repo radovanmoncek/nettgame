@@ -1,6 +1,6 @@
 package cz.radovanmoncek.ship.repositories;
 
-import cz.radovanmoncek.ship.injection.annotations.InjectSessionFactory;
+import cz.radovanmoncek.ship.injection.annotations.AttributeInjectee;
 import jakarta.persistence.TypedQuery;
 import jakarta.persistence.criteria.CriteriaQuery;
 import jakarta.persistence.criteria.Root;
@@ -10,7 +10,7 @@ import java.util.List;
 
 public final class Repository<T> {
     private final Class<T> persistableClass;
-    @InjectSessionFactory
+    @AttributeInjectee
     private SessionFactory sessionFactory;
 
     public Repository(final Class<T> persistableClass) {

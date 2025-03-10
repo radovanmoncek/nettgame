@@ -92,7 +92,7 @@ public class ExampleGameSessionEventListener extends GameSessionEventListener {
 
         if (!gameUUID.toString().substring(0, 8).equals(gameCode.substring(0, 8))) {
 
-            sendInvalid(playerChannel);
+            logger.info("Player sent non-matching game code: {}", gameCode); //todo: debug level
 
             return;
         }

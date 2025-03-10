@@ -1,6 +1,5 @@
 package cz.radovanmoncek.ship.builders;
 
-import com.google.flatbuffers.Table;
 import cz.radovanmoncek.ship.bootstrap.GameServerBootstrap;
 import cz.radovanmoncek.ship.parents.builders.Builder;
 import cz.radovanmoncek.ship.parents.creators.ChannelHandlerCreator;
@@ -14,7 +13,7 @@ public class GameServerBootstrapBuilder implements Builder<GameServerBootstrap> 
 
     public GameServerBootstrapBuilder() {
 
-        result = GameServerBootstrap.newInstance();
+        result = GameServerBootstrap.returnNewInstance();
     }
 
     @Override
@@ -32,7 +31,7 @@ public class GameServerBootstrapBuilder implements Builder<GameServerBootstrap> 
     @Override
     public Builder<GameServerBootstrap> reset() {
 
-        result = GameServerBootstrap.newInstance();
+        result = GameServerBootstrap.returnNewInstance();
 
         return this;
     }
@@ -72,19 +71,16 @@ public class GameServerBootstrapBuilder implements Builder<GameServerBootstrap> 
         return this;
     }
 
-    public GameServerBootstrapBuilder buildProtocolSchema(
-            final Byte magicByte,
-            final Class<? extends Table> flatBufferSerializable
-    ){
+    public GameServerBootstrapBuilder buildLogLevel(LogLevel logLevel) {
 
-        result.registerMagicByteToFlatBufferSerializableBinding(magicByte, flatBufferSerializable);
+        result.setLogLevel(logLevel);
 
         return this;
     }
 
-    public GameServerBootstrapBuilder buildLogLevel(LogLevel logLevel) {
+    public GameServerBootstrapBuilder buildShutdownDelay(int i) {
 
-        result.setLogLevel(logLevel);
+        result.setShutdownTimeout(i);
 
         return this;
     }

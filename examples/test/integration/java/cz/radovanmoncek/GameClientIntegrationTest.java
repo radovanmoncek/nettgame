@@ -1,25 +1,19 @@
 package cz.radovanmoncek;
 
-import cz.radovanmoncek.client.modules.games.codecs.GameStateFlatBufferDecoder;
-import cz.radovanmoncek.client.modules.games.codecs.GameStateRequestFlatBufferEncoder;
 import cz.radovanmoncek.client.modules.games.models.GameStateRequestFlatBuffersSerializable;
 import cz.radovanmoncek.client.ship.bootstrap.GameClientBootstrap;
 import cz.radovanmoncek.client.ship.builders.GameClientBootstrapBuilder;
-import cz.radovanmoncek.server.ship.compiled.schemas.ChatMessage;
-import cz.radovanmoncek.server.ship.compiled.schemas.GameState;
-import cz.radovanmoncek.server.ship.compiled.schemas.GameStateRequest;
-import cz.radovanmoncek.server.ship.compiled.schemas.GameStatus;
+import cz.radovanmoncek.client.ship.directors.GameClientBootstrapDirector;
 import cz.radovanmoncek.client.ship.parents.handlers.ServerChannelHandler;
+import cz.radovanmoncek.server.ship.compiled.schemas.GameState;
+import cz.radovanmoncek.server.ship.compiled.schemas.GameStatus;
 import io.netty.channel.ChannelHandlerContext;
-import io.netty.handler.logging.LogLevel;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import org.junit.jupiter.api.*;
 
-import java.lang.reflect.InvocationTargetException;
-import java.lang.reflect.Method;
-import java.net.InetAddress;
 import java.util.concurrent.LinkedBlockingQueue;
+import java.util.concurrent.TimeUnit;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
@@ -28,75 +22,28 @@ import static org.junit.jupiter.api.Assertions.assertNotNull;
 public class GameClientIntegrationTest {
     private static final Logger logger = LogManager.getLogger(GameClientIntegrationTest.class);
     private static GameClientBootstrap player1, player2;
-    private static Method unicastToServerChannel1, unicastToServerChannel2;
-    private static ServerChannelHandler<GameState> sessionServerChannelHandler1, sessionServerChannelHandler2;
-    private static LinkedBlockingQueue<GameState> gameStateQueue1, gameStateQueue2;
+    private static TestingGameStateServerChannelHandler gameStateTestingGameStateServerChannelHandler1, gameStateTestingGameStateServerChannelHandler2;
     private static int x1 = 1000, y1 = 1000, x2 = 1000, y2 = 1000;
 
     @BeforeAll
-    static void setup() throws Exception {
+    static void setup() {
 
-        gameStateQueue1 = new LinkedBlockingQueue<>();
-        player1 = new GameClientBootstrapBuilder()
-                .buildPort(4321)
-                .buildServerAddress(InetAddress.getLoopbackAddress())
-                .buildLogLevel(LogLevel.INFO)
-                .buildChannelHandler(new GameStateFlatBufferDecoder())
-                .buildChannelHandler(sessionServerChannelHandler1 = new ServerChannelHandler<GameState>() {
+        gameStateTestingGameStateServerChannelHandler1 = new TestingGameStateServerChannelHandler();
 
-                    public void sendServer(Object message){
-
-                        unicastToServerChannel(message);
-                    }
-
-                    @Override
-                    protected void channelRead0(final ChannelHandlerContext channelHandlerContext, final GameState gameState) {
-
-                        gameStateQueue1.offer(gameState);
-                    }
-
-                    {
-
-                        try {
-
-                            unicastToServerChannel1 = getClass()
-                                    .getSuperclass()
-                                    .getDeclaredMethod("unicastToServerChannel", Object.class);
-                        } catch (final NoSuchMethodException noSuchMethodException) {
-
-                            logger.error(noSuchMethodException.getMessage(), noSuchMethodException);
-                        }
-
-                        unicastToServerChannel1.setAccessible(true);
-                    }
-                })
-                .buildChannelHandler(new GameStateRequestFlatBufferEncoder())
-                .buildMagicByteToFlatBuffersSchemaBinding((byte) 'G', GameState.class)
-                .buildMagicByteToFlatBuffersSchemaBinding((byte) 'g', GameStateRequest.class)
-                .buildMagicByteToFlatBuffersSchemaBinding((byte) 'm', ChatMessage.class)
-                .buildShutdownOnDisconnect(false)
+        player1 = new GameClientBootstrapDirector(new GameClientBootstrapBuilder())
+                .makeDefaultGameClientBootstrapBuilder()
+                .buildChannelHandler(gameStateTestingGameStateServerChannelHandler1)
                 .build();
-
-        player1.run(1, 9999);
-    }
-
-    @AfterEach
-    void cleanUpSessionResponseProtocolDataUnitQueue() {
-
-        gameStateQueue1.clear();
+        player1.run();
     }
 
     @Test
     @Order(0)
-    void nicknameOver8CharactersTest() throws Exception {
+    void nicknameOver8CharactersTest() throws InterruptedException {
 
-        unicastToServerChannel1
-                .invoke(
-                        sessionServerChannelHandler1,
-                        new GameStateRequestFlatBuffersSerializable(0, 0, 0, "VeryLongNicknameThatIsOverEightCharacters", GameStatus.START_SESSION, "")
-                );
+        gameStateTestingGameStateServerChannelHandler1.unicast(new GameStateRequestFlatBuffersSerializable(0, 0, 0, "VeryLongNicknameThatIsOverEightCharacters", GameStatus.START_SESSION, ""));
 
-        final var gameState = gameStateQueue1.take();
+        var gameState = gameStateTestingGameStateServerChannelHandler1.poll();
 
         assertNotNull(gameState);
 
@@ -105,15 +52,11 @@ public class GameClientIntegrationTest {
 
     @Test
     @Order(1)
-    void emptyPlayerNameTest() throws Exception {
+    void emptyPlayerNameTest() throws InterruptedException {
 
-        unicastToServerChannel1
-                .invoke(
-                        sessionServerChannelHandler1,
-                        new GameStateRequestFlatBuffersSerializable(0, 0, 0, "", GameStatus.START_SESSION, "")
-                );
+        gameStateTestingGameStateServerChannelHandler1.unicast(new GameStateRequestFlatBuffersSerializable(0, 0, 0, "", GameStatus.START_SESSION, ""));
 
-        final var gameState = gameStateQueue1.take();
+        final var gameState = gameStateTestingGameStateServerChannelHandler1.poll();
 
         assertNotNull(gameState);
 
@@ -122,13 +65,13 @@ public class GameClientIntegrationTest {
 
     @Test
     @Order(2)
-    void sessionStartTest() throws Exception {
+    void sessionStartTest() throws InterruptedException {
 
         final var sessionRequestProtocolDataUnit = new GameStateRequestFlatBuffersSerializable(0, 0, 0, "Test", GameStatus.START_SESSION, "");
 
-        unicastToServerChannel1.invoke(sessionServerChannelHandler1, sessionRequestProtocolDataUnit);
+        gameStateTestingGameStateServerChannelHandler1.unicast(sessionRequestProtocolDataUnit);
 
-        final var gameState = gameStateQueue1.take();
+        final var gameState = gameStateTestingGameStateServerChannelHandler1.poll();
 
         assertNotNull(gameState);
 
@@ -142,16 +85,16 @@ public class GameClientIntegrationTest {
     @AfterAll
     static void tearDown() {
 
-        player1.shutdownGracefullyAfterNSeconds(0);
+        gameStateTestingGameStateServerChannelHandler1.disconnect();
     }
 
     @Test
     @Order(3)
-    void sessionValidStateWithinBoundsTest() throws InterruptedException, IllegalAccessException, InvocationTargetException {
+    void sessionValidStateWithinBoundsTest() throws InterruptedException {
 
-        unicastToServerChannel1.invoke(sessionServerChannelHandler1, new GameStateRequestFlatBuffersSerializable(1008, 1008, 90, "", GameStatus.STATE_CHANGE, ""));
+        gameStateTestingGameStateServerChannelHandler1.unicast(new GameStateRequestFlatBuffersSerializable(1008, 1008, 90, "", GameStatus.STATE_CHANGE, ""));
 
-        final var gameState = gameStateQueue1.take();
+        final var gameState = gameStateTestingGameStateServerChannelHandler1.poll();
 
         assertNotNull(gameState);
         assertNotNull(gameState.game());
@@ -169,9 +112,9 @@ public class GameClientIntegrationTest {
     @Order(4)
     void sessionInvalidStateOverBoundsTest() throws Exception {
 
-        unicastToServerChannel1.invoke(sessionServerChannelHandler1, new GameStateRequestFlatBuffersSerializable(801, 601, 15, "", GameStatus.STATE_CHANGE, ""));
+        gameStateTestingGameStateServerChannelHandler1.unicast(new GameStateRequestFlatBuffersSerializable(801, 601, 15, "", GameStatus.STATE_CHANGE, ""));
 
-        final var gameState = gameStateQueue1.take();
+        final var gameState = gameStateTestingGameStateServerChannelHandler1.poll();
 
         assertNotNull(gameState);
 
@@ -182,9 +125,9 @@ public class GameClientIntegrationTest {
     @Order(5)
     void sessionInvalidStateUnderBoundsTest() throws Exception {
 
-        unicastToServerChannel1.invoke(sessionServerChannelHandler1, new GameStateRequestFlatBuffersSerializable(-1, -1, -15, "", GameStatus.STATE_CHANGE, ""));
+        gameStateTestingGameStateServerChannelHandler1.unicast(new GameStateRequestFlatBuffersSerializable(-1, -1, -15, "", GameStatus.STATE_CHANGE, ""));
 
-        final var gameState = gameStateQueue1.take();
+        final var gameState = gameStateTestingGameStateServerChannelHandler1.poll();
 
         assertNotNull(gameState);
 
@@ -195,9 +138,9 @@ public class GameClientIntegrationTest {
     @Order(6)
     void sessionValidStateMoveDeltaTest() throws Exception {
 
-        unicastToServerChannel1.invoke(sessionServerChannelHandler1, new GameStateRequestFlatBuffersSerializable(1000, 1008, 180, "", GameStatus.STATE_CHANGE, ""));
+        gameStateTestingGameStateServerChannelHandler1.unicast(new GameStateRequestFlatBuffersSerializable(1000, 1008, 180, "", GameStatus.STATE_CHANGE, ""));
 
-        var gameState = gameStateQueue1.take();
+        var gameState = gameStateTestingGameStateServerChannelHandler1.poll();
 
         assertNotNull(gameState);
         assertNotNull(gameState.player1());
@@ -207,9 +150,9 @@ public class GameClientIntegrationTest {
         assertEquals(1008, gameState.player1().y());
         assertEquals(180, gameState.player1().rotationAngle());
 
-        unicastToServerChannel1.invoke(sessionServerChannelHandler1, new GameStateRequestFlatBuffersSerializable(1008, 1008, 270, "", GameStatus.STATE_CHANGE, ""));
+        gameStateTestingGameStateServerChannelHandler1.unicast(new GameStateRequestFlatBuffersSerializable(1008, 1008, 270, "", GameStatus.STATE_CHANGE, ""));
 
-        gameState = gameStateQueue1.take();
+        gameState = gameStateTestingGameStateServerChannelHandler1.poll();
 
         assertNotNull(gameState);
         assertNotNull(gameState.player1());
@@ -224,17 +167,17 @@ public class GameClientIntegrationTest {
     @Order(7)
     void sessionInvalidStateMoveDeltaTest() throws Exception {
 
-        unicastToServerChannel1.invoke(sessionServerChannelHandler1, new GameStateRequestFlatBuffersSerializable(2, 6, 45, "", GameStatus.STATE_CHANGE, ""));
+        gameStateTestingGameStateServerChannelHandler1.unicast(new GameStateRequestFlatBuffersSerializable(2, 6, 45, "", GameStatus.STATE_CHANGE, ""));
 
-        var gameState = gameStateQueue1.take();
+        var gameState = gameStateTestingGameStateServerChannelHandler1.poll();
 
         assertNotNull(gameState);
 
         assertEquals(GameStatus.INVALID_STATE, gameState.game().status());
 
-        unicastToServerChannel1.invoke(sessionServerChannelHandler1, new GameStateRequestFlatBuffersSerializable(4, 4, 45, "", GameStatus.STATE_CHANGE, ""));
+        gameStateTestingGameStateServerChannelHandler1.unicast(new GameStateRequestFlatBuffersSerializable(4, 4, 45, "", GameStatus.STATE_CHANGE, ""));
 
-        gameState = gameStateQueue1.take();
+        gameState = gameStateTestingGameStateServerChannelHandler1.poll();
 
         assertNotNull(gameState);
 
@@ -245,12 +188,9 @@ public class GameClientIntegrationTest {
     @Order(8)
     void sessionEndTest() throws Exception {
 
-        unicastToServerChannel1.invoke(
-                sessionServerChannelHandler1,
-                new GameStateRequestFlatBuffersSerializable(0, 0, 0, "", GameStatus.STOP_SESSION, "")
-        );
+        gameStateTestingGameStateServerChannelHandler1.unicast(new GameStateRequestFlatBuffersSerializable(0, 0, 0, "", GameStatus.STOP_SESSION, ""));
 
-        final var gameState = gameStateQueue1.take();
+        final var gameState = gameStateTestingGameStateServerChannelHandler1.poll();
 
         assertNotNull(gameState);
 
@@ -266,75 +206,33 @@ public class GameClientIntegrationTest {
         instanceField.setAccessible(true);
         instanceField.set(player1, null);
 
-        gameStateQueue2 = new LinkedBlockingQueue<>();
+        gameStateTestingGameStateServerChannelHandler2 = new TestingGameStateServerChannelHandler();
 
-        player2 = new GameClientBootstrapBuilder()
-                .buildLogLevel(LogLevel.INFO)
-                .buildChannelHandler(new GameStateFlatBufferDecoder())
-                .buildChannelHandler(sessionServerChannelHandler2 = new ServerChannelHandler<GameState>() {
-
-                    {
-
-                        try {
-                            (
-                                    unicastToServerChannel2 =
-                                            getClass()
-                                                    .getSuperclass()
-                                                    .getDeclaredMethod("unicastToServerChannel", Object.class)
-                            )
-                                    .setAccessible(true);
-                        } catch (final NoSuchMethodException noSuchMethodException) {
-
-                            logger.error(noSuchMethodException.getMessage(), noSuchMethodException);
-                        }
-                    }
-
-                    public void sendServer(Object message) {
-
-                        unicastToServerChannel(message);
-                    }
-
-                    @Override
-                    protected void channelRead0(final ChannelHandlerContext channelHandlerContext, final GameState protocolDataUnit) {
-
-                        gameStateQueue2.offer(protocolDataUnit);
-                    }
-                })
-                .buildChannelHandler(new GameStateRequestFlatBufferEncoder())
-                .buildMagicByteToFlatBuffersSchemaBinding((byte) 'G', GameState.class)
-                .buildMagicByteToFlatBuffersSchemaBinding((byte) 'g', GameStateRequest.class)
+        player2 = new GameClientBootstrapDirector(new GameClientBootstrapBuilder())
+                .makeDefaultGameClientBootstrapBuilder()
+                .buildChannelHandler(gameStateTestingGameStateServerChannelHandler2)
                 .build();
+        player2.run();
 
-        player2.run(1, 9999);
+        gameStateTestingGameStateServerChannelHandler1.unicast(new GameStateRequestFlatBuffersSerializable(0, 0, 0, "Test", GameStatus.START_SESSION, ""));
 
-        unicastToServerChannel1.invoke(
-                sessionServerChannelHandler1,
-                new GameStateRequestFlatBuffersSerializable(0, 0, 0, "Test", GameStatus.START_SESSION, "")
-        );
-
-        var gameState = gameStateQueue1.take();
+        var gameState = gameStateTestingGameStateServerChannelHandler1.poll();
 
         assertNotNull(gameState);
 
         assertEquals(GameStatus.START_SESSION, gameState.game().status());
 
-        final var gameCode = gameState.game().gameCode();
+        final var gameCode = gameState
+                .game()
+                .gameCode();
 
         assertNotNull(gameCode);
 
-        /*gameState = gameStateQueue1.take();
+        TimeUnit.MILLISECONDS.sleep(2000);
 
-        assertNotNull(gameState);
+        gameStateTestingGameStateServerChannelHandler2.unicast(new GameStateRequestFlatBuffersSerializable(0, 0, 0, "Test2", GameStatus.JOIN_SESSION, gameCode));
 
-        assertEquals(GameStatus.STATE_CHANGE, gameState.game().status());
-*/
-
-        unicastToServerChannel2.invoke(
-                sessionServerChannelHandler2,
-                new GameStateRequestFlatBuffersSerializable(0, 0, 0, "Test2", GameStatus.JOIN_SESSION, gameCode)
-        );
-
-        var gameStateSecondPlayer = gameStateQueue2.take();
+        var gameStateSecondPlayer = gameStateTestingGameStateServerChannelHandler2.poll();
 
         assertNotNull(gameStateSecondPlayer);
 
@@ -345,7 +243,7 @@ public class GameClientIntegrationTest {
         assertNotNull(gameStateSecondPlayer.player1().name());
         assertNotNull(gameStateSecondPlayer.player2().name());
 
-        gameState = gameStateQueue1.take();
+        gameState = gameStateTestingGameStateServerChannelHandler1.poll();
 
         assertNotNull(gameState);
 
@@ -353,14 +251,8 @@ public class GameClientIntegrationTest {
         assertEquals("Test", gameState.player1().name());
         assertEquals("Test2", gameState.player2().name());
 
-        //gameState = gameStateQueue1.take();
-        //gameStateSecondPlayer = gameStateQueue2.take();
-
-        //assertNotNull(gameState);
         assertNotNull(gameStateSecondPlayer);
 
-        //assertEquals(GameStatus.STATE_CHANGE, gameState.game().status());
-        //assertEquals(GameStatus.STATE_CHANGE, gameStateSecondPlayer.game().status());
         assertEquals(GameStatus.JOIN_SESSION, gameStateSecondPlayer.game().status());
         assertEquals("Test2", gameStateSecondPlayer.player1().name());
         assertEquals("Test", gameStateSecondPlayer.player2().name());
@@ -370,18 +262,15 @@ public class GameClientIntegrationTest {
     @Order(10)
     void twoPlayerSessionTest() throws Exception {
 
-        unicastToServerChannel1.invoke(
-                sessionServerChannelHandler1,
-                new GameStateRequestFlatBuffersSerializable(x1 + 8, y1, 90, "", GameStatus.STATE_CHANGE, "")
-        );
+        gameStateTestingGameStateServerChannelHandler1.unicast(new GameStateRequestFlatBuffersSerializable(x1 + 8, y1, 90, "", GameStatus.STATE_CHANGE, ""));
 
-        var gameStateFirstPlayer = gameStateQueue1.take();
+        var gameStateFirstPlayer = gameStateTestingGameStateServerChannelHandler1.poll();
 
         assertNotNull(gameStateFirstPlayer);
 
         assertEquals(GameStatus.STATE_CHANGE, gameStateFirstPlayer.game().status());
 
-        var gameStateSecondPlayer = gameStateQueue2.take();
+        var gameStateSecondPlayer = gameStateTestingGameStateServerChannelHandler2.poll();
 
         assertNotNull(gameStateSecondPlayer);
 
@@ -396,18 +285,15 @@ public class GameClientIntegrationTest {
         x1 = gameStateFirstPlayer.player1().x();
         y1 = gameStateFirstPlayer.player1().y();
 
-        unicastToServerChannel2.invoke(
-                sessionServerChannelHandler2,
-                new GameStateRequestFlatBuffersSerializable(x2, y2 + 8, 90, "", GameStatus.STATE_CHANGE, "")
-        );
+        gameStateTestingGameStateServerChannelHandler2.unicast(new GameStateRequestFlatBuffersSerializable(x2, y2 + 8, 90, "", GameStatus.STATE_CHANGE, ""));
 
-        gameStateSecondPlayer = gameStateQueue2.take();
+        gameStateSecondPlayer = gameStateTestingGameStateServerChannelHandler2.poll();
 
         assertNotNull(gameStateSecondPlayer);
 
         assertEquals(GameStatus.STATE_CHANGE, gameStateSecondPlayer.game().status());
 
-        gameStateFirstPlayer = gameStateQueue1.take();
+        gameStateFirstPlayer = gameStateTestingGameStateServerChannelHandler1.poll();
 
         assertNotNull(gameStateFirstPlayer);
 
@@ -427,6 +313,37 @@ public class GameClientIntegrationTest {
     @Order(11)
     void shutdownJoinedPlayerGameClientTest() {
 
-        player2.shutdownGracefully();
+        gameStateTestingGameStateServerChannelHandler2.disconnect();
+    }
+
+    /**
+     * Inspired by {@link io.netty.channel.embedded.EmbeddedChannel}
+     */
+    public static class TestingGameStateServerChannelHandler extends ServerChannelHandler<GameState> {
+        private final LinkedBlockingQueue<GameState> queue = new LinkedBlockingQueue<>();
+
+        @Override
+        protected void channelRead0(ChannelHandlerContext ctx, GameState msg) {
+
+            queue.offer(msg);
+        }
+
+        @Override
+        public void unicast(Object msg) {
+
+            super.unicast(msg);
+        }
+
+        public GameState poll() throws InterruptedException {
+
+            return queue.poll(100, TimeUnit.MILLISECONDS);
+        }
+
+        public void disconnect() {
+
+            queue.clear();
+
+            super.disconnect();
+        }
     }
 }

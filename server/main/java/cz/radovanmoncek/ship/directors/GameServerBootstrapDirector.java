@@ -1,5 +1,6 @@
 package cz.radovanmoncek.ship.directors;
 
+import cz.radovanmoncek.client.ship.builders.GameClientBootstrapBuilder;
 import cz.radovanmoncek.ship.builders.GameServerBootstrapBuilder;
 import io.netty.handler.logging.LogLevel;
 
@@ -17,6 +18,7 @@ public class GameServerBootstrapDirector {
         return builder
                 .buildLogLevel(LogLevel.INFO)
                 .buildPort(4321)
-                .buildInternetProtocolAddress(InetAddress.getLoopbackAddress());
+                .buildInternetProtocolAddress(InetAddress.getLoopbackAddress())
+                .buildShutdownDelay(4);
     }
 }

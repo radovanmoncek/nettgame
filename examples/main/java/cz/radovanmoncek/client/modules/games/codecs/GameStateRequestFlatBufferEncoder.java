@@ -15,41 +15,13 @@ public class GameStateRequestFlatBufferEncoder extends FlatBuffersEncoder<GameSt
     @Override
     protected byte[] encodeBodyAfterHeader(GameStateRequestFlatBuffersSerializable flatBuffersSerializable, FlatBufferBuilder flatBufferBuilder) {
 
-        if (flatBuffersSerializable.gameCode() == null || flatBuffersSerializable.name() == null){
+        logger.info("Encoding {}", flatBuffersSerializable);
 
-            logger.error("Serializable {} invalid", flatBuffersSerializable);
+        return flatBuffersSerializable.serialize(flatBufferBuilder);
+    }
 
-            return new byte[0];
-        }
-
-        final var name = flatBufferBuilder.createString(flatBuffersSerializable.name());
-        final var gameCode = flatBufferBuilder.createString(flatBuffersSerializable.gameCode());
-
-        GameStateRequest.startGameStateRequest(flatBufferBuilder);
-        GameStateRequest.addGameStatusRequest(flatBufferBuilder, flatBuffersSerializable.gameStatus());
-
-        switch (flatBuffersSerializable.gameStatus()) {
-
-            case GameStatus.STATE_CHANGE -> {
-
-                GameStateRequest.addX(flatBufferBuilder, flatBuffersSerializable.x());
-                GameStateRequest.addY(flatBufferBuilder, flatBuffersSerializable.y());
-                GameStateRequest.addRotationAngle(flatBufferBuilder, flatBuffersSerializable.rotationAngle());
-            }
-
-            case GameStatus.START_SESSION -> GameStateRequest.addName(flatBufferBuilder, name);
-
-            case GameStatus.JOIN_SESSION -> {
-
-                GameStateRequest.addName(flatBufferBuilder, name);
-                GameStateRequest.addGameCode(flatBufferBuilder, gameCode);
-            }
-        }
-
-        final var gameStateRequest = GameStateRequest.endGameStateRequest(flatBufferBuilder);
-
-        flatBufferBuilder.finish(gameStateRequest);
-
-        return flatBufferBuilder.sizedByteArray();
+    @Override
+    protected byte[] encodeHeader(GameStateRequestFlatBuffersSerializable flatBuffersSerializable, FlatBufferBuilder flatBufferBuilder) {
+        return new byte[]{'g'};
     }
 }

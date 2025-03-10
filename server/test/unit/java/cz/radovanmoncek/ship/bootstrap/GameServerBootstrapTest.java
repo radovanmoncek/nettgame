@@ -7,7 +7,6 @@ import cz.radovanmoncek.ship.parents.codecs.FlatBuffersEncoder;
 import cz.radovanmoncek.ship.parents.creators.ChannelHandlerCreator;
 import cz.radovanmoncek.ship.parents.handlers.ChannelGroupHandler;
 import cz.radovanmoncek.ship.parents.models.FlatBufferSerializable;
-import io.netty.channel.Channel;
 import io.netty.channel.ChannelHandler;
 import io.netty.channel.ChannelHandlerContext;
 import org.junit.jupiter.api.BeforeAll;
@@ -26,7 +25,7 @@ public class GameServerBootstrapTest {
     @BeforeAll
     static void setup() {
 
-        gameServerBootstrap = GameServerBootstrap.newInstance();
+        gameServerBootstrap = GameServerBootstrap.returnNewInstance();
     }
 
     @Test
@@ -41,7 +40,7 @@ public class GameServerBootstrapTest {
         assertNotNull(instance);
 
         assertEquals(instance, gameServerBootstrap);
-        assertEquals(instance, GameServerBootstrap.newInstance());
+        assertEquals(instance, GameServerBootstrap.returnNewInstance());
     }
 
     @Test
@@ -79,7 +78,12 @@ public class GameServerBootstrapTest {
             @Override
             public ChannelHandler newProduct() {
 
-                return new FlatBuffersDecoder<>(Table.class) {
+                return new FlatBuffersDecoder<>() {
+
+                    @Override
+                    protected boolean decodeHeader(ByteBuffer in) {
+                        return false;
+                    }
 
                     @Override
                     protected Table decodeBodyAfterHeader(ByteBuffer in) {
@@ -101,18 +105,20 @@ public class GameServerBootstrapTest {
 
         assertEquals(HashMap.class, bindingsField.get(decoder).getClass());
 
-        gameServerBootstrap.registerMagicByteToFlatBufferSerializableBinding((byte) 2, FlatBufferSerializable.class);
         gameServerBootstrap.addChannelHandlerCreator(new ChannelHandlerCreator() {
 
             @Override
             public ChannelHandler newProduct() {
 
                 return new FlatBuffersEncoder<>() {
+                    @Override
+                    protected byte[] encodeHeader(FlatBufferSerializable flatBuffersSerializable, FlatBufferBuilder flatBufferBuilder) {
+                        return new byte[0];
+                    }
 
                     @Override
-                    protected byte [] encodeBodyAfterHeader(FlatBufferSerializable<?> flatBufferSerializable, FlatBufferBuilder builder) {
-
-                        return null;
+                    protected byte[] encodeBodyAfterHeader(FlatBufferSerializable flatBuffersSerializable, FlatBufferBuilder flatBufferBuilder) {
+                        return new byte[0];
                     }
                 };
             }

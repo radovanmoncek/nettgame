@@ -39,7 +39,7 @@ public abstract class GameSessionChannelGroupHandler<FlatBuffersSchema extends T
 
     /**
      * Broadcasts a connection event to all registered {@link GameSessionEventListener}s.
-     * This method is very computationally intensive; it should only be used for events that necessitate global event attention.
+     * This method should only be used for events of global scope.
      *
      * @param playerChannel the channel that is relevant to the arisen event.
      */

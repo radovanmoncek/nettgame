@@ -1,16 +1,15 @@
 package cz.radovanmoncek.server.modules.chats.models;
 
-import cz.radovanmoncek.server.ship.compiled.schemas.ChatMessage;
+import com.google.flatbuffers.FlatBufferBuilder;
 import cz.radovanmoncek.ship.parents.models.FlatBufferSerializable;
 
 /**
- * Example chat message ProtocolDataUnit.
+ * Example.
  */
-public record ChatMessageFlatBufferSerializable(String authorNick, String message) implements FlatBufferSerializable<ChatMessage> {
+public record ChatMessageFlatBufferSerializable(String authorNick, String message) implements FlatBufferSerializable {
 
     @Override
-    public Class<ChatMessage> getSchemaClass() {
-
-        return ChatMessage.class;
+    public byte[] serialize(FlatBufferBuilder builder) {
+        return builder.sizedByteArray();
     }
 }

@@ -10,4 +10,9 @@ public final class ChatMessageFlatBuffersEncoder extends FlatBuffersEncoder<Chat
     protected byte[] encodeBodyAfterHeader(ChatMessageFlatBufferSerializable flatBuffersSerializable, FlatBufferBuilder flatBufferBuilder) {
         return new byte[0];
     }
+
+    @Override
+    protected byte[] encodeHeader(ChatMessageFlatBufferSerializable flatBuffersSerializable, FlatBufferBuilder flatBufferBuilder) {
+        return new byte[0];
+    }
 }

@@ -167,7 +167,7 @@ public class ExampleServerChannelHandler extends ServerChannelHandler<GameState>
             }
         }
 
-        unicastToServerChannel(new GameStateRequestFlatBuffersSerializable(requestedX, requestedY, requestedRotationAngle, "", GameStatus.STATE_CHANGE, ""));
+        unicast(new GameStateRequestFlatBuffersSerializable(requestedX, requestedY, requestedRotationAngle, "", GameStatus.STATE_CHANGE, ""));
     }
 
     private interface ClientState {
@@ -277,7 +277,7 @@ public class ExampleServerChannelHandler extends ServerChannelHandler<GameState>
                     if (userInput.isEmpty())
                         return;
 
-                    unicastToServerChannel(new GameStateRequestFlatBuffersSerializable(0, 0, 0, userInput.toString(), GameStatus.START_SESSION, ""));
+                    unicast(new GameStateRequestFlatBuffersSerializable(0, 0, 0, userInput.toString(), GameStatus.START_SESSION, ""));
                 }
 
                 case KeyEvent.VK_BACK_SPACE -> {
@@ -356,7 +356,7 @@ public class ExampleServerChannelHandler extends ServerChannelHandler<GameState>
                     if (userInput.length() != 8)
                         return;
 
-                    unicastToServerChannel(new GameStateRequestFlatBuffersSerializable(0, 0, 0, nickname, GameStatus.JOIN_SESSION, userInput.toString()));
+                    unicast(new GameStateRequestFlatBuffersSerializable(0, 0, 0, nickname, GameStatus.JOIN_SESSION, userInput.toString()));
                 }
 
                 case KeyEvent.VK_BACK_SPACE -> {
@@ -424,13 +424,7 @@ public class ExampleServerChannelHandler extends ServerChannelHandler<GameState>
                     }
                 }
 
-                try {
-
-                    disconnectFromServerChannel();
-                } catch (InterruptedException exception) {
-
-                    logger.error(exception.getMessage(), exception);
-                }
+                disconnect();
             };
 
             final var networkedGameGUIRenderingLoop = Executors

@@ -1,7 +1,6 @@
 package cz.radovanmoncek.client.ship.builders;
 
 import cz.radovanmoncek.client.ship.bootstrap.GameClientBootstrap;
-import com.google.flatbuffers.Table;
 import cz.radovanmoncek.ship.parents.builders.Builder;
 import io.netty.channel.ChannelHandler;
 import io.netty.handler.logging.LogLevel;
@@ -13,7 +12,7 @@ public class GameClientBootstrapBuilder implements Builder<GameClientBootstrap> 
 
     public GameClientBootstrapBuilder() {
 
-        result = GameClientBootstrap.newInstance();
+        result = GameClientBootstrap.returnNewInstance();
     }
 
     @Override
@@ -39,28 +38,21 @@ public class GameClientBootstrapBuilder implements Builder<GameClientBootstrap> 
 
     public GameClientBootstrapBuilder buildPort(int port){
 
-        result.setServerPort(port);
+        result.setGameServerPort(port);
 
         return this;
     }
 
-    public GameClientBootstrapBuilder buildServerAddress(InetAddress address){
+    public GameClientBootstrapBuilder buildServerAddress(InetAddress address) {
 
-        result.setInstanceContainerAddress(address);
+        result.setGameServerAddress(address);
 
         return this;
     }
 
-    public GameClientBootstrapBuilder buildChannelHandler(ChannelHandler channelHandler){
+    public GameClientBootstrapBuilder buildChannelHandler(ChannelHandler channelHandler) {
 
         result.addChannelHandler(channelHandler);
-
-        return this;
-    }
-
-    public GameClientBootstrapBuilder buildMagicByteToFlatBuffersSchemaBinding(final Byte magicByte, Class<? extends Table> flatBuffersSchema){
-
-        result.registerProtocolDataUnitToProtocolDataUnitBinding(magicByte, flatBuffersSchema);
 
         return this;
     }
@@ -68,6 +60,27 @@ public class GameClientBootstrapBuilder implements Builder<GameClientBootstrap> 
     public GameClientBootstrapBuilder buildLogLevel(LogLevel logLevel) {
 
         result.setLogLevel(logLevel);
+
+        return this;
+    }
+
+    public GameClientBootstrapBuilder buildReconnectAttempts(int i) {
+
+        result.setReconnectAttempts(i);
+
+        return this;
+    }
+
+    public GameClientBootstrapBuilder buildReconnectDelay(int i) {
+
+        result.setReconnectDelay(i);
+
+        return this;
+    }
+
+    public GameClientBootstrapBuilder buildShutdownTimeout(int i) {
+
+        result.setShutdownTimeout(i);
 
         return this;
     }

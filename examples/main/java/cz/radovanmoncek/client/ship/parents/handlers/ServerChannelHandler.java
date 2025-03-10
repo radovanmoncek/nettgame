@@ -12,12 +12,12 @@ public abstract class ServerChannelHandler<FlatBuffersSchema extends Table> exte
     private Channel serverChannel;
 
     @Override
-    public void handlerAdded(final ChannelHandlerContext channelHandlerContext) {
+    public void handlerAdded(ChannelHandlerContext ctx) {
 
-        serverChannel = channelHandlerContext.channel();
+        serverChannel = ctx.channel();
     }
 
-    protected void unicastToServerChannel(final Object message) {
+    protected void unicast(final Object message) {
 
         if(serverChannel == null){
 
@@ -29,7 +29,7 @@ public abstract class ServerChannelHandler<FlatBuffersSchema extends Table> exte
         serverChannel.writeAndFlush(message);
     }
 
-    protected void disconnectFromServerChannel() throws InterruptedException {
+    protected void disconnect() {
 
         serverChannel
                 .close()
