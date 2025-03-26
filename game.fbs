@@ -1,0 +1,31 @@
+///Composite
+table Player {
+    x:int;
+    y:int;
+    rotation_angle:int;
+    name:string;
+}
+
+enum GameStatus:byte {START_SESSION, STOP_SESSION, JOIN_SESSION, STATE_CHANGE, INVALID_STATE}
+
+///Conmposite Game metadata
+table Game {
+    status:GameStatus;
+    game_code:string;
+}
+
+///Reponse to players
+table GameState {
+    game:Game;
+    player1:Player;
+    player2:Player;
+}
+
+///Request from players
+table GameStateRequest {
+    position:Vec2;
+    rotation_angle:int;
+    game_status_request:GameStatus;
+    game_code:string;
+    name:string;
+}

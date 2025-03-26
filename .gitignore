@@ -31,3 +31,15 @@ target
 
 # MANIFEST.MF
 MANIFEST.MF
+
+#.env
+.env
+
+#.iml
+*.iml
+
+#.properties
+*.properties
+
+#.xml
+cz.radovanmoncek.ship.util.reflection.ReflectionUtilities.log4j2.xml
