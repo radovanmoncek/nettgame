@@ -20,6 +20,7 @@ import org.hibernate.boot.MetadataSources;
 import org.hibernate.boot.registry.StandardServiceRegistryBuilder;
 import org.hibernate.cfg.Configuration;
 
+import java.lang.reflect.ParameterizedType;
 import java.net.InetAddress;
 import java.util.*;
 import java.util.concurrent.Executors;
@@ -183,10 +184,10 @@ public final class NettgameServerBootstrap {
                                 .setProperty("hibernate.connection.url", System.getenv("DATABASE_URL"))
                                 .setProperty("hibernate.connection.username", System.getenv("HIBERNATE_DB_USER"))
                                 .setProperty("hibernate.connection.password", System.getenv("MYSQL_ROOT_PASSWORD"))
-                                .addAnnotatedClasses(repositories.stream().map(repository -> ReflectionUtilities.returnTypeParameterAtIndex(repository.getClass(), 0)).toArray(Class[]::new))
+                                .addAnnotatedClasses(repositories.stream().map(repository -> ReflectionUtilities.returnTypeParameterAtIndex((ParameterizedType) repository.getClass().getGenericSuperclass(), 0)).toArray(Class[]::new))
                                 .buildSessionFactory() :
                         new MetadataSources(registry)
-                                .addAnnotatedClasses(repositories.stream().map(repository -> ReflectionUtilities.returnTypeParameterAtIndex(repository.getClass(), 0)).toArray(Class[]::new))
+                                .addAnnotatedClasses(repositories.stream().map(repository -> ReflectionUtilities.returnTypeParameterAtIndex((ParameterizedType) repository.getClass().getGenericSuperclass(), 0)).toArray(Class[]::new))
                                 .buildMetadata()
                                 .buildSessionFactory()
         ) {

@@ -7,6 +7,7 @@ import jakarta.persistence.criteria.CriteriaQuery;
 import jakarta.persistence.criteria.Root;
 import org.hibernate.SessionFactory;
 
+import java.lang.reflect.ParameterizedType;
 import java.util.List;
 import java.util.Optional;
 
@@ -41,7 +42,7 @@ public abstract class Repository<T> {
 
     private Class<T> returnEntityClass() {
 
-        return (Class<T>) ReflectionUtilities.returnTypeParameterAtIndex(getClass(), 0);
+        return (Class<T>) ReflectionUtilities.returnTypeParameterAtIndex((ParameterizedType) getClass().getGenericSuperclass(), 0);
     }
 
     /**

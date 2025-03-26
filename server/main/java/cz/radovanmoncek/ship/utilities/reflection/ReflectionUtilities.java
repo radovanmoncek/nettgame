@@ -1,7 +1,6 @@
 package cz.radovanmoncek.ship.utilities.reflection;
 
-import java.lang.reflect.Field;
-import java.lang.reflect.InvocationTargetException;
+import java.lang.reflect.*;
 import java.util.Arrays;
 
 public final class ReflectionUtilities {
@@ -50,9 +49,10 @@ public final class ReflectionUtilities {
         method.invoke(object, parameters);
     }
 
-    public static Class<?> returnTypeParameterAtIndex(Class<?> clazz, int i) {
+    //Big thanks to: google.gson
+    public static Class<?> returnTypeParameterAtIndex(ParameterizedType type, int i) {
 
-        return clazz.getTypeParameters()[i].getClass();
+        return (Class<?>) type.getActualTypeArguments()[i];
     }
 
     public static Class<?> findActualClass(Object object) {
