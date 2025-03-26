@@ -37,7 +37,7 @@ public abstract class GameSessionEventListener {
      * State change operations should be performed.
      * @param context this {@link GameSessionContext}.
      */
-    public abstract void onRunning(GameSessionContext context);
+    public abstract void onServerTick(GameSessionContext context);
 
     /**
      * This is the last event called in the lifecycle of a game session.

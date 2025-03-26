@@ -5,6 +5,7 @@ import cz.radovanmoncek.ship.parents.creators.ChannelHandlerCreator;
 import io.netty.channel.ChannelHandler;
 
 public class GameStateFlatBuffersEncoderCreator extends ChannelHandlerCreator {
+
     @Override
     public ChannelHandler newProduct() {
 

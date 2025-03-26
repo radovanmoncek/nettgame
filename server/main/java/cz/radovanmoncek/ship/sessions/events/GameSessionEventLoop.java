@@ -5,46 +5,66 @@ import cz.radovanmoncek.ship.parents.sessions.listeners.GameSessionEventListener
 import cz.radovanmoncek.ship.sessions.models.GameSessionConfigurationOption;
 import io.netty.channel.Channel;
 import io.netty.channel.group.ChannelGroup;
-import org.apache.logging.log4j.LogManager;
-import org.apache.logging.log4j.Logger;
+import io.netty.channel.group.DefaultChannelGroup;
+import io.netty.util.concurrent.GlobalEventExecutor;
 
 import java.util.*;
 import java.util.concurrent.ConcurrentLinkedQueue;
 import java.util.concurrent.LinkedBlockingQueue;
 import java.util.concurrent.TimeUnit;
+import java.util.logging.Level;
+import java.util.logging.Logger;
 
 public class GameSessionEventLoop implements Runnable {
-    private static final Logger logger = LogManager.getLogger(GameSessionEventLoop.class);
-    private final GameSessionContext gameSessionContext;
-    private final ChannelGroup globalConnections;
-    private final ChannelGroup contextConnections;
-    private final LinkedBlockingQueue<Channel> pendingChannels;
-    private final List<Map.Entry<GameSessionConfigurationOption, Object>> options;
-    private final Map.Entry<GameSessionEventListener, GameSessionContext> gameSessionListenerEntry;
-    private final GameSessionEventListener gameSessionEventListener;
-    private final ConcurrentLinkedQueue<Map.Entry<GameSessionEventListener, GameSessionContext>> gameSessionListeners;
+    private static final Logger logger = Logger.getLogger(GameSessionEventLoop.class.getName());
+    private GameSessionContext gameSessionContext;
+    private ChannelGroup globalConnections;
+    private ChannelGroup contextConnections;
+    private LinkedBlockingQueue<Channel> pendingConnections;
+    private List<Map.Entry<GameSessionConfigurationOption, Object>> options;
+    private Map.Entry<GameSessionEventListener, GameSessionContext> gameSessionListenerEntry;
+    private GameSessionEventListener gameSessionEventListener;
+    private ConcurrentLinkedQueue<Map.Entry<GameSessionEventListener, GameSessionContext>> gameSessionListeners;
     private boolean endedCheck;
 
-    public GameSessionEventLoop(
-            GameSessionContext gameSessionContext,
-            ChannelGroup globalConnections,
-            ChannelGroup contextConnections,
-            LinkedBlockingQueue<Channel> pendingChannels,
-            List<Map.Entry<GameSessionConfigurationOption, Object>> options, Map.Entry<GameSessionEventListener, GameSessionContext> gameSessionListenerEntry,
-            ConcurrentLinkedQueue<Map.Entry<GameSessionEventListener, GameSessionContext>> gameSessionListeners,
-            GameSessionEventListener gameSessionEventListener
-    ) {
-
-        this.gameSessionContext = gameSessionContext;
-        this.globalConnections = globalConnections;
-        this.contextConnections = contextConnections;
-        this.pendingChannels = pendingChannels;
-        this.options = options;
-        this.gameSessionListenerEntry = gameSessionListenerEntry;
-        this.gameSessionListeners = gameSessionListeners;
-        this.gameSessionEventListener = gameSessionEventListener;
+    {
 
         endedCheck = false;
+    }
+
+    public GameSessionEventLoop withGlobalConnections(ChannelGroup globalConnections) {
+
+        this.globalConnections = globalConnections;
+
+        contextConnections = new DefaultChannelGroup(GlobalEventExecutor.INSTANCE);
+        pendingConnections = new LinkedBlockingQueue<>();
+        gameSessionContext = new DefaultGameSessionContext(globalConnections, contextConnections, pendingConnections);
+
+        return this;
+    }
+
+    public GameSessionEventLoop withOptions(List<Map.Entry<GameSessionConfigurationOption, Object>> options) {
+
+        this.options = options;
+
+        return this;
+    }
+
+    public GameSessionEventLoop withGameSessionEventListener(GameSessionEventListener gameSessionEventListener) {
+
+        this.gameSessionEventListener = gameSessionEventListener;
+
+        gameSessionListenerEntry = new AbstractMap.SimpleEntry<>(gameSessionEventListener, gameSessionContext);
+        gameSessionListeners.add(gameSessionListenerEntry);
+
+        return this;
+    }
+
+    public GameSessionEventLoop withGameSessionListeners(ConcurrentLinkedQueue<Map.Entry<GameSessionEventListener, GameSessionContext>> gameSessionListeners) {
+
+        this.gameSessionListeners = gameSessionListeners;
+
+        return this;
     }
 
     @Override
@@ -54,7 +74,7 @@ public class GameSessionEventLoop implements Runnable {
 
             gameSessionEventListener.onInitialize(gameSessionContext);
 
-            var pendingChannel = pendingChannels.take(); //todo: option: wait for initial channel
+            var pendingChannel = pendingConnections.take(); //todo: option: wait for initial channel
 
             if (retrieveOption(GameSessionConfigurationOption.MAX_PLAYERS) instanceof Integer maxPlayers && contextConnections.size() > maxPlayers) {
 
@@ -67,19 +87,36 @@ public class GameSessionEventLoop implements Runnable {
             gameSessionEventListener.onStart(gameSessionContext);
 
             boolean runCondition = !contextConnections.isEmpty();
-            long timeoutMilliseconds;
+            long timeout = 0;
+            boolean timeoutSet = false;
 
-            while (runCondition) {
+            // source and big thanks to: https://github.com/mas-bandwidth/yojimbo/blob/main/USAGE.md
+            // https://en.wikipedia.org/wiki/Hertz -> we want 60 cycles per 1 second = 60 Hertz = 60^-1 = 1/60
+            // the result is then converted to milliseconds -> approx. 16,7 ms -> 17 ms after rounding
+            final var tickDelta = Math.round(1 / (float) 60 * 1000);
+
+            while (runCondition || timeoutSet) {
+
+                final var startingTime = System.currentTimeMillis();
 
                 runCondition = !contextConnections.isEmpty();
 
-                /*if(!runCondition && gameSessionConfiguration.containsOption(GameSessionConfigurationOption.ENABLE_TIMEOUT)) {
+                if (retrieveOption(GameSessionConfigurationOption.ENABLE_TIMEOUT) instanceof Boolean enableTimeout && enableTimeout) {
 
-                    timeoutMilliseconds = System.currentTimeMillis() + 20000;
+                    if(!runCondition) {
+
+                        if (!timeoutSet) {
+
+                            timeout = System.currentTimeMillis() + 20000;
+                            timeoutSet = true;
+                        }
+
+                        if (timeout > System.currentTimeMillis())
+                            break;
+                    }
+                    else
+                        timeoutSet = false;
                 }
-
-                if(timeoutMilliseconds > System.currentTimeMillis())
-                    runCondition = true;*/
 
                 if (contextConnections.stream().noneMatch(globalConnections::contains)) {
 
@@ -100,7 +137,7 @@ public class GameSessionEventLoop implements Runnable {
                     return false;
                 });
 
-                pendingChannel = pendingChannels.poll();
+                pendingChannel = pendingConnections.poll();
 
                 if (Objects.nonNull(pendingChannel)) {
 
@@ -114,18 +151,23 @@ public class GameSessionEventLoop implements Runnable {
                     }
                 }
 
-                gameSessionEventListener.onRunning(gameSessionContext);
+                gameSessionEventListener.onServerTick(gameSessionContext);
 
-                TimeUnit.MILLISECONDS.sleep(33); //todo: better tick rate server mechanism
+                final var currentTickDelta = System.currentTimeMillis() - startingTime;
+                final var sleepDelta = currentTickDelta - tickDelta;
+
+                // https://github.com/mas-bandwidth/yojimbo/blob/main/USAGE.md
+                // we want each cycle to take, at most, 17 ms, and, the currentTickDelta be as close as possible to that value.
+                TimeUnit.MILLISECONDS.sleep(Math.abs(sleepDelta > 17 ? 0 : sleepDelta));
             }
 
             gameSessionListeners.remove(gameSessionListenerEntry); //todo: resolve externally in bootstrap
 
-            logger.info("GameSessionEventLoop end {} {}", contextConnections, gameSessionListeners); //todo: debug
+            logger.log(Level.FINEST, "GameSessionEventLoop end {0} {1}", new Object[]{contextConnections, gameSessionListeners});
 
             if (endedCheck) {
 
-                logger.error("GameSessionEventLoop stopped more than once, THIS SHOULD NEVER HAPPEN!");
+                logger.severe("GameSessionEventLoop stopped more than once, THIS SHOULD NEVER HAPPEN!");
 
                 return;
             }
@@ -135,7 +177,7 @@ public class GameSessionEventLoop implements Runnable {
             endedCheck = true;
         } catch (final Exception exception) {
 
-            logger.error(exception.getMessage(), exception);
+            logger.throwing(getClass().getName(), "run", exception);
 
             gameSessionEventListener.onErrorThrown(gameSessionContext, exception);
         }

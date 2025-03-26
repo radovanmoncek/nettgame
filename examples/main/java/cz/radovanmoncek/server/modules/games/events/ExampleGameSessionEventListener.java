@@ -1,46 +1,58 @@
 package cz.radovanmoncek.server.modules.games.events;
 
-import cz.radovanmoncek.server.modules.games.models.ExampleGameHistoryPersistableModel;
-import cz.radovanmoncek.server.modules.games.models.GameStateFlatBufferSerializable;
-import cz.radovanmoncek.server.ship.compiled.schemas.GameStateRequest;
-import cz.radovanmoncek.server.ship.compiled.schemas.GameStatus;
+import cz.radovanmoncek.server.modules.games.models.GameHistoryEntity;
+import cz.radovanmoncek.server.modules.games.models.GameStateFlatBuffersSerializable;
+import cz.radovanmoncek.server.modules.games.repositories.GameHistories;
+import cz.radovanmoncek.server.ship.tables.GameStateRequest;
+import cz.radovanmoncek.server.ship.tables.GameStatus;
 import cz.radovanmoncek.ship.parents.sessions.listeners.GameSessionEventListener;
 import cz.radovanmoncek.ship.parents.models.GameSessionContext;
 import io.netty.channel.Channel;
 import io.netty.util.AttributeKey;
-import org.apache.logging.log4j.LogManager;
-import org.apache.logging.log4j.Logger;
 
 import java.sql.Timestamp;
 import java.time.Instant;
-import java.util.LinkedList;
+import java.util.Arrays;
 import java.util.Objects;
 import java.util.UUID;
 import java.util.concurrent.ConcurrentLinkedQueue;
 import java.util.concurrent.atomic.AtomicInteger;
+import java.util.logging.Level;
+import java.util.logging.Logger;
 
 public class ExampleGameSessionEventListener extends GameSessionEventListener {
-    private static final Logger logger = LogManager.getLogger(ExampleGameSessionEventListener.class);
+    private static final Logger logger = Logger.getLogger(ExampleGameSessionEventListener.class.getName());
     private static final AttributeKey<ConcurrentLinkedQueue<GameStateRequest>> gameStateRequestQueueAttribute = AttributeKey.valueOf("gameStateRequestQueue");
-    private static final AttributeKey<GameStateFlatBufferSerializable.Player> playerStateAttribute = AttributeKey.valueOf("playerState");
-    private static final int xBound = 2000, yBound = 2000, moveDelta = 8;
+    private static final AttributeKey<int[]> playerPositionAttribute = AttributeKey.valueOf("playerPosition");
+    private static final AttributeKey<String> playerNameAttribute = AttributeKey.valueOf("playerName");
+    private static final int xBound = 800, yBound = 600, moveDelta = 8;
     private final UUID gameUUID;
     private final Channel hostChannel;
-    private final ExampleGameHistoryPersistableModel historyPersistableModel;
-    private int lastGameSum = 0;
+    private final GameHistories gameHistories;
+    private int lastGameHash = Integer.MIN_VALUE;
+    private final String[] playerNames;
+    private final Channel[] orderedPlayerChannels;
 
-    public ExampleGameSessionEventListener(Channel hostChannel, ExampleGameHistoryPersistableModel historyPersistableModel) {
+    //https://stackoverflow.com/questions/6307648/change-global-setting-for-logger-instances
+    static {
 
-        this.historyPersistableModel = historyPersistableModel;
+        logger.setLevel(Level.FINEST);
+    }
+
+    public ExampleGameSessionEventListener(Channel hostChannel, GameHistories gameHistories) {
+
+        this.gameHistories = gameHistories;
         this.hostChannel = hostChannel;
 
         gameUUID = UUID.randomUUID();
+        playerNames = new String[2];
+        orderedPlayerChannels = new Channel[2];
     }
 
     @Override
     public void onErrorThrown(final GameSessionContext context, Throwable throwable) {
 
-        logger.error(throwable.getMessage(), throwable);
+        logger.throwing(getClass().getName(), "onErrorThrown", throwable);
     }
 
     @Override
@@ -61,17 +73,22 @@ public class ExampleGameSessionEventListener extends GameSessionEventListener {
                 return;
 
             playerChannel
-                    .attr(playerStateAttribute)
-                    .set(new GameStateFlatBufferSerializable.Player(xBound / 2, yBound / 2, 0, gameStateRequest.name()));
+                    .attr(playerPositionAttribute)
+                    .set(new int[]{xBound / 2, yBound / 2, 0});
 
-            playerChannel.writeAndFlush(
-                    new GameStateFlatBufferSerializable(
-                            new GameStateFlatBufferSerializable.Game(GameStatus.START_SESSION, gameUUID.toString().substring(0, 8)),
-                            new GameStateFlatBufferSerializable.Player[]{
-                                    playerChannel.attr(playerStateAttribute).get(),
-                                    null
-                            }
-                    )
+            lastGameHash = Integer.hashCode(Arrays.stream(playerChannel.attr(playerPositionAttribute).get()).sum());
+
+            playerChannel
+                    .attr(playerNameAttribute)
+                    .set(gameStateRequest.name());
+
+            playerNames[0] = playerChannel.attr(playerNameAttribute).get();
+
+            playerChannel.writeAndFlush(new GameStateFlatBuffersSerializable()
+                            .withGameStatus(GameStatus.START_SESSION)
+                            .withGameCode(gameUUID.toString().substring(0, 8))
+                            .withName1(playerChannel.attr(playerNameAttribute).get())
+                            .withPlayer1Position(playerChannel.attr(playerPositionAttribute).get())
             );
         });
     }
@@ -93,19 +110,25 @@ public class ExampleGameSessionEventListener extends GameSessionEventListener {
             return;
         }
 
-        final var gameStateRequest = playerGameStateRequestQueue.poll();
+        final var gameStateRequest = playerGameStateRequestQueue.peek();
         final var gameCode = Objects.requireNonNullElse(gameStateRequest.gameCode(), "");
 
         if (!gameUUID.toString().substring(0, 8).equals(gameCode.substring(0, 8))) {
 
-            logger.info("Player sent non-matching game code: {}", gameCode); //todo: debug level
+            logger.log(Level.FINEST, "Player sent non-matching game code: {0}", gameCode);
 
             return;
         }
 
+        playerGameStateRequestQueue.poll();
+
         playerChannel
-                .attr(playerStateAttribute)
-                .set(new GameStateFlatBufferSerializable.Player(xBound / 2, yBound / 2, 0, gameStateRequest.name()));
+                .attr(playerPositionAttribute)
+                .set(new int[]{xBound / 2, yBound / 2, 0});
+
+        playerChannel
+                .attr(playerNameAttribute)
+                .set(gameStateRequest.name());
 
         context.registerPlayerConnection(playerChannel);
 
@@ -119,9 +142,8 @@ public class ExampleGameSessionEventListener extends GameSessionEventListener {
     }
 
     @Override
-    public void onRunning(GameSessionContext context) {
+    public void onServerTick(GameSessionContext context) {
 
-        final var orderedPlayerChannels = new Channel[2];
         final var currentGameStateSum = new AtomicInteger(0);
         final var i = new AtomicInteger(0);
 
@@ -152,7 +174,11 @@ public class ExampleGameSessionEventListener extends GameSessionEventListener {
                 case GameStatus.STOP_SESSION -> {
 
                     playerChannel
-                            .attr(playerStateAttribute)
+                            .attr(playerPositionAttribute)
+                            .set(null);
+
+                    playerChannel
+                            .attr(playerNameAttribute)
                             .set(null);
 
                     playerChannel
@@ -166,11 +192,14 @@ public class ExampleGameSessionEventListener extends GameSessionEventListener {
 
                 case GameStatus.STATE_CHANGE -> {
 
-                    GameStateFlatBufferSerializable.Player currentPlayerState = playerChannel
-                            .attr(playerStateAttribute)
+                    final var currentPlayerState = playerChannel
+                            .attr(playerPositionAttribute)
                             .get();
 
                     if (Objects.isNull(currentPlayerState)) {
+
+                        logger.log(Level.WARNING, "Player with no state {0}", playerChannel);
+
                         return;
                     }
 
@@ -200,8 +229,8 @@ public class ExampleGameSessionEventListener extends GameSessionEventListener {
                         return;
                     }
 
-                    final var xDelta = Math.abs(gameStateRequest.x() - currentPlayerState.x());
-                    final var yDelta = Math.abs(gameStateRequest.y() - currentPlayerState.y());
+                    final var xDelta = Math.abs(gameStateRequest.x() - currentPlayerState[0]);
+                    final var yDelta = Math.abs(gameStateRequest.y() - currentPlayerState[1]);
 
                     if ((xDelta != moveDelta && xDelta != 0) || (yDelta != 0 && yDelta != moveDelta)) {
 
@@ -211,18 +240,8 @@ public class ExampleGameSessionEventListener extends GameSessionEventListener {
                     }
 
                     playerChannel
-                            .attr(playerStateAttribute)
-                            .set(new GameStateFlatBufferSerializable.Player(gameStateRequest.x(), gameStateRequest.y(), gameStateRequest.rotationAngle(), currentPlayerState.name()));
-
-                    currentPlayerState = playerChannel
-                            .attr(playerStateAttribute)
-                            .get();
-
-                    currentGameStateSum.set(currentGameStateSum.get()
-                            + currentPlayerState.x()
-                            + currentPlayerState.y()
-                            + currentPlayerState.rotationAngle()
-                    );
+                            .attr(playerPositionAttribute)
+                            .set(new int[]{gameStateRequest.x(), gameStateRequest.y(), gameStateRequest.rotationAngle()});
 
                     orderedPlayerChannels[i.get()] = playerChannel;
 
@@ -231,112 +250,132 @@ public class ExampleGameSessionEventListener extends GameSessionEventListener {
             }
         });
 
-        if (lastGameSum == currentGameStateSum.get()) {
+        context.performOnAllConnections(playerChannel -> {
+
+            final var currentPlayerState = playerChannel
+                    .attr(playerPositionAttribute)
+                    .get();
+
+            if (Objects.isNull(currentPlayerState)) {
+
+                logger.log(Level.WARNING, "Player with no state {0}", playerChannel);
+
+                return;
+            }
+
+            currentGameStateSum.set(currentGameStateSum.addAndGet(Arrays.stream(currentPlayerState).sum()));
+        });
+
+        if (lastGameHash == Integer.hashCode(currentGameStateSum.get())) {
 
             return;
         }
 
-        lastGameSum = currentGameStateSum.get();
+        lastGameHash = Integer.hashCode(currentGameStateSum.get());
 
-        if(orderedPlayerChannels[0] == null)
+        if (orderedPlayerChannels[0] == null) {
+
+            logger.fine("No channels to send game state to");
+
             return;
+        }
 
-        orderedPlayerChannels[0].writeAndFlush(
-                new GameStateFlatBufferSerializable(
-                        new GameStateFlatBufferSerializable.Game(GameStatus.STATE_CHANGE, ""),
-                        new GameStateFlatBufferSerializable.Player[]{
-                                orderedPlayerChannels[0].attr(playerStateAttribute).get(),
-                                orderedPlayerChannels[1] == null ? null : orderedPlayerChannels[1].attr(playerStateAttribute).get()
-                        }
-                )
-        );
-
-        if(orderedPlayerChannels[1] == null)
-            return;
-
-        orderedPlayerChannels[1].writeAndFlush(
-                new GameStateFlatBufferSerializable(
-                        new GameStateFlatBufferSerializable.Game(GameStatus.STATE_CHANGE, ""),
-                        new GameStateFlatBufferSerializable.Player[]{
-                                orderedPlayerChannels[1].attr(playerStateAttribute).get(),
-                                orderedPlayerChannels[0].attr(playerStateAttribute).get()
-                        }
-                )
-        );
+        sendGameStateToOrderedPlayerChannels(GameStatus.STATE_CHANGE);
     }
 
     @Override
     public void onEnded(GameSessionContext context) {
 
-        final var storedGameHistory = historyPersistableModel.store(gameUUID.toString(), Timestamp.from(Instant.now()));
+        final var gameHistory = new GameHistoryEntity();
 
-        logger.info("Persisted game history: {} and ended game session", storedGameHistory);
+        gameHistory.setGameSessionUUID(gameUUID.toString());
+        gameHistory.setEndTime(Timestamp.from(Instant.now()));
+        gameHistory.setPlayer1Name(playerNames[0]);
+        gameHistory.setPlayer2Name(playerNames[1]);
+        gameHistory.setTotalScore(0L);
+
+        final var storedGameHistory = gameHistories.store(gameHistory);
+
+        logger.log(Level.INFO, "Persisted game history, and ended game session, game history: \n{0}", storedGameHistory);
     }
 
     @Override
     public void onContextConnectionsEmpty(GameSessionContext context) {
 
-        context.broadcast(new GameStateFlatBufferSerializable(new GameStateFlatBufferSerializable.Game(GameStatus.STOP_SESSION, gameUUID.toString().substring(0, 8)), null));
+        context.broadcast(new GameStateFlatBuffersSerializable()
+                .withGameStatus(GameStatus.STOP_SESSION)
+                .withGameCode(gameUUID
+                        .toString()
+                        .substring(0, 8)
+                )
+        );
     }
 
     @Override
     public void onContextConnection(GameSessionContext context, Channel playerChannel) {
-
-        final var orderedPlayerChannels = new Channel[2];
 
         context.performOnAllConnections(channel -> {
 
             if (channel == playerChannel) {
 
                 orderedPlayerChannels[0] = channel;
+                playerNames[0] = orderedPlayerChannels[0]
+                        .attr(playerNameAttribute)
+                        .get();
 
                 return;
             }
 
             orderedPlayerChannels[1] = channel;
+            playerNames[1] = orderedPlayerChannels[1]
+                    .attr(playerNameAttribute)
+                    .get();
         });
 
-        if(orderedPlayerChannels[0] == null)
-            return;
-
-        orderedPlayerChannels[0].writeAndFlush(new GameStateFlatBufferSerializable(
-                new GameStateFlatBufferSerializable.Game(GameStatus.JOIN_SESSION, gameUUID.toString().substring(0, 8)),
-                new GameStateFlatBufferSerializable.Player[]{
-                        orderedPlayerChannels[0].attr(playerStateAttribute).get(),
-                        orderedPlayerChannels[1].attr(playerStateAttribute).get()
-                }));
-
-        if(orderedPlayerChannels[1] == null)
-            return;
-
-        orderedPlayerChannels[1].writeAndFlush(new GameStateFlatBufferSerializable(
-                new GameStateFlatBufferSerializable.Game(GameStatus.JOIN_SESSION, gameUUID.toString().substring(0, 8)),
-                new GameStateFlatBufferSerializable.Player[]{
-                        orderedPlayerChannels[1].attr(playerStateAttribute).get(),
-                        orderedPlayerChannels[0].attr(playerStateAttribute).get()
-                }));
+        sendGameStateToOrderedPlayerChannels(GameStatus.JOIN_SESSION);
     }
 
     @Override
     public void onContextConnectionClosed(GameSessionContext context) {
 
+        logger.finest("Got context connection closed");
     }
 
     @Override
     public void onContextConnectionCountChanged(GameSessionContext context) {
 
+        logger.finest("Got context connection count changed");
     }
 
     private void sendInvalid(Channel channel) {
 
         channel.writeAndFlush(
-                new GameStateFlatBufferSerializable(
-                        new GameStateFlatBufferSerializable.Game(GameStatus.INVALID_STATE, ""),
-                        new GameStateFlatBufferSerializable.Player[]{
-                                new GameStateFlatBufferSerializable.Player(0, 0, 0, ""),
-                                new GameStateFlatBufferSerializable.Player(0, 0, 0, "")
-                        }
-                )
+                new GameStateFlatBuffersSerializable()
+                        .withGameStatus(GameStatus.INVALID_STATE)
+        );
+    }
+
+    private void sendGameStateToOrderedPlayerChannels(byte gameStatus) {
+
+        orderedPlayerChannels[0].writeAndFlush(new GameStateFlatBuffersSerializable()
+                .withGameStatus(gameStatus)
+                .withGameCode("")
+                .withPlayer1Position(orderedPlayerChannels[0].attr(playerPositionAttribute).get())
+                .withName1(orderedPlayerChannels[0].attr(playerNameAttribute).get())
+                .withPlayer2Position(orderedPlayerChannels[1] == null ? new int[]{} : Objects.requireNonNullElse(orderedPlayerChannels[1].attr(playerPositionAttribute).get(), new int[]{}))
+                .withName2(orderedPlayerChannels[1] == null ? "" : Objects.requireNonNullElse(orderedPlayerChannels[1].attr(playerNameAttribute).get(), ""))
+        );
+
+        if (orderedPlayerChannels[1] == null)
+            return;
+
+        orderedPlayerChannels[1].writeAndFlush(new GameStateFlatBuffersSerializable()
+                .withGameStatus(gameStatus)
+                .withGameCode("")
+                .withPlayer1Position(orderedPlayerChannels[1].attr(playerPositionAttribute).get())
+                .withName1(orderedPlayerChannels[1].attr(playerNameAttribute).get())
+                .withPlayer2Position(orderedPlayerChannels[0].attr(playerPositionAttribute).get())
+                .withName2(orderedPlayerChannels[0].attr(playerNameAttribute).get())
         );
     }
 }

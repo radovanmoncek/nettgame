@@ -1,38 +1,32 @@
 package cz.radovanmoncek.ship.injection.services;
 
-import cz.radovanmoncek.ship.injection.annotations.AttributeInjectee;
+import cz.radovanmoncek.ship.injection.annotations.ChannelHandlerAttributeInjectee;
 import cz.radovanmoncek.ship.injection.exceptions.InjectionException;
 import cz.radovanmoncek.ship.parents.creators.ChannelHandlerCreator;
-import cz.radovanmoncek.ship.parents.creators.RepositoryCreator;
-import cz.radovanmoncek.ship.parents.models.PersistableModel;
 import cz.radovanmoncek.ship.parents.repositories.Repository;
+import cz.radovanmoncek.ship.utilities.reflection.ReflectionUtilities;
 import io.netty.channel.ChannelHandler;
 import io.netty.channel.ChannelHandlerAdapter;
-import org.apache.logging.log4j.LogManager;
-import org.apache.logging.log4j.Logger;
 import org.hibernate.SessionFactory;
 
 import java.util.LinkedList;
-import java.util.List;
-import java.util.Objects;
+import java.util.logging.Level;
+import java.util.logging.Logger;
 
 public class ChannelHandlerInjectionService {
-    private static final Logger logger = LogManager.getLogger(ChannelHandlerInjectionService.class);
+    private static final Logger logger = Logger.getLogger(ChannelHandlerInjectionService.class.getName());
     private final SessionFactory sessionFactory;
-    private final LinkedList<ChannelHandlerCreator> channelHandlerCreators;
-    private final RepositoryCreator repositoryCreator;
-    private final LinkedList<PersistableModel> persistableModels;
+    private final LinkedList<Repository<?>> repositories;
 
-    public ChannelHandlerInjectionService(SessionFactory sessionFactory, LinkedList<ChannelHandlerCreator> channelHandlerCreators, RepositoryCreator repositoryCreator, LinkedList<PersistableModel> persistableModels) {
+    public ChannelHandlerInjectionService(SessionFactory sessionFactory, LinkedList<Repository<?>> repositories) {
+
         this.sessionFactory = sessionFactory;
-        this.channelHandlerCreators = channelHandlerCreators;
-        this.repositoryCreator = repositoryCreator;
-        this.persistableModels = persistableModels;
+        this.repositories = repositories;
     }
 
-    public LinkedList<ChannelHandlerCreator> returnInjectedChannelHandlerCreators() {
+    public LinkedList<ChannelHandlerCreator> returnInjectedChannelHandlerCreators(final LinkedList<ChannelHandlerCreator> channelHandlerCreators) {
 
-        logger.warn("Starting ChannelHandler injection");
+        logger.warning("Starting ChannelHandler injection");
 
         final var injectedChannelHandlerCreators = new LinkedList<ChannelHandlerCreator>();
 
@@ -56,18 +50,18 @@ public class ChannelHandlerInjectionService {
 
                             for (final var field : declaredFields) {
 
-                                if (!field.isAnnotationPresent(AttributeInjectee.class)) {
+                                if (!field.isAnnotationPresent(ChannelHandlerAttributeInjectee.class)) {
 
                                     continue;
                                 }
 
-                                PersistableModel persistableModelToInject = null;
+                                Repository<?> repositoryToInject = null;
 
-                                for (final var persistableModel : persistableModels) {
+                                for (final var repository : repositories) {
 
-                                    if (persistableModel.getClass().equals(field.getType())) {
+                                    if (ReflectionUtilities.findActualClass(repository).equals(field.getType())) {
 
-                                        persistableModelToInject = persistableModel;
+                                        repositoryToInject = repository;
 
                                         break;
                                     }
@@ -75,72 +69,49 @@ public class ChannelHandlerInjectionService {
 
                                 injectionExceptionReason.append(String.format(" %s into %s", channelHandler, field));
 
-                                if (persistableModelToInject == null) {
+                                if (repositoryToInject == null) {
 
                                     throw new InjectionException(injectionExceptionReason.toString());
                                 }
 
-                                Class<?> persistableModelClazz = persistableModelToInject.getClass();
+                                Class<?> repositoryToInjectClass = repositoryToInject.getClass();
 
-                                while (persistableModelClazz.getSuperclass() != PersistableModel.class) {
+                                while (repositoryToInjectClass.getSuperclass() != Repository.class) {
 
-                                    persistableModelClazz = persistableModelClazz.getSuperclass();
+                                    repositoryToInjectClass = repositoryToInjectClass.getSuperclass();
                                 }
 
-                                persistableModelClazz = persistableModelClazz.getSuperclass();
+                                repositoryToInjectClass = repositoryToInjectClass.getSuperclass();
 
-                                for (final var persistableModelField : persistableModelClazz.getDeclaredFields()) {
+                                for (final var repositoryField : repositoryToInjectClass.getDeclaredFields()) {
 
-                                    if (!persistableModelField.isAnnotationPresent(AttributeInjectee.class) || !persistableModelField.getType().equals(Repository.class)) {
+                                    if (!repositoryField.isAnnotationPresent(ChannelHandlerAttributeInjectee.class)) {
 
                                         continue;
                                     }
 
-                                    final var repository = repositoryCreator.createRepository();
+                                    repositoryField.setAccessible(true);
 
-                                    for (final var repositoryField : repository.getClass().getDeclaredFields()) {
+                                    if (repositoryField.getType().equals(SessionFactory.class)) {
 
-                                        if (!repositoryField.isAnnotationPresent(AttributeInjectee.class)) {
-
-                                            continue;
-                                        }
-
-                                        repositoryField.setAccessible(true);
-
-                                        if (repositoryField.getType().equals(SessionFactory.class)) {
-
-                                            repositoryField.set(repository, sessionFactory);
-
-                                            continue;
-                                        }
-
-                                        if (repositoryField.getType().equals(PersistableModel.class)) {
-
-                                            repositoryField.set(repository, persistableModelToInject.getClass());
-                                        }
+                                        repositoryField.set(repositoryToInject, sessionFactory);
                                     }
-
-                                    persistableModelField.setAccessible(true);
-                                    persistableModelField.set(persistableModelToInject, repository);
                                 }
 
                                 field.setAccessible(true);
-                                field.set(channelHandler, persistableModelToInject);
+                                field.set(channelHandler, repositoryToInject);
 
-                                logger.debug("Injecting {} into {}", channelHandler, field);
-
+                                logger.log(Level.FINEST, "Injecting {0} into {1}", new Object[]{channelHandler.getClass().getName(), field.getName()});
                             }
 
                             clazz = clazz.getSuperclass();
+                        } catch (final Exception exception) {
 
-                        }
-                        catch (final Exception exception) {
-
-                            logger.error(exception.getMessage(), exception);
+                            logger.throwing(getClass().getName(), "returnInjectedChannelHandlerCreators", exception);
 
                             final var injectionException = new InjectionException(injectionExceptionReason.append(", expect incorrect operation!").toString(), exception);
 
-                            logger.error(injectionException.getMessage(), injectionException);
+                            logger.throwing(getClass().getName(), "returnInjectedChannelHandlerCreators", injectionException);
 
                             return null;
                         }
@@ -150,11 +121,17 @@ public class ChannelHandlerInjectionService {
                 }
             };
 
-            if(injectedChannelHandlerCreator.newProduct() == null)
+            if (injectedChannelHandlerCreator.newProduct() == null) {
+
+                logger.warning("Nothing injected, returning empty list");
+
                 return new LinkedList<>();
+            }
 
             injectedChannelHandlerCreators.add(injectedChannelHandlerCreator);
         }
+
+        logger.info("Successfully injected ChannelHandlers");
 
         return injectedChannelHandlerCreators;
     }

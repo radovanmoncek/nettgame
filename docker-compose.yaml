@@ -1,19 +1,26 @@
 version: "1.0"
 
 services:
-  game-server:
-    container_name: "game-server"
+  nettgame-server:
+    container_name: "nettgame-server"
     build:
       context: ./
       dockerfile: game_server.dockerfile
-    image: docker-game-server:latest
+    expose:
+      - "4321"
     ports:
       - "4321:4321"
     depends_on:
-      - game-server-data
+      - nettgame-server-data
+    networks:
+      - game-server-internal-network
+    environment:
+      - DATABASE_URL
+      - MYSQL_ROOT_PASSWORD
+      - HIBERNATE_DB_USER
 
-  game-server-data:
-    container_name: "game-server-data"
+  nettgame-server-data:
+    container_name: "nettgame-server-data"
     image: mysql:8.0
     environment:
       - MYSQL_ROOT_PASSWORD
@@ -21,6 +28,12 @@ services:
       - game-server-persistent-data:/var/lib/mysql
     ports:
       - "3306:3306"
+    networks:
+      - game-server-internal-network
 
 volumes:
   game-server-persistent-data:
+
+networks:
+  game-server-internal-network:
+    driver: bridge

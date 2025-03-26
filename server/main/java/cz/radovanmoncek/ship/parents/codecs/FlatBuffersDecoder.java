@@ -4,11 +4,9 @@ import com.google.flatbuffers.Table;
 import io.netty.buffer.ByteBuf;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.handler.codec.ByteToMessageDecoder;
-import org.apache.logging.log4j.LogManager;
-import org.apache.logging.log4j.Logger;
-
 import java.nio.ByteBuffer;
 import java.util.List;
+import java.util.logging.Logger;
 
 /**
  * This class provides basic encoding utility for a given FlatBuffers {@link Table}.
@@ -22,9 +20,10 @@ import java.util.List;
  *     |                        your body                      |
  *     ---------------------------------------------------------
  * </pre>
+ * Inspired by: <a href=https://github.com/netty/netty/blob/4.1/example/src/main/java/io/netty/example/factorial/BigIntegerDecoder.java>this</a>
  */
 public abstract class FlatBuffersDecoder<FlatBuffersSchema extends Table> extends ByteToMessageDecoder {
-    private static final Logger logger = LogManager.getLogger(FlatBuffersDecoder.class);
+    private static final Logger logger = Logger.getLogger(FlatBuffersDecoder.class.getName());
     private static final int HEADER_SIZE = Long.BYTES;
 
     @Override
@@ -48,7 +47,7 @@ public abstract class FlatBuffersDecoder<FlatBuffersSchema extends Table> extend
 
         if (in.readableBytes() == 0) {
 
-            logger.warn("Received an empty flat buffer");
+            logger.warning("Received an empty flat buffer");
 
             return;
         }
@@ -64,9 +63,7 @@ public abstract class FlatBuffersDecoder<FlatBuffersSchema extends Table> extend
 
         in.readerIndex(in.readerIndex() + headerNIOBuffer.position());
 
-        out.add(decodeBodyAfterHeader(in.nioBuffer()));
-
-        in.readerIndex(in.writerIndex());
+        out.add(decodeBodyAfterHeader(in.readBytes(in.readableBytes()).nioBuffer()));
     }
 
     /**
@@ -84,6 +81,6 @@ public abstract class FlatBuffersDecoder<FlatBuffersSchema extends Table> extend
     @Override
     public final void exceptionCaught(final ChannelHandlerContext channelHandlerContext, final Throwable cause) {
 
-        logger.error(cause.getMessage(), cause);
+        logger.throwing(getClass().getName(), "exceptionCaught", cause);
     }
 }

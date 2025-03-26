@@ -6,12 +6,10 @@ import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.SimpleChannelInboundHandler;
 import io.netty.channel.group.ChannelGroup;
 import io.netty.channel.group.DefaultChannelGroup;
-import io.netty.util.AttributeKey;
 import io.netty.util.concurrent.GlobalEventExecutor;
-import org.apache.logging.log4j.LogManager;
-import org.apache.logging.log4j.Logger;
 
-import java.util.List;
+import java.util.logging.Level;
+import java.util.logging.Logger;
 
 /**
  * This is mostly a utility handler for managing connected channels using a {@link ChannelGroup} object.
@@ -26,7 +24,7 @@ public abstract class ChannelGroupHandler<FlatBuffersSchema extends Table> exten
 
     static {
 
-        logger = LogManager.getLogger(ChannelGroupHandler.class);
+        logger = Logger.getLogger(ChannelGroupHandler.class.getName());
         clientChannels = new DefaultChannelGroup(GlobalEventExecutor.INSTANCE);
     }
 
@@ -41,7 +39,7 @@ public abstract class ChannelGroupHandler<FlatBuffersSchema extends Table> exten
         if(!clientChannels.add(channelHandlerContext.channel()))
             return;
 
-        logger.info("Channel {} registered", channelHandlerContext.channel());
+        logger.log(Level.INFO, "Channel {0} registered", channelHandlerContext.channel());
     }
 
     protected void multicast(final Object message, final Channel ... clientChannels){

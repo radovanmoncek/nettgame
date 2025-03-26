@@ -9,5 +9,9 @@ public enum GameSessionConfigurationOption {
     /**
      * The maximum amount of players this game session can have.
      */
-    MAX_PLAYERS
+    MAX_PLAYERS,
+    /**
+     * Wait for an initial connection (the host player).
+     */
+    AWAIT_HOST
 }

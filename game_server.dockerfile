@@ -1,9 +1,9 @@
-FROM openjdk:17-jdk-alpine
+FROM openjdk:25
 LABEL authors="Radovan Monček"
-MAINTAINER: https://github.com/radovanmoncek
+MAINTAINER Radovan Monček
 
-COPY target/docker-game-server.jar dockergameserver.jar
+COPY target/docker-game-server.jar gameserver.jar
 
 EXPOSE 4321
 
-ENTRYPOINT ["java", "-jar", "/dockergameserver.jar"]
+ENTRYPOINT ["java", "-jar", "/gameserver.jar", "--mode", "containerized"]

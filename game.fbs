@@ -1,8 +1,3 @@
-table ChatMessage {
-    author_player_nickname:string;
-    message_content:string;
-}
-
 ///Composite
 table Player {
     x:int;
@@ -21,15 +16,14 @@ table Game {
 
 ///Reponse to players
 table GameState {
-    cz:Game;
+    game:Game;
     player1:Player;
     player2:Player;
 }
 
 ///Request from players
 table GameStateRequest {
-    x:int;
-    y:int;
+    position:Vec2;
     rotation_angle:int;
     game_status_request:GameStatus;
     game_code:string;

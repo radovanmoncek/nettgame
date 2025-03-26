@@ -5,8 +5,10 @@ import cz.radovanmoncek.ship.parents.models.FlatBufferSerializable;
 import io.netty.buffer.ByteBuf;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.handler.codec.MessageToByteEncoder;
-import org.apache.logging.log4j.LogManager;
-import org.apache.logging.log4j.Logger;
+
+import java.util.Arrays;
+import java.util.logging.Level;
+import java.util.logging.Logger;
 
 /**
  * Structure:
@@ -21,21 +23,21 @@ import org.apache.logging.log4j.Logger;
  * @param <BandAid> a class that is able to produce FlatBuffers encoded data of its attributes.
  */
 public abstract class FlatBuffersEncoder<BandAid extends FlatBufferSerializable> extends MessageToByteEncoder<BandAid> {
-    private static final Logger logger = LogManager.getLogger(FlatBuffersEncoder.class);
+    private static final Logger logger = Logger.getLogger(FlatBuffersEncoder.class.getName());
 
     @Override
     protected void encode(final ChannelHandlerContext channelHandlerContext, final BandAid flatBuffersSerializable, final ByteBuf out) {
 
         try {
 
-            logger.info("Encoding {}", flatBuffersSerializable);
+            logger.log(Level.INFO, "Encoding {0}", flatBuffersSerializable);
 
             final var builder = new FlatBufferBuilder(1024);
             final var header = encodeHeader(flatBuffersSerializable, builder);
 
             final var body = encodeBodyAfterHeader(flatBuffersSerializable, builder);
 
-            logger.info("\n| {}B | {} |\n| {} |", header.length + body.length, header, body);
+            logger.log(Level.INFO, "\n| {0}B | {1} |\n| {2} |", new Object[]{header.length + body.length, Arrays.toString(header), Arrays.toString(body)});
 
             out
                     .writeLong(header.length + body.length)
@@ -44,7 +46,7 @@ public abstract class FlatBuffersEncoder<BandAid extends FlatBufferSerializable>
         }
         catch (final Exception exception) {
 
-            logger.error(exception.getMessage(), exception);
+            logger.throwing(getClass().getName(), "encode", exception);
         }
     }
 

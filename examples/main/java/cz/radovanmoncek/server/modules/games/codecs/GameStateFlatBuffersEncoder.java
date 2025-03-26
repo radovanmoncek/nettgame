@@ -1,25 +1,22 @@
 package cz.radovanmoncek.server.modules.games.codecs;
 
 import com.google.flatbuffers.FlatBufferBuilder;
-import cz.radovanmoncek.server.modules.games.models.GameStateFlatBufferSerializable;
-import cz.radovanmoncek.server.ship.compiled.schemas.Game;
-import cz.radovanmoncek.server.ship.compiled.schemas.GameState;
-import cz.radovanmoncek.server.ship.compiled.schemas.GameStatus;
-import cz.radovanmoncek.server.ship.compiled.schemas.Player;
+import cz.radovanmoncek.server.modules.games.models.GameStateFlatBuffersSerializable;
 import cz.radovanmoncek.ship.parents.codecs.FlatBuffersEncoder;
 
 /**
- * Example.
+ * Encoder for {@link GameStateFlatBuffersSerializable}.
  */
-public final class GameStateFlatBuffersEncoder extends FlatBuffersEncoder<GameStateFlatBufferSerializable> {
+public final class GameStateFlatBuffersEncoder extends FlatBuffersEncoder<GameStateFlatBuffersSerializable> {
 
     @Override
-    protected byte[] encodeHeader(GameStateFlatBufferSerializable flatBuffersSerializable, FlatBufferBuilder flatBufferBuilder) {
+    protected byte[] encodeHeader(GameStateFlatBuffersSerializable flatBuffersSerializable, FlatBufferBuilder flatBufferBuilder) {
+
         return new byte[]{'G'};
     }
 
     @Override
-    protected byte [] encodeBodyAfterHeader(final GameStateFlatBufferSerializable gameState, final FlatBufferBuilder builder) {
+    protected byte [] encodeBodyAfterHeader(final GameStateFlatBuffersSerializable gameState, final FlatBufferBuilder builder) {
 
         return gameState.serialize(builder);
     }

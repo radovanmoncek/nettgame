@@ -42,4 +42,4 @@ MANIFEST.MF
 *.properties
 
 #.xml
-log4j2.xml
+cz.radovanmoncek.ship.util.reflection.ReflectionUtilities.log4j2.xml

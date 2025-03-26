@@ -1,6 +1,6 @@
 package cz.radovanmoncek.server.modules.games.codecs;
 
-import cz.radovanmoncek.server.ship.compiled.schemas.GameStateRequest;
+import cz.radovanmoncek.server.ship.tables.GameStateRequest;
 import cz.radovanmoncek.ship.parents.codecs.FlatBuffersDecoder;
 
 import java.nio.ByteBuffer;
