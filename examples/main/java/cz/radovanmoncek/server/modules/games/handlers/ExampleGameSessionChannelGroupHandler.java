@@ -7,7 +7,7 @@ import cz.radovanmoncek.server.ship.tables.GameStatus;
 import cz.radovanmoncek.server.ship.tables.GameStateRequest;
 import cz.radovanmoncek.ship.injection.annotations.ChannelHandlerAttributeInjectee;
 import cz.radovanmoncek.ship.parents.handlers.GameSessionChannelGroupHandler;
-import cz.radovanmoncek.ship.sessions.models.GameSessionConfigurationOption;
+import cz.radovanmoncek.ship.models.GameSessionConfigurationOption;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.util.AttributeKey;
 
@@ -76,6 +76,8 @@ public class ExampleGameSessionChannelGroupHandler extends GameSessionChannelGro
                     return;
 
                 currentPlayerStateQueue.offer(gameStateRequest);
+
+                logger.fine("Game state request enqueued");
             }
 
             case GameStatus.JOIN_SESSION -> {

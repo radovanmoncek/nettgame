@@ -5,8 +5,9 @@ import cz.radovanmoncek.server.modules.games.models.GameStateFlatBuffersSerializ
 import cz.radovanmoncek.server.modules.games.repositories.GameHistories;
 import cz.radovanmoncek.server.ship.tables.GameStateRequest;
 import cz.radovanmoncek.server.ship.tables.GameStatus;
-import cz.radovanmoncek.ship.parents.sessions.listeners.GameSessionEventListener;
+import cz.radovanmoncek.ship.parents.events.GameSessionEventListener;
 import cz.radovanmoncek.ship.parents.models.GameSessionContext;
+import cz.radovanmoncek.ship.utilities.logging.LoggingUtilities;
 import io.netty.channel.Channel;
 import io.netty.util.AttributeKey;
 
@@ -36,7 +37,7 @@ public class ExampleGameSessionEventListener extends GameSessionEventListener {
     //https://stackoverflow.com/questions/6307648/change-global-setting-for-logger-instances
     static {
 
-        logger.setLevel(Level.FINEST);
+        LoggingUtilities.enableGlobalLoggingLevel(Level.ALL);
     }
 
     public ExampleGameSessionEventListener(Channel hostChannel, GameHistories gameHistories) {
@@ -357,11 +358,13 @@ public class ExampleGameSessionEventListener extends GameSessionEventListener {
 
     private void sendGameStateToOrderedPlayerChannels(byte gameStatus) {
 
+        logger.log(Level.FINE, "Sending game state to ordered player channels {0}", Arrays.toString(orderedPlayerChannels));
+
         orderedPlayerChannels[0].writeAndFlush(new GameStateFlatBuffersSerializable()
                 .withGameStatus(gameStatus)
                 .withGameCode("")
                 .withPlayer1Position(orderedPlayerChannels[0].attr(playerPositionAttribute).get())
-                .withName1(orderedPlayerChannels[0].attr(playerNameAttribute).get())
+                .withName1(Objects.requireNonNullElse(orderedPlayerChannels[0].attr(playerNameAttribute).get(), ""))
                 .withPlayer2Position(orderedPlayerChannels[1] == null ? new int[]{} : Objects.requireNonNullElse(orderedPlayerChannels[1].attr(playerPositionAttribute).get(), new int[]{}))
                 .withName2(orderedPlayerChannels[1] == null ? "" : Objects.requireNonNullElse(orderedPlayerChannels[1].attr(playerNameAttribute).get(), ""))
         );

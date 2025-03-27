@@ -1,18 +1,16 @@
 package cz.radovanmoncek.test.ship.sessions.events;
 
-import cz.radovanmoncek.ship.sessions.events.DefaultGameSessionContext;
+import cz.radovanmoncek.ship.events.DefaultGameSessionContext;
 import cz.radovanmoncek.ship.utilities.logging.LoggingUtilities;
 import io.netty.channel.Channel;
 import io.netty.channel.embedded.EmbeddedChannel;
 import io.netty.channel.group.ChannelGroup;
 import io.netty.channel.group.DefaultChannelGroup;
-import io.netty.channel.local.LocalChannel;
 import io.netty.util.concurrent.GlobalEventExecutor;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
-import java.util.concurrent.ConcurrentLinkedQueue;
 import java.util.concurrent.LinkedBlockingQueue;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicReference;

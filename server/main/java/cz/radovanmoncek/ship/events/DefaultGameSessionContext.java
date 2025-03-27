@@ -1,4 +1,4 @@
-package cz.radovanmoncek.ship.sessions.events;
+package cz.radovanmoncek.ship.events;
 
 import cz.radovanmoncek.ship.parents.models.GameSessionContext;
 import io.netty.channel.Channel;

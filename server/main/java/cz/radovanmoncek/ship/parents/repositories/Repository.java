@@ -17,6 +17,8 @@ import java.util.Optional;
  * which is an antipattern known as the <a href=https://refactoring.guru/smells/data-class>Data Class</a>.
  * <p>
  * The idea is to, basically, combine both model and service into one singular class.
+ * The model class should contain setter methods servicing pre-database operations, and no getter methods.
+ * Those need to be replaced by printers or other such methods.
  * </p>
  * Thanks to: <a href=https://www.yegor256.com/2016/07/06/data-transfer-object.html>yegor256</a>
  * Thanks to: <a href=https://refactoring.guru/smells/data-class>refactoring.guru</a>
@@ -25,6 +27,7 @@ import java.util.Optional;
  * @author Radovan Monček
  */
 public abstract class Repository<T> {
+    private final Class<T> entityClass;
     @ChannelHandlerAttributeInjectee
     @SuppressWarnings("unused")
     private SessionFactory sessionFactory;
@@ -37,12 +40,14 @@ public abstract class Repository<T> {
      */
     public Optional<T> findByIdentifier(final Long identifier) {
 
-        return Optional.of(sessionFactory.fromTransaction(session -> session.find(returnEntityClass(), identifier)));
+        return Optional.of(sessionFactory.fromTransaction(session -> session.find(entityClass, identifier)));
     }
 
-    private Class<T> returnEntityClass() {
+    //Big thanks to: Google Gson project
+    @SuppressWarnings("unchecked")
+    public Repository() {
 
-        return (Class<T>) ReflectionUtilities.returnTypeParameterAtIndex((ParameterizedType) getClass().getGenericSuperclass(), 0);
+        entityClass = (Class<T>) ReflectionUtilities.returnTypeParameterAtIndex((ParameterizedType) getClass().getGenericSuperclass(), 0);
     }
 
     /**
@@ -55,8 +60,8 @@ public abstract class Repository<T> {
         return sessionFactory.fromTransaction(session -> {
 
             final var criteriaBuilder = session.getCriteriaBuilder();
-            final CriteriaQuery<T> criteriaQuery = criteriaBuilder.createQuery(returnEntityClass());
-            final Root<T> root = criteriaQuery.from(returnEntityClass());
+            final CriteriaQuery<T> criteriaQuery = criteriaBuilder.createQuery(entityClass);
+            final Root<T> root = criteriaQuery.from(entityClass);
             final var all = criteriaQuery.select(root);
             final TypedQuery<T> allQuery = session.createQuery(all);
 
@@ -76,7 +81,7 @@ public abstract class Repository<T> {
 
     public Optional<T> delete(final Long identifier) {
 
-        final var deletedEntity = sessionFactory.fromTransaction(session -> session.find(returnEntityClass(), identifier));
+        final var deletedEntity = sessionFactory.fromTransaction(session -> session.find(entityClass, identifier));
 
         sessionFactory.inTransaction(session -> session.remove(deletedEntity));
 

@@ -1,19 +1,20 @@
-package cz.radovanmoncek.ship.parents.sessions.listeners;
+package cz.radovanmoncek.ship.parents.events;
 
+import cz.radovanmoncek.ship.events.GameSessionEventLoop;
 import cz.radovanmoncek.ship.parents.models.GameSessionContext;
 import io.netty.channel.Channel;
 
 /**
- * Listens for {@link cz.radovanmoncek.ship.sessions.events.GameSessionEventLoop} events.
- * At most one {@link GameSessionEventListener} may be registered to each {@link cz.radovanmoncek.ship.sessions.events.GameSessionEventLoop}.
- * @see cz.radovanmoncek.ship.sessions.events.GameSessionEventLoop
+ * Listens for {@link GameSessionEventLoop} events.
+ * At most one {@link GameSessionEventListener} may be registered to each {@link GameSessionEventLoop}.
+ * @see GameSessionEventLoop
  * @author Radovan Monček
  * @since 1.0
  */
 public abstract class GameSessionEventListener {
 
     /**
-     * If this event is called, some exception has occurred inside the {@link cz.radovanmoncek.ship.sessions.events.GameSessionEventLoop} and it had to unexpectedly end.
+     * If this event is called, some exception has occurred inside the {@link GameSessionEventLoop} and it had to unexpectedly end.
      * @param context this {@link GameSessionContext}.
      * @param t the exception that caused this event.
      */
@@ -33,7 +34,7 @@ public abstract class GameSessionEventListener {
     public abstract void onStart(GameSessionContext context);
 
     /**
-     * This event is called for each {@link cz.radovanmoncek.ship.sessions.events.GameSessionEventLoop} cycle.
+     * This event is called for each {@link GameSessionEventLoop} cycle.
      * State change operations should be performed.
      * @param context this {@link GameSessionContext}.
      */

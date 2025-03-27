@@ -1,8 +1,8 @@
-package cz.radovanmoncek.ship.sessions.events;
+package cz.radovanmoncek.ship.events;
 
 import cz.radovanmoncek.ship.parents.models.GameSessionContext;
-import cz.radovanmoncek.ship.parents.sessions.listeners.GameSessionEventListener;
-import cz.radovanmoncek.ship.sessions.models.GameSessionConfigurationOption;
+import cz.radovanmoncek.ship.parents.events.GameSessionEventListener;
+import cz.radovanmoncek.ship.models.GameSessionConfigurationOption;
 import io.netty.channel.Channel;
 import io.netty.channel.group.ChannelGroup;
 import io.netty.channel.group.DefaultChannelGroup;

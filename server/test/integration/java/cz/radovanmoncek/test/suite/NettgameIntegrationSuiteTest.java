@@ -1,7 +1,5 @@
 package cz.radovanmoncek.test.suite;
 
-import cz.radovanmoncek.ship.injection.services.ChannelHandlerInjectionService;
-import cz.radovanmoncek.ship.sessions.events.DefaultGameSessionContext;
 import cz.radovanmoncek.test.ship.injection.services.ChannelHandlerInjectionServiceTest;
 import cz.radovanmoncek.test.ship.sessions.events.DefaultGameSessionContextTest;
 import cz.radovanmoncek.test.ship.sessions.events.GameSessionEventLoopTest;

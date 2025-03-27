@@ -207,6 +207,8 @@ public final class NettgameServerBootstrap {
                         @Override
                         protected void initChannel(SocketChannel ch) {
 
+                            LoggingUtilities.enableGlobalLoggingLevel(Level.ALL);
+
                             initialHandlers.forEach(ch.pipeline()::addLast);
 
                             new ChannelHandlerInjectionService(sessionFactory, repositories)

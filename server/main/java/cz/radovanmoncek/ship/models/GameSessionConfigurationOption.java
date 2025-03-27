@@ -1,4 +1,4 @@
-package cz.radovanmoncek.ship.sessions.models;
+package cz.radovanmoncek.ship.models;
 
 public enum GameSessionConfigurationOption {
 
