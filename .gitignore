@@ -43,3 +43,6 @@ MANIFEST.MF
 
 #.xml
 cz.radovanmoncek.ship.util.reflection.ReflectionUtilities.log4j2.xml
+
+#.exe
+*.exe
