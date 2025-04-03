@@ -1,6 +1,5 @@
 package cz.radovanmoncek.ship.bay.events;
 
-import cz.radovanmoncek.ship.deck.events.GameSessionContext;
 import cz.radovanmoncek.ship.deck.events.GameSessionEventListener;
 import cz.radovanmoncek.ship.bay.models.GameSessionConfigurationOption;
 import io.netty.channel.Channel;
@@ -38,7 +37,7 @@ public class GameSessionEventLoop implements Runnable {
 
         contextConnections = new DefaultChannelGroup(GlobalEventExecutor.INSTANCE);
         pendingConnections = new LinkedBlockingQueue<>();
-        gameSessionContext = new DefaultGameSessionContext(globalConnections, contextConnections, pendingConnections);
+        gameSessionContext = new GameSessionContext(globalConnections, contextConnections, pendingConnections);
 
         return this;
     }

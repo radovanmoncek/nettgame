@@ -1,5 +1,11 @@
 package cz.radovanmoncek.ship.bay.models;
 
+/**
+ * Options for configuring a game session.
+ *
+ * @author Radovan Monček
+ * @since 1.0
+ */
 public enum GameSessionConfigurationOption {
 
     /**
@@ -13,5 +19,9 @@ public enum GameSessionConfigurationOption {
     /**
      * Wait for an initial connection (the host player).
      */
-    AWAIT_HOST
+    AWAIT_HOST,
+    /**
+     * The maximum possible length a game session can have.
+     */
+    MAX_LENGTH
 }

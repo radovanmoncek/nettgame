@@ -1,5 +1,6 @@
 package cz.radovanmoncek.ship.deck.events;
 
+import cz.radovanmoncek.ship.bay.events.GameSessionContext;
 import cz.radovanmoncek.ship.bay.parents.handlers.GameSessionChannelGroupHandler;
 import cz.radovanmoncek.ship.bay.events.GameSessionEventLoop;
 import io.netty.channel.Channel;
@@ -7,6 +8,7 @@ import io.netty.channel.Channel;
 /**
  * Listens for {@link GameSessionEventLoop} events.
  * At most one {@link GameSessionEventListener} may be registered to each {@link GameSessionEventLoop}.
+ *
  * @see GameSessionEventLoop
  * @author Radovan Monček
  * @since 1.0
@@ -16,9 +18,9 @@ public interface GameSessionEventListener {
     /**
      * If this event is called, some exception has occurred inside the {@link GameSessionEventLoop} and it had to unexpectedly end.
      * @param context this {@link GameSessionContext}.
-     * @param t the exception that caused this event.
+     * @param throwable the exception that caused this event.
      */
-    void onErrorThrown(GameSessionContext context, Throwable t);
+    void onErrorThrown(GameSessionContext context, Throwable throwable);
 
     /**
      * The first event called in the game session lifecycle.

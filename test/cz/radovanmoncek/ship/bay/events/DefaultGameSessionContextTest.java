@@ -1,6 +1,5 @@
 package cz.radovanmoncek.ship.bay.events;
 
-import cz.radovanmoncek.ship.bay.events.DefaultGameSessionContext;
 import cz.radovanmoncek.ship.bay.utilities.logging.LoggingUtilities;
 import io.netty.channel.Channel;
 import io.netty.channel.embedded.EmbeddedChannel;
@@ -19,7 +18,7 @@ import java.util.logging.Level;
 import static org.junit.jupiter.api.Assertions.*;
 
 public class DefaultGameSessionContextTest {
-    private static DefaultGameSessionContext defaultGameSessionContext;
+    private static GameSessionContext defaultGameSessionContext;
     private static ChannelGroup globalConnections, contextConnections;
     private static LinkedBlockingQueue<Channel> pendingChannels;
 
@@ -31,7 +30,7 @@ public class DefaultGameSessionContextTest {
         globalConnections = new DefaultChannelGroup(GlobalEventExecutor.INSTANCE);
         contextConnections = new DefaultChannelGroup(GlobalEventExecutor.INSTANCE);
         pendingChannels = new LinkedBlockingQueue<>();
-        defaultGameSessionContext = new DefaultGameSessionContext(globalConnections, contextConnections, pendingChannels);
+        defaultGameSessionContext = new GameSessionContext(globalConnections, contextConnections, pendingChannels);
     }
 
     @BeforeEach

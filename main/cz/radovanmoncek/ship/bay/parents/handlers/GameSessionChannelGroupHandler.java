@@ -4,7 +4,7 @@ import com.google.flatbuffers.Table;
 import cz.radovanmoncek.ship.bay.events.GameSessionEventLoop;
 import cz.radovanmoncek.ship.bay.models.GameSessionConfigurationOption;
 import cz.radovanmoncek.ship.deck.events.GameSessionEventListener;
-import cz.radovanmoncek.ship.deck.events.GameSessionContext;
+import cz.radovanmoncek.ship.bay.events.GameSessionContext;
 import io.netty.channel.Channel;
 import io.netty.channel.group.ChannelGroup;
 import io.netty.channel.group.DefaultChannelGroup;

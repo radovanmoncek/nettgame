@@ -1,7 +1,6 @@
 package cz.radovanmoncek.ship.bay.events;
 
 import cz.radovanmoncek.ship.bay.models.GameSessionConfigurationOption;
-import cz.radovanmoncek.ship.deck.events.GameSessionContext;
 import cz.radovanmoncek.ship.deck.events.GameSessionEventListener;
 import io.netty.channel.Channel;
 import io.netty.channel.embedded.EmbeddedChannel;
@@ -39,7 +38,7 @@ public class GameSessionEventLoopTest {
                 .withGameSessionEventListener(eventListener = new GameSessionEventListener() {
 
                     @Override
-                    public void onErrorThrown(GameSessionContext context, Throwable t) {
+                    public void onErrorThrown(GameSessionContext context, Throwable throwable) {
 
                     }
 
