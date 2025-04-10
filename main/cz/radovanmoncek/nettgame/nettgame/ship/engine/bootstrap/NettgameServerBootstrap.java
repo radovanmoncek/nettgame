@@ -20,6 +20,7 @@ import org.hibernate.cfg.Configuration;
 
 import java.lang.reflect.ParameterizedType;
 import java.net.InetAddress;
+import java.net.UnknownHostException;
 import java.util.*;
 import java.util.concurrent.Executors;
 import java.util.concurrent.TimeUnit;
@@ -229,7 +230,7 @@ public final class NettgameServerBootstrap {
                                     .forEach(ch.pipeline()::addLast);
                         }
                     })
-                    .bind(address, port)
+		            .bind(Objects.requireNonNullElse(InetAddress.getByName(System.getProperty("address")), address), port)
                     .sync()
                     .addListener((ChannelFutureListener) future -> {
 
@@ -278,9 +279,9 @@ public final class NettgameServerBootstrap {
                 }
             }
         }
-        catch (final InterruptedException interruptedException) {
+        catch (final UnknownHostException | InterruptedException exception) {
 
-            logger.log(Level.SEVERE, interruptedException.getMessage(), interruptedException);
+            logger.log(Level.SEVERE, exception.getMessage(), exception);
         }
     }
 
