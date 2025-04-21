@@ -45,8 +45,24 @@ public abstract class FlatBuffersEncoder<BandAid extends FlatBufferSerializable>
         renderEncodedData(header.length + body.length, header, body);
     }
 
+    /**
+     * Specify, how the header message will be encoded.
+     * @param flatBuffersSerializable the message.
+     * @param flatBufferBuilder convenience instance of FLatBuffersBuilder.
+     * @return the binary format of the encoded message header.
+     * @since 1.0
+     * @author Radovan Monček
+     */
     protected abstract byte[] encodeHeader(final BandAid flatBuffersSerializable, final FlatBufferBuilder flatBufferBuilder);
 
+    /**
+     * Specify, how the message will be ancoded.
+     * @param flatBuffersSerializable the message
+     * @param flatBufferBuilder convenience instance of FlatBuffersBuilder.
+     * @return the binary format of the encoded message.
+     * @author Radovan Monček
+     * @since 1.0
+     */
     protected abstract byte[] encodeBodyAfterHeader(final BandAid flatBuffersSerializable, final FlatBufferBuilder flatBufferBuilder);
 
     private void renderEncodedData(int length, byte[] header, byte[] body) {

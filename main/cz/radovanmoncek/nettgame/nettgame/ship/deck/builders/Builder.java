@@ -3,6 +3,8 @@ package cz.radovanmoncek.nettgame.nettgame.ship.deck.builders;
 /**
  * Each realization should include methods prefixed with 'build', and an accumulative attribute called 'result'.
  * @param <T> the buildee.
+ * @since 1.0
+ * @author Radovan Monček
  */
 public interface Builder<T> {
 

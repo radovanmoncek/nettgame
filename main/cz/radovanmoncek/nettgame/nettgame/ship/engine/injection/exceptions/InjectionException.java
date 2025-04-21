@@ -2,6 +2,8 @@ package cz.radovanmoncek.nettgame.nettgame.ship.engine.injection.exceptions;
 
 /**
  * Thrown, if a dependency injection fails, for any reason.
+ * @since 1.0
+ * @author Radovan Monček
  */
 public class InjectionException extends Exception {
 

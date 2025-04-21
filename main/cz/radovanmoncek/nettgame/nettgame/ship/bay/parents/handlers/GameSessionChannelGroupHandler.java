@@ -20,6 +20,8 @@ import java.util.logging.Logger;
  * This handler is responsible for provisioning and managing game sessions.
  *
  * @param <FlatBuffersSchema> the FlatBuffers schema this handler should accept.
+ * @since 1.0
+ * @author Radovan Monček
  */
 public abstract class GameSessionChannelGroupHandler<FlatBuffersSchema extends Table> extends ChannelGroupHandler<FlatBuffersSchema> {
 

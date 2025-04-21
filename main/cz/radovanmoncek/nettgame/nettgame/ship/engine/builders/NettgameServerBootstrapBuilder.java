@@ -67,6 +67,11 @@ public class NettgameServerBootstrapBuilder implements Builder<NettgameServerBoo
         return this;
     }
 
+    /**
+     * Build a specific port.
+     * @param port the port to build.
+     * @return this for chaining.
+     */
     public NettgameServerBootstrapBuilder buildPort(int port){
 
         result.setPort(port);
@@ -74,6 +79,11 @@ public class NettgameServerBootstrapBuilder implements Builder<NettgameServerBoo
         return this;
     }
 
+    /**
+     * build a specific address.
+     * @param address the address to build.
+     * @return this for chaining.
+     */
     public NettgameServerBootstrapBuilder buildInternetProtocolAddress(InetAddress address){
 
         result.setInternetProtocolAddress(address);
@@ -81,6 +91,11 @@ public class NettgameServerBootstrapBuilder implements Builder<NettgameServerBoo
         return this;
     }
 
+    /**
+     * build a handler for business logic.
+     * @param channelHandlerCreator the handler to build.
+     * @return this for chaining.
+     */
     public NettgameServerBootstrapBuilder buildChannelHandlerCreator(ChannelHandlerCreator channelHandlerCreator){
 
         result.addChannelHandlerCreator(channelHandlerCreator);
@@ -88,6 +103,11 @@ public class NettgameServerBootstrapBuilder implements Builder<NettgameServerBoo
         return this;
     }
 
+    /**
+     * build a repository for use in handleres.
+     * @param repository the repository to build.
+     * @return this for chaining.
+     */
     public NettgameServerBootstrapBuilder buildRepository(Repository<?> repository){
 
         result.addRepository(repository);
@@ -95,6 +115,11 @@ public class NettgameServerBootstrapBuilder implements Builder<NettgameServerBoo
         return this;
     }
 
+    /**
+     * build a handler with a specific logging level.
+     * @param logLevel the level for the logging handler.
+     * @return this for chaining.
+     */
     public NettgameServerBootstrapBuilder buildLogLevel(LogLevel logLevel) {
 
         result.setLogLevel(logLevel);
@@ -102,6 +127,11 @@ public class NettgameServerBootstrapBuilder implements Builder<NettgameServerBoo
         return this;
     }
 
+    /**
+     * build a shutdown delay value.
+     * @param i the ammount of seconds to defer shutdown for.
+     * @return this for chaining.
+     */
     public NettgameServerBootstrapBuilder buildShutdownDelay(int i) {
 
         result.setShutdownTimeout(i);

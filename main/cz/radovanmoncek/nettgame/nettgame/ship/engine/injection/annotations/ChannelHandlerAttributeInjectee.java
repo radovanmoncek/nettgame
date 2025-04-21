@@ -14,6 +14,8 @@ import java.lang.annotation.Target;
  *     In other words: automatic <i>attribute injection</i> will be performed for each field
  *     in a {@link io.netty.channel.ChannelHandler} annotated with {@link ChannelHandlerAttributeInjectee}.
  * </p>
+ * @since 1.0
+ * @author Radovan Monček
  */
 @Retention(RetentionPolicy.RUNTIME)
 @Target(ElementType.FIELD)
