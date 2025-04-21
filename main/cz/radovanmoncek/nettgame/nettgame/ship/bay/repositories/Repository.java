@@ -44,7 +44,7 @@ public class Repository<T> {
     protected SessionFactory sessionFactory;
 
     /**
-     * Find an {@link jakarta.persistence.Entity} by identifier.
+     * Optionally, find an {@link jakarta.persistence.Entity} by identifier.
      *
      * @param identifier the identifier to search by.
      * @return an {@link Object} for the matching identifier, if such exists.
@@ -65,6 +65,7 @@ public class Repository<T> {
     }
 
     /**
+     * Find all entities of type {@link T}.
      * Implementation from <a href=https://www.baeldung.com/hibernate-select-all>source</a>.
      *
      * @return a list of fitting entities.
@@ -83,16 +84,31 @@ public class Repository<T> {
         });
     }
 
+    /**
+     * Store an entity.
+     * @param entity the entity to store.
+     * @return optionally, the stored entity.
+     */
     public Optional<T> store(final T entity) {
 
         return Optional.of(sessionFactory.fromTransaction(session -> session.merge(entity)));
     }
 
+    /**
+     * Update an existing entity.
+     * @param entity the entity to update.
+     * @return optionally, the updated entity.
+     */
     public Optional<T> update(final T entity) {
 
         return Optional.of(sessionFactory.fromTransaction(session -> session.merge(entity)));
     }
 
+    /**
+     * Delete an entity.
+     * @param identifier the identifier of the entity to delete.
+     * @return optionally, the deleted entity.
+     */
     public Optional<T> delete(final Long identifier) {
 
         final var deletedEntity = sessionFactory.fromTransaction(session -> session.find(entityClass, identifier));

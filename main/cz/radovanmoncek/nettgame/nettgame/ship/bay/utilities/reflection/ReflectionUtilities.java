@@ -3,6 +3,11 @@ package cz.radovanmoncek.nettgame.nettgame.ship.bay.utilities.reflection;
 import java.lang.reflect.*;
 import java.util.Arrays;
 
+/**
+ * Utility methods for performing reflective operations.
+ * @since 1.0
+ * @author Radovan Monček
+ */
 public final class ReflectionUtilities {
 
     private ReflectionUtilities() {}

@@ -13,8 +13,16 @@ import java.util.LinkedList;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 
+/**
+ * This is an internal companion class of {@link cz.radovanmoncek.nettgame.nettgame.ship.engine.bootstrap.NettgameServerBootstrap}.
+ * @apiNote this class in internal to the nettgame framework.
+ * @since 1.0
+ * @author Radovan Monček
+ */
 public class ChannelHandlerInjectionService {
+
     private static final Logger logger = Logger.getLogger(ChannelHandlerInjectionService.class.getName());
+
     private final SessionFactory sessionFactory;
     private final LinkedList<Repository<?>> repositories;
 

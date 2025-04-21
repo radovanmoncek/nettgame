@@ -13,6 +13,13 @@ import java.util.concurrent.TimeUnit;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 
+/**
+ * This class represents the main event loop of every running game session.
+ * Its life cycle is tied to the specific game session that had it assigned.
+ * @apiNote this is an internal class of the nettgame framework.
+ * @author Radovan Monček
+ * @since 1.0
+ */
 public class GameSessionEventLoop implements Runnable {
 
     private static final Logger logger = Logger.getLogger(GameSessionEventLoop.class.getName());
@@ -26,6 +33,12 @@ public class GameSessionEventLoop implements Runnable {
 
     private boolean endedCheck;
 
+    /**
+     * Constructs a new instance.
+     * @param globalConnections all players connected to some game session.
+     * @param gameSessionEventListener the listener that will react to events.
+     * @param options options for this game session.
+     */
     public GameSessionEventLoop(ChannelGroup globalConnections, GameSessionEventListener gameSessionEventListener, List<Map.Entry<GameSessionConfigurationOption, Object>> options) {
 
         this.globalConnections = globalConnections;
@@ -38,11 +51,20 @@ public class GameSessionEventLoop implements Runnable {
         endedCheck = false;
     }
 
+    /**
+     * Broadcast an event to all listeners.
+     * @param channel the relevant connection of this event.
+     */
     public void notifyOfGlobalConnectionEvent(final Channel channel) {
 
         gameSessionEventListener.onGlobalConnectionEvent(gameSessionContext, channel);
     }
 
+    /**
+     * Run this game session.
+     * @author Radovan Monček
+     * @since 1.0
+     */
     @Override
     public void run() {
 
