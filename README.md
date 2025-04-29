@@ -67,6 +67,6 @@ but, thanks to Hibernate, and JDBC, not the only possible one.
 - https://junit.org/junit5/
 - https://netty.io/
 
-#### Legal
+#### UML Class diagram
 
-The licence of Nettgame is the **MIT** licence.
+![UML Class diagram](https://github.com/radovanmoncek/nettgame/blob/development/design/Nettgame_class_diagram.png)
