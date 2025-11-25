@@ -66,6 +66,8 @@ but, thanks to Hibernate, and JDBC, not the only possible one.
 - https://app.docker.com/
 - https://junit.org/junit5/
 - https://netty.io/
+- https://www.yegor256.com/
+- https://www.youtube.com/@TsodingDaily
 
 #### Legal
 
