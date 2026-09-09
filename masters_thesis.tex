@@ -1,0 +1,403 @@
+ \documentclass{article}
+\usepackage{graphicx} % Required for inserting images
+\usepackage{tikz}
+\usepackage{amsmath}
+
+\title{NNDIP}
+\author{Radovan Monček}
+\date{June 2026}
+
+\begin{document}
+
+\maketitle
+
+%\section{Introduction}
+
+\begin{abstract}
+Tato práce cílí na přepis frameworku Nettgame 
+%\cite{%\iffNettgame \fi moncek_nettgame}\cite{Thesis}
+\cite{moncek_nettgame} \cite{moncek_theses}, který byl hlavní náplní mé Bakalářské práce 
+%\cite{Thesis}
+\cite{moncek_theses}, založený na platformě Java a kontejnerizovaný pomocí kontejnerizační technologie Docker. Důvodem potřeby vnesení Kubernetes do Nettgame je pro účely nasazení konkrétního herního serveru ne jen na jediný uzel, ale také na několik spolupracujících síťových hostitelů propojených pomocí Kubernetes clusteru. Přepis je uskutečněn do jazyka C++, a to především pro účely zvýšení výkonu, pomocí nativního běhu a průzkumu alternativních síťových technologií, jako nabídka výběru protokolů různé spolehlivosti (např. KCP nebo RUDP) nebo jiné frameworky (ASIO nebo ENet). Kubernetes umožňuje frameworku rozložit zátěž paralelizovaných herních relací napříč několika fyzickými koncovými body a nabízí tak, oproti jedinému, rozšířený repertoár funkcí, jako redundance, obnovitelnost, sdílení herního stavu mezi jednotlivými replikami nebo strategické kontextuální umístění a přesun herní relace tak, aby danému uživatzeli nabízela nejlepší možnou kvalitu relace.
+%přechodu z Javy na C++ a jinou knihovnu/framework (Asio/ENet),
+%přechodu z čistého TCP na vylepšený typ UDP a provedení nějakého typu měření, popř. zavést podporu více typů protokolů (včetně, např. Reliable UDP, KCP),
+%pojetí jednotlivých kontejnerů v clusteru jako "kontejnerů vláken relací" a vytvoření systému pro přenos těchto relací mezi kontejnery (sdílená paměť v rámci Kubernetes)
+%a také by mne velice zajímalo prozkoumání oblasti "failoveru" kontejnerů (který jste na minulé konzultaci zmiňoval), nebo jiného využití replikace/distribuce serverů (např. způsob automatické distribuce relací).
+%Práci bych tedy rád pojal, jako vytvoření "nového" systému (tentokrát v C++ a s využitím nejen Dockeru, ale i Kubernetes), jako přepis projektu z BP. Primárním přínosem Kubernetes by byla možnost využití redundance/replikace serveru (failover, distribuce relací, škálování). "Nový" server by byl vyvýjen přímo pro účely distribuce a sdílení vláken relací mezi replikami. Hlavními důvody pro toto rozhodnutí je zajištětí dostatečného obsahu/přínosu práce a také obhájitelnost přechodu na distribuovaný/replikovaný systém.
+\end{abstract}
+
+\newpage
+
+\tableofcontents
+
+\newpage
+
+Pro tvorbu teto práce byl využit NotebookLM.
+
+\newpage
+
+\section*{Klíčová slova}
+Kubernetes\\
+Java\\
+C++\\
+Herní server\\
+Replikované systémy\\
+Distribuované systémy\\
+Síťové protokoly\\
+KCP\\
+RUDP\\
+Paralelizace\\
+Sdílení paměti\\
+Zabezpečení síťových her\\
+QoS
+
+\newpage
+\section{Úvod}
+
+Nettgame je framework vyvíjený jako obsah mé Bakalářské práce 
+%\cite{Thesis}
+\cite{moncek_theses}, sloužící k tvorbě specializovaných herních serverů. Je požadováno, aby Nettgame podporoval platformu Kubernetes. Nettgame je ale navržen a zamýšlen pouze pro běh v rámci jediného Docker kontejneru, a tak, pro umožnění podpory Kubernetes, musí být zásadně změněna a přizpůsobena celá architektura.
+
+Z toho důvodu, že je modifikace frameworku takto razantní, je smysluplné provést i změnu programovacího jazyka, který bude lépe vyhovovat případu užití - herního serveru. Reprezentantem vhodnějšího jazyka je i C++.
+
+\newpage
+
+\section{Orchestrační technologie a clustery}
+\subsection{Docker Swarm}
+\subsection{Kubernetes}
+Kubernetes, jinak také známý jako a déle pouze K8s, je otevřená platforma pro
+\begin{itemize}
+    \item automatizaci nasazení, 
+    \item škálování
+    \item a správu kontejnerů.
+\end{itemize} K8s seskupuje kontejnery aplikace do separátních logických jednotek a umožňuje tak realisticky spravovat aplikace, které by jinak byly tvořeny sporadickým seskupením diskrétních kontejnerů.
+
+Jedná se tedy, prakticky, o nadstavbu nad kontejnerizací, umožňující tvořit infrastruktury a aplikace o více jak jednom kontejneru. K8s je také velmi vyspělý projekt s mnoholetou historií, využívaný v produkci, např. poskytovateli cloud-native služeb.
+
+K8s také poskytuje pokročilé funkce jako vyrovnávání zátěže a facilitaci síťového propojení kontejnerů. \cite{kubernetes_home}.
+
+
+
+\subsubsection{K3s}
+%\subsection{K3s}
+K3s je oficiálně certifikovaná distribuce Kubernetes, specificky navržena pro jednoduché nasazení na různé typy infrastruktur a operačních systémů. Celá instalace je enkapsulována do spustitelného binárního souboru zabírajícího méně, než 70 MB místa pevné paměti. \cite{k3s}.
+\newpage
+\section{Distribuce a Replikace}
+\subsection{Distribuce}
+\subsection{Replikace}
+\subsection{Srovnání Distribuce a Replikace}
+\newpage
+\section{MQ systémy}
+\subsection{Rabbit MQ}
+\subsection{Apache Kafka}
+\newpage
+\section{Výběr nového C++ frameworku}
+Změna jazyka, na kterém je Nettgame framework vystavěn, vyžaduje také změnu síťového zázemí, resp. síťového frameworku.
+
+Stará verze Nettgame využívá jako síťový framework Netty. Ten ale nelze využít v C++, protože je na Javě založen.
+
+C++, stejně jako Java, nabízí řadu síťových knihoven a frameworků, z kterých je potřeba zvolit vhodnou náhradu za Netty.
+
+\subsection{Asio}
+Asio je jedna z nejvýznamějších knihoven jazyka C++ na světě. 
+
+Knihovna slouží k modernímu asynchronnímu multiplatformnímu vývoji síťových aplikací a nízkoúrovňovému programování vstupů a výstupů. \cite{boostasio}
+\subsubsection{Boost.Asio}
+
+\subsection{ENet}
+ENet, podobně jako Asio, slouží k nízkoúrovňovému síťovému programování v jazyce C++. Na rozdíl od Asio se ENet soustředí na protokol UDP, a tudíž preferenci bezspojové a rychlé komunikace. \cite{enet}.
+
+\subsection{gRPC}
+gRPC je moderní otevřený framework pro komunikaci v rámci distribuovaných systémů. Tento framework zakládá na technologii RPC (Remote Procedure Call) a Protocol Buffers. Protocol Buffers umožňuje tomuto frameworku fungovat napříč několika různými programovacími jazyky, čímž se zásadně odlišuje od předchozích alternativ.
+
+gRPC také podporuje bi-direkcionální streaming, např. skrze HTTP/2. HTTP/2 ale nemá pro Nettgame přímý přínos \cite{grpc}.
+\subsection{Yojimbo}
+Yojimbo je, narozdíl od předchozích možností, síťová knihovna zaměřená specificky na síťové hry, specifičtěji pak na hry, vyžadující okamžitou odezvu a stabilitu serveru. 
+
+Knihovnu vytvořil renomovaný Glenn Fiedler, který je významnou osbností ve světě síťových her. Tento fakt přidává této možnosti na kredibilitě a důvěře ve fungování, vhodnosti a výkonu.
+
+Mezi zásadní výhody volby této knihovny patří:
+\begin{itemize}
+\item podpora autentizace a enkryptace komunikace pomocí tokenů,
+\item možnost rychlé bezspojové a spojové komunikace přes UDP,
+\item specifické zaměření na síťové hry
+    \item a QoS mechanismy
+\end{itemize} \cite{TODO}.
+\newpage
+\section{Server jako kontejner pro vlákna herních relací}
+Aby mohl nový framework správně fungovat, je nutné separovat dva zásadní a základní koncepty: 
+\begin{itemize}
+\item herní server 
+\item a herní relace. 
+\end{itemize}
+
+V původní verzi Nettgame je globální množina herních relací pevně svázaná s jediným kontejnerizovaným serverem. Vnesení Kubernetes jako mezivrstvy klientu a kontejneru zapříčiní možnost existence více než jednoho herního serveru. Pokud by herní relace neprošly změnou, která přizpůsobí jejich rozložení napříč dílčími servery, byly by stále pevně svázány se serverem, kde vznikly, resp., byly by součástí lokální množiny relací jednoho určitého serveru, který bude jejich jediným správcem až do zániku.
+
+Vzhledem k problematice nastíněné v předchozím odstavci je nezbytné přijít s řešením, které umožní odpoutat herní relaci od serveru a umožnit jí tak volný přesun mezi lokálními množinami relací jednotlivých serverů. Globální množina relací by pak již existovala spíše jako logický svazek nad množinou všech replik herních serverů.
+\newpage
+\section{Automatický failover a další přínosy Kubernetes}
+Jak již bylo zmíněno v předchozích kapitolách, Kubernetes umožní rozložit původní jediný Docker kontejner, resp. herní server, na několik dílčích serverů, mezi které lze následně rozdělit výkon. Tato vlastnost přináší možnosti nových funkcí, které by samotný Docker kontejner nemohl poskytovat.
+\subsection{Failover dílčích herních serverů}
+
+\subsection{Vyrovnávání zátěže}
+
+\subsection{Optimalizace výkonu pomocí geografické lokace uzlu}
+
+\subsubsection{CDN}
+
+\newpage
+%\section{Diagram původního Nettgame frameworku}
+%\section{Přepis Nettgame z Java na C++}
+\section{Nettgame Java a Nettgame C++}
+Původní Nettgame framework je založen na platformě, resp. programovacím jazyce Java. Ačkoliv je Java pro svůj účel vhodná a nabízí, mimo jiné, i implicitní podporu více plaforem, trpí zásadním problémem, a to nižším vykonem, oproti alternativám.
+
+Z tohoto důvodu se, vzhledem k již probíhající změně architektury, ku prospěchu Kubernetes, nabízí možnost nepokračovat dále s Java platformou a přejít k jazyku, který netrpí stejnými nedostatky.
+
+Alternativních jazyku pro víceúčelové programování dnes existuje řada a neexistuje pouze jedna správná odpověď. I přesto ale existují jazyky, které lehce transcendují množinu svých moderních protějšků. Mezi takové jazyky se řadí i C++, které je prostředkem pro tvorbu noveho Nettgame frameworku.
+\newpage
+\section{Přechod k nové architektuře}
+
+Změna architektury Nettgame obnáší dvě zásadní fáze: připomenutí fungování původní architektury a iterace nad původní architekturou prostřednictvím koncepce, návrhu a implementace architektury nové.
+
+\subsection{Logická Herní Relace}
+Herní relace sestává ze dvou primárních komponent: smyčky událostí a stavových informací, v podobě herního stavu. 
+
+Každá relace je izolována od ostatních a vyžaduje paralelní běh ve vlastním vlákně.
+
+Vzhledem k agnostické vlastnosti frameworku Nettgame nelze exaktně určit, jaké služby bude relace uživatelům poskytovat, ale zpravidla se bude jednat o instanci nějaké síťové hry, která bude mít omezenou živostnost a simultánně obsluhovat mnoho klientů.
+
+O jednotlivých relacích lze tedy uvažovat jako o logických jednotkách, které nemusí nezbytně běžet v rámci jednoho kontejneru či fyzického uzlu. Taková vlastnost je velmi přínosná pro servery, které využívají více, než jeden server pro poskytování svých služeb.
+$$
+\boxed{\substack{\boxed{\text{Event Loop}}\\\boxed{\text{Game State}}}}
+$$
+
+\subsection{Původní architektura}
+Stávající framework je založen na jediném Netty serveru, který využívá modelu klient/server a operuje v jediné instanci Docker kontejneru. Toto řešení je funkční a postačující pro jednodušší herní servery, které nevyžadují pokročilé funkce, jako automatické škálování, vyrovnávání zátěže nebo redundanci. Lze ale spekulovat, že nastane situace, kdy budou takové funkce vyžadovány.
+$$
+\begin{matrix}
+\boxed{\text{Klient 1}}&\ldots&\boxed{\text{Klient N}}\\
+&\downarrow\uparrow&\\
+\ldots&\text{Docker}&\ldots\\
+&\downarrow\uparrow&\\
+&\small\text{Java Netty Framework}&\\
+\boxed{\text{DB}}&\boxed{\boxed{\text{Kontejnerizovaný Server}}}&\\
+&\downarrow\uparrow&\\&\small\text{Vlákna}&\\
+&\boxed{\text{Logické Herní relace a kontexty}\text{ }1\ldots N}&
+\end{matrix}
+$$
+
+\subsection{Nová architektura}
+Nový framework nabízí potenciálnímu implementátorovi konkrétního herního serveru značně rozšířený repertoár funkcí, oproti původnímu provedení. Mezi původní vrstvy klientských připojení a Docker platformu je vložena nová zprostředkující vrstva, tvořená Kubernetes, zajišťující běh mnoho replik specifických a kontejnerizovaných herních serverů.
+
+Jednotlivé logické herní relace jsou dynamicky rozděleny mezi servery a všechny tyto diskrétní jednotky sdílí jeden globální prostor herních dat.
+
+Kubernetes umožňuje rozložit zátěž meži dílčí servery a poskytuje funkce jako obnova v případě výpadku jedné z jednotek nebo optimalizace rychlosti poskytované služby v případě, kdy by byl cluster složen z fyzických uzlů na různě geograficky situovaných místech. Možnosti, které cluster nabízí jsou ale rozsáhlejší.
+%\section{Diagram nového Nettgame frameworku}
+%\begin{tikzpicture}
+    %\draw (0,0) -- (4,4);\node{Test}
+%\end{tikzpicture}
+$$\begin{matrix}
+    \boxed{\text{Klient 1}}&\ldots&\boxed{\text{Klient N}}\\
+    &\downarrow\uparrow&\\
+    \ldots&\text{Load balancing Kubernetes}&\ldots\\
+    &\downarrow\uparrow&\\
+    &\text{Docker}&\\
+    &\downarrow\uparrow&\\
+    \boxed{\text{DB}}&\boxed{\mathrel{\substack{
+    %&
+    \small\text{C++ Framework}\\
+    %&
+    %\\
+    %&
+    \boxed{\boxed{\substack{\text{Kontejnerizovaná}\\\text{Server Replica 1}}}\mathrel{\substack{\rightarrow\\\leftarrow}}\ldots\mathrel{\substack{\rightarrow\\\leftarrow}}\boxed{\substack{\text{Kontejnerizovaná}\\\text{Server Replica N}}}}}}}&\\
+    &\downarrow\uparrow&\\
+    
+    &\small\text{Vlákna}&\\
+    &\boxed{\text{Logické Herní relace}\text{ }1\ldots N}&\\
+    &\downarrow\uparrow&\\
+    &\text{Redis}&\\
+    &\downarrow\uparrow&\\
+    &\boxed{\text{Kontexty a stavové informace relací}}&
+\end{matrix}
+$$
+\newpage
+
+\newpage
+\section{Podpora více protokolů}
+Dalším vhodným rozšířením a iterací nad původní verzí frameworku Nettgame je umožnění implementátorům výběru mezi více protokoly, za účelem poskytnutí maximálního možného výkonu a vhodnosti pro specifický herní server a síťovou hru.
+
+Nettgame původně nabízel připojení klientů pouze skrze protokol TCP ve své výchozí podobě. Faktem je, že tento protokol bude, pro určité typy síťových her, s vysokou pravděpodobností postačující a volba protokolu sama o sobě má silnou vazbu na specifické užití, které implementátor zamýšlí. Z těchto důvodů je jednoznačně vhodné, aby nová verze frameworku umožnila volbu mezi více specializovanými protokoly transportní vrstvy.
+\subsection{RUDP}
+Spontánní reakcí na potřebu lepšího výkonu, oproti TCP, je okamžitá migrace na "protější" UDP. UDP ale musí za svou zvýšenou rychlost zaplatit nemalou daní, a to ztrátou spolehlovosti a spojení mezi komunikujícími entitami. Elaborací této myšlenky lze dojít k řešení, které sestává z kombinace spolehlovosti poskytované TCP a rychlosti UDP.
+
+RUDP zakládá právě na myšlence, která byla nastíněna v předchozím odstavci.
+\subsection{KCP}
+
+KCP je dalším protokolem, který umožňuje rychlý a zároveň spolehlivý přenos dat přes počítačovou síť a protokol UDP.
+
+\newpage
+\section{Možnosti zabezpečení a QoS}
+Další přidanou hodnotou změny architektury Nettgame je rozšíření o možnosti herní server zabezpečit a vylepšit uživatelský zážitek prostřednictvím mechanismu QoS (Quality of Service). Tyto funkce nejsou nezbytně závislé na nově vzniklé architektuře Nettgame a mohly být přidány i do verze původní.
+\subsection{Enkryptace paketů}
+Enkryptace paketů je proces, který před odesláním dat přes počítačovou síť provede kryptografické zabezpečení zašifrováním obsahu každé zprávy.
+
+Jak již bylo v mé Bakalářské práci zmíněno, největším problémem postihujícím herní zážitek je jednoznačně problém podvádění, což je zároveň i primárním důvodem preference klient/server před peer to peer u některých her.
+
+Způsobů podvádění u síťových her existuje celá řada a návrh preventivních opatření je velmi netriviální úloha, se kterou je nezbytné při tvorbě herních serverů počítat \cite{moncek_theses}.%\cite{Thesis}.
+\subsection{Quality of Service}
+Kvalita a stabilita připojení klienta k hernímu serveru je faktor, který zásadně ovlivňuje požitek z poskytované služby. V případě kdy dochází k neustálým problémům s připojením či nestabilním doručením dat, bude i ten nejlépe navržený klient a server síťové hry takřka napoužitelný. 
+
+%QoS je mechanismus, který se snaží zaručit plynulý běh náročné síťové služby za všech okolností a za každou cenu. \cite{moncek_theses}.
+\newpage
+
+\newpage
+
+\section{Implementace}
+
+\subsection{Nový Nettgame v C++}
+
+\subsection{Nová ukázková hra}
+
+\newpage
+
+\section{Metriky a měření výkonu nové architektury}
+
+\subsection{Srovnání výkonu Kubernetes a samotného Docker kontejneru}
+
+\subsubsection{Metodika}
+
+\subsubsection{Výsledky}
+
+\subsection{Srovnání RUDP a KCP}
+
+\subsubsection{Metodika}
+
+\subsubsection{Výsledky}
+
+\newpage
+
+\section{Zdroje}
+%\begin{thebibliography}[19]
+%\begin{thebibliography}[18]
+\begin{thebibliography}[20]
+ %   
+%\end{thebibliography}
+    %\bibitem{Nettgame}
+    %https://www.github.com/radovanmoncek/nettgame
+    %\bibitem{Thesis}
+    %https://theses.cz/id/0hoafo/
+    %\bibitem{ENet}
+    %https://enet.bespin.org/
+    %\bibitem{Asio}
+    %http://think-async.com/Asio/
+    \bibitem{moncek_nettgame}
+    MONČEK, Radovan. \textit{nettgame: C++ Network Library for Games} [online]. GitHub, 2024 [cit. 2026-06-16]. Dostupné z: https://github.com/radovanmoncek/nettgame
+
+    \bibitem{moncek_theses}
+    MONČEK, Radovan. \textit{Návrh a implementace síťové knihovny pro počítačové hry v prostředí C++}. Brno, 2024. Diplomová práce. Vysoké učení technické v Brně. Fakulta informačních technologií. Vedoucí práce doc. Ing. Petr Matoušek, Ph.D. Dostupné také z: https://theses.cz/id/0hoafo/
+
+    \bibitem{enet}
+    ENET AUTHORS. \textit{ENet: Reliable UDP networking library} [online]. 2002–2026 [cit. 2026-06-16]. Dostupné z: https://enet.bespin.org
+
+    \bibitem{asio_standalone}
+    KOHLHOFF, Christopher M. \textit{Asio C++ Library (Standalone)} [online]. 2003–2026 [cit. 2026-06-16]. Dostupné z: https://think-async.com/Asio
+%\bibitem{businesscompass}
+%BUSINESS COMPASS LLC. \textit{Architecting Real-Time Gaming Platforms for Massive Concurrency}. 20. srpen 2025. Dostupné z dokumentace k architektuře herních platforem.
+
+%\bibitem{stackoverflow}
+%STACK OVERFLOW. \textit{Best C/C++ Network Library}. 2026. Komunitní přehled síťových knihoven pro C/C++.
+
+%\bibitem{boostasio}
+%KOHLHOFF, Christopher M. \textit{Boost.Asio}. 2003--2026. Dokumentace knihovny pro asynchronní síťové vstupy a výstupy.
+
+%\bibitem{k8s_pods}
+%KUBERNETES. \textit{Communicate Between Containers in the Same Pod Using a Shared Volume}. 24. srpen 2023. Technická příručka pro orchestraci kontejnerů.
+
+%\bibitem{reliable_udp}
+%MEHMOOD, Umer a Adnan HASSNAIN. \textit{Reliable-Data-Transfer-Over-UDP}. GitHub, 2026. Implementace spolehlivého přenosu dat nad protokolem UDP pomocí selektivního opakování.
+
+%\bibitem{lunamultiplayer}
+%TNTTHELAGGER. \textit{LunaMultiplayer: Multiplayer mod for Kerbal Space Program (KSP)}. GitHub, 2026. Open-source modifikace pro síťovou hru využívající knihovnu Lidgren.
+
+%\bibitem{kcp_udp}
+%P9C. \textit{kcp: reliable udp low latency network transport}. GitHub, 2026. Knihovna pro nízkolatenční spolehlivý transport nad UDP.
+
+%\bibitem{goworld}
+%XIAONANLN. \textit{goworld: Scalable Distributed Game Server Engine with Hot Swapping in Golang}. GitHub, 2026. Distribuovaný herní engine s podporou hot-swapu entit.
+
+%\bibitem{drcodes}
+%DRCODES. \textit{Kubernetes for Game Servers: Complete Orchestration Guide}. 27. září 2025. Průvodce nasazením herních serverů v prostředí Kubernetes s využitím frameworku Agones.
+
+%\bibitem{geeksforgeeks}
+%GEEKSFORGEEKS. \textit{Reliable User Datagram Protocol - RUDP}. 15. říjen 2025. Technický rozbor protokolu RUDP a mechanismů sliding window.
+
+%\bibitem{cppnetlib}
+%BERRIS, Dean Michael a Glyn MATTHEWS. \textit{cpp-netlib: The C++ Network Library}. 2012--2018. Projekt kolekcí síťových knihoven pro moderní C++.
+
+%\bibitem{whiteboard}
+%\textit{diplomka-whiteboard-11-14-02-06-2026.pdf}. Interní dokumentace a návrhové schéma (whiteboard), 2026.
+
+%\bibitem{grpc}
+%GRPC AUTHORS. \textit{gRPC: A high performance, open source universal RPC framework}. 2026. Dokumentace frameworku pro vzdálené volání procedur.
+
+%\bibitem{hahm}
+%HAHM, Oliver. \textit{Distributed Systems: Peer-to-Peer Online Gaming}. Frankfurt University of Applied Sciences, 16. červenec 2024. Přednáškové materiály k distribuovaným systémům.
+
+%\bibitem{vmware}
+%VMWARE. \textit{VMware vSphere Cluster Resiliency and High Availability: Amazon RDS on VMware}. 2019. Technická specifikace odolnosti a vysoké dostupnosti clusterů.
+
+
+    \bibitem{businesscompass}
+    BUSINESS COMPASS LLC. Architecting Real-Time Gaming Platforms for Massive Concurrency. In: \textit{Business Compass LLC} [online]. 20. srpen 2025 [cit. 2026-06-15]. Dostupné z: https://businesscompassllc.com/architecting-real-time-gaming-platforms-for-massive-concurrency/
+
+    \bibitem{stackoverflow}
+    STACK OVERFLOW. Best C/C++ Network Library. In: \textit{Stack Overflow} [online]. 23. září 2008, aktualizováno 31. ledna 2022 [cit. 2026-06-15]. Dostupné z: https://stackoverflow.com/questions/118364/best-cc-network-library
+
+    \bibitem{boostasio}
+    KOHLHOFF, Christopher M. \textit{Boost.Asio} [online]. 2003–2026 [cit. 2026-06-15]. Dostupné z: https://www.boost.org/doc/libs/release/libs/asio/
+
+    \bibitem{k8s_pods}
+    KUBERNETES. Communicate Between Containers in the Same Pod Using a Shared Volume. In: \textit{Kubernetes Documentation} [online]. 24. srpen 2023 [cit. 2026-06-15]. Dostupné z: https://kubernetes.io/docs/tasks/access-application-cluster/communicate-containers-same-pod-shared-volume/
+
+    \bibitem{reliable_udp}
+    MEHMOOD, Umer a Adnan HASSNAIN. \textit{Reliable-Data-Transfer-Over-UDP} [online]. GitHub, 2026 [cit. 2026-06-15]. Dostupné z: https://github.com/Reliable-Data-Tranfer-Over-UDP/Reliable-Data-Transfer-Over-UDP
+
+    \bibitem{lunamultiplayer}
+    TNTTHELAGGER. \textit{LunaMultiplayer: Multiplayer mod for Kerbal Space Program (KSP)} [online]. GitHub, 2026 [cit. 2026-06-15]. Dostupné z: https://github.com/TNTTheLagger/LunaMultiplayer
+
+    \bibitem{kcp_udp}
+    P9C. \textit{kcp: reliable udp low latency network transport} [online]. GitHub, 2026 [cit. 2026-06-15]. Dostupné z: https://github.com/p9c/kcp
+
+    \bibitem{goworld}
+    XIAONANLN. \textit{goworld: Scalable Distributed Game Server Engine with Hot Swapping in Golang} [online]. GitHub, 2026 [cit. 2026-06-15]. Dostupné z: https://github.com/xiaonanln/goworld
+
+    \bibitem{drcodes}
+    DRCODES. Kubernetes for Game Servers: Complete Orchestration Guide. In: \textit{DrCodes} [online]. 27. září 2025 [cit. 2026-06-15]. Dostupné z: https://drcodes.com/posts/kubernetes-game-servers-orchestration-guide
+
+    \bibitem{geeksforgeeks}
+    GEEKSFORGEEKS. Reliable User Datagram Protocol - RUDP. In: \textit{GeeksforGeeks} [online]. 15. říjen 2025 [cit. 2026-06-15]. Dostupné z: https://www.geeksforgeeks.org/reliable-user-datagram-protocol-rudp/
+
+    \bibitem{cppnetlib}
+    BERRIS, Dean Michael a Glyn MATTHEWS. \textit{cpp-netlib: The C++ Network Library} [online]. 2012–2018 [cit. 2026-06-15]. Dostupné z: https://cpp-netlib.org/
+
+    \bibitem{grpc}
+    GRPC AUTHORS. \textit{gRPC: A high performance, open source universal RPC framework} [online]. 2026 [cit. 2026-06-15]. Dostupné z: https://grpc.io/
+
+    \bibitem{hahm}
+    HAHM, Oliver. \textit{Distributed Systems: Peer-to-Peer Online Gaming} [online]. Frankfurt University of Applied Sciences, 16. červenec 2024 [cit. 2026-06-15]. Dostupné z: https://teaching.dahahm.de/assets/dissys-ss24-16.pdf
+
+    \bibitem{vmware}
+    VMWARE. \textit{VMware vSphere Cluster Resiliency and High Availability: Amazon RDS on VMware} [online]. 2019 [cit. 2026-06-15]. Dostupné z: https://www.vmware.com/docs/vmw-vsphere-cluster-resiliency-ha-rds-on-vmware
+    \bibitem{kubernetes_home}
+THE KUBERNETES AUTHORS. \textit{Kubernetes: Production-Grade Container Orchestration} [online]. 2026 [cit. 2026-06-17]. Dostupné z: https://kubernetes.io/
+\bibitem{k3s}
+K3S PROJECT AUTHORS. \textit{K3s: Lightweight Kubernetes} [online]. 2026 [cit. 2026-06-17]. Dostupné z: https://k3s.io/
+\bibitem{TODO}
+[InternetShortcut]
+URL=http://enet.bespin.org/Features.html
+\bibitem{TODO}
+[InternetShortcut]
+URL=http://enet.bespin.org/Tutorial.html
+
+\end{thebibliography}
+\end{document}

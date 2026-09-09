@@ -1,0 +1,85 @@
+apiVersion: v1
+kind: Service
+metadata:
+    name: nettgame
+spec:
+    selector:
+      app.kubernetes.io/name: nettgame-proxy
+    externalIPs:
+      - 192.168.100.81
+    ports:
+      - name: nettgame-server
+        port: 4321
+        targetPort: nettgame-server
+
+---
+
+# load balancing happens between Pods, each Pod has its unique IP, multiple containers in a pod are not load balanced?
+# look into StatefulSet
+#apiVersion: apps/v1
+#kind: Deployment
+#metadata:
+  #name: nettgame
+  #labels:
+    #app: nettgame
+#spec:
+  #replicas: 2
+  #selector:
+    #matchLabels:
+      #app: nettgame
+  #template:
+    apiVersion: v1
+    kind: Pod
+    metadata:
+      name: nettgame
+      labels:
+        app: nettgame
+        app.kubernetes.io/name: nettgame-proxy
+    spec:
+      os: { name: linux }
+      nodeSelector:
+        kubernetes.io/os: linux
+      containers:
+      - name: nettgame
+        image: alpine:3.23.5
+        command: ['sh', '-c', 'apk update && apk add g++ gdb boost-dev && sleep infinity']
+        ports:
+        - containerPort: 4321 
+          name: nettgame-server
+        volumeMounts:
+        - mountPath: /development
+          name: passed-sources
+      volumes:
+      - name: passed-sources
+        hostPath:
+          path: /home/iota/nettgame
+          type: Directory
+
+---
+
+# this is not a good approach when it comes to production, but is necessary for development
+    apiVersion: v1
+    kind: Pod
+    metadata:
+      name: nettgame2
+      labels:
+        app.kubernetes.io/name: nettgame-proxy
+    spec:
+      os: { name: linux }
+      nodeSelector:
+        kubernetes.io/os: linux
+      containers:
+      - name: nettgame
+        image: alpine:3.23.5
+        command: ['sh', '-c', 'apk update && apk add g++ gdb boost-dev && sleep infinity']
+        ports:
+        - containerPort: 4321 
+          name: nettgame-server
+        volumeMounts:
+        - mountPath: /development
+          name: passed-sources
+      volumes:
+        - name: passed-sources
+          hostPath:
+            path: /home/iota/nettgame
+            type: Directory
