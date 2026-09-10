@@ -1,3 +1,5 @@
+#include "transcenders_game_state.cpp"
+
 /**
  * Synopsis:
  *
@@ -184,7 +186,7 @@ void broadcast_do_for_all(game_state *state_, nettgame::game_session<game_state>
 	    if (!game_session->has_affinity(current_player->address(), current_player->port()))
 	    continue;
 
-	    logger.log_info("player has disconnected, and their resources are beign deallocated.");
+	    game_session->log_info("player has disconnected, and their resources are beign deallocated.");
 
 	    int unique_id = game_session->remove_affinity(current_player->address(), current_player->port());
 
@@ -216,7 +218,7 @@ void broadcast_do_for_all(game_state *state_, nettgame::game_session<game_state>
 		    continue;
 
 		if (game_session->has_affinity(current_player->address(), current_player->port())) {
-		    logger.log_info("player just reconnected");
+		    game_session->log_info("player just reconnected");
 
 		    auto affinity_arbitrary = game_session->retrieve_affinity(current_player->address(), current_player->port());
 
@@ -239,20 +241,20 @@ void broadcast_do_for_all(game_state *state_, nettgame::game_session<game_state>
 
 		std::string log = "player joined, current player count is "+std::to_string(state_->player_count);
 
-		logger.log_info(log.c_str());
+		game_session->log_info(log.c_str());
 
 		if (!state_->initializing)
 		    continue;
 
-		logger.log_info("initializing game session");
-		logger.log_info("step 1: adding enemies");
+		game_session->log_info("initializing game session");
+		game_session->log_info("step 1: adding enemies");
 
 		for (auto i = 0; i < MAX_THREATHS; ++i) {
 		    state_->entities.push_back(new enemy_threat(assign_unique_id(), state_->entities));
 		}
 
-		logger.log_info("step 1 done: enemies added");
-		logger.log_info("step 2: adding items/weapons");
+		game_session->log_info("step 1 done: enemies added");
+		game_session->log_info("step 2: adding items/weapons");
 
 		auto parsed_db = boost::json::parse(persistence_json).as_object();
 		auto spawnable_pool = boost::json::value_to<std::vector<boost::json::value>>(parsed_db["spawnable_pool"]);
@@ -269,7 +271,7 @@ void broadcast_do_for_all(game_state *state_, nettgame::game_session<game_state>
 		    }
 		}
 
-		logger.log_info("step 2 done: items/weapons added");
+		game_session->log_info("step 2 done: items/weapons added");
 
 		state_->initializing=false;
 	    }
@@ -310,7 +312,7 @@ void broadcast_do_for_all(game_state *state_, nettgame::game_session<game_state>
 		}
 
 		if ((*current_entity)->health_points<=0) {
-		    logger.log_info("entity just died");
+		    game_session->log_info("entity just died");
 
 		    (*current_entity)->deleted=true;
 		}

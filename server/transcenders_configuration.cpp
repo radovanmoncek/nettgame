@@ -1,3 +1,11 @@
+#define MIN_ARGV 4
+#define MIN_ASIO_THREADS 1
+/**
+ * Synopsis:
+ *
+ * 1/60.f is approx. 16ms (960)
+ */
+#define GAME_SESSION_TICK_RATE std::chrono::milliseconds(16)
 #define MAX_PLAYER_NAME_LENGTH 8
 #define MAX_JUMP_HEIGHT 2
 #define MAX_TRANSFER_BUFFER_SIZE 32

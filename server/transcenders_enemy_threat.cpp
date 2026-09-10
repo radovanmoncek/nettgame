@@ -1,3 +1,5 @@
+#include "transcenders_entity.cpp"
+
 struct enemy_threat : entity {
     int idle_ticks = THREAT_IDLE_TICKS, movement_duration = 0, random_axis = 0;
     float random_movement;

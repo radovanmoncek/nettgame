@@ -1,3 +1,5 @@
+#pragma once
+
 auto generate_random = [](int min, int max) {
     std::random_device random_device;
     std::default_random_engine default_random_engine(random_device());

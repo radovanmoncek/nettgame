@@ -1,3 +1,5 @@
+#include "transcenders_entity.cpp"
+
 struct player : entity {
     std::string name="";
     uint8_t classification, firing = 0x0;

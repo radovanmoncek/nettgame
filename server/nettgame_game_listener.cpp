@@ -21,7 +21,7 @@ class listener : public std::enable_shared_from_this<listener> {
 	listener_acceptor.open(endpoint.protocol(), beast_error_code);
 
 	if (beast_error_code) {
-	    logger.log_error(beast_error_code.what().c_str());
+	    nettgame_server.log_error(beast_error_code.what().c_str());
 
 	    return;
 	}
@@ -29,7 +29,7 @@ class listener : public std::enable_shared_from_this<listener> {
 	listener_acceptor.set_option(boost::asio::socket_base::reuse_address(true), beast_error_code);
 
 	if (beast_error_code) {
-	    logger.log_error(beast_error_code.what().c_str());
+	    nettgame_server.log_error(beast_error_code.what().c_str());
 
 	    return;
 	}
@@ -37,7 +37,7 @@ class listener : public std::enable_shared_from_this<listener> {
 	listener_acceptor.bind(endpoint, beast_error_code);
 
 	if (beast_error_code) {
-	    logger.log_error(beast_error_code.what().c_str());
+	    nettgame_server.log_error(beast_error_code.what().c_str());
 
 	    return;
 	}
@@ -45,7 +45,7 @@ class listener : public std::enable_shared_from_this<listener> {
 	listener_acceptor.listen(boost::asio::socket_base::max_listen_connections, beast_error_code);
 
 	if (beast_error_code) {
-	    logger.log_error(beast_error_code.what().c_str());
+	    nettgame_server.log_error(beast_error_code.what().c_str());
 
 	    return;
 	}
@@ -59,13 +59,13 @@ class listener : public std::enable_shared_from_this<listener> {
 	    auto remote_endpoint = socket.remote_endpoint(error_code_);
 
 	    if (error_code_) {
-		logger.log_error(error_code.message().c_str());
+		nettgame_server.log_error(error_code.message().c_str());
 
 		return;
 	    }
 
 	    if (error_code){
-		logger.log_error(error_code.message().c_str());
+		nettgame_server.log_error(error_code.message().c_str());
 
 		return;
 	    }
@@ -76,7 +76,7 @@ class listener : public std::enable_shared_from_this<listener> {
 
 		std::string log = "handling new connection "+remote_endpoint.address().to_string()+":"+std::to_string(remote_endpoint.port());
 
-		logger.log_debug(log.c_str());
+		nettgame_server.log_debug(log.c_str());
 	    }
 
 	    accept();

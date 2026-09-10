@@ -1,9 +1,4 @@
-#include "transcenders_game_state.cpp"
-
-/**
- * 1/60.f is approx. 16ms (960)
- */
-#define GAME_SESSION_TICK_RATE std::chrono::milliseconds(16)
+#include "transcenders_business_logic.cpp"
 
 player_session::player_session(boost::asio::ip::tcp::socket &&socket, boost::asio::ip::tcp::endpoint remote_endpoint, std::string document_root, std::vector<std::shared_ptr<player_session>> &players, nettgame::nettgame_server<game_state> &nettgame_server):
     tcp_stream(std::move(socket)),
@@ -99,7 +94,7 @@ boost::beast::http::message_generator player_session::handle_http_request(boost:
     auto const size = body.size();
 
     if (request.method()==boost::beast::http::verb::head) {
-	logger.log_debug("handling HEAD-request");
+	nettgame_server.log_debug("handling HEAD-request");
 
 	boost::beast::http::response<boost::beast::http::empty_body> response{boost::beast::http::status::ok, request.version()};
 
@@ -111,7 +106,7 @@ boost::beast::http::message_generator player_session::handle_http_request(boost:
 	return response; 
     }
 
-    logger.log_debug("handling GET-request");
+    nettgame_server.log_debug("handling GET-request");
 
     boost::beast::http::response<boost::beast::http::file_body> response{std::piecewise_construct, std::make_tuple(std::move(body)), std::make_tuple(boost::beast::http::status::ok, request.version())};
 
@@ -135,12 +130,12 @@ void player_session::perform_websocket_handshake(boost::beast::http::request<Bod
 
     nettgame_server.synchronize([&]{
 	    players.push_back(shared_from_this());
-	    logger.log_info("switched to WebSocket");
+	    nettgame_server.log_info("switched to WebSocket");
 	    });
 }
 void player_session::on_accept(boost::beast::error_code error_code) {
     if (error_code) {
-	logger.log_error(error_code.message().c_str());
+	nettgame_server.log_error(error_code.message().c_str());
 
 	return;
     }
@@ -162,7 +157,7 @@ void player_session::read() {
 void player_session::on_read(boost::beast::error_code error_code, std::size_t) {
     if (websocket_handshake_performed) {
 	if (error_code == boost::beast::websocket::error::closed) {
-	    logger.log_info(error_code.message().c_str());
+	    nettgame_server.log_info(error_code.message().c_str());
 
 	    nettgame_server.synchronize([&]{
 		    for (auto current = players.begin(); current != players.end();) {
@@ -181,7 +176,7 @@ void player_session::on_read(boost::beast::error_code error_code, std::size_t) {
 	}
 
 	if (error_code) {
-	    logger.log_error(error_code.message().c_str());
+	    nettgame_server.log_error(error_code.message().c_str());
 
 	    return;
 	}
@@ -209,7 +204,7 @@ void player_session::on_read(boost::beast::error_code error_code, std::size_t) {
 		    nettgame_server.start_new_game_session(GAME_SESSION_TICK_RATE, &broadcast_do_for_all, game_state_);
 	    }); 
 
-	    uint8_t join_new_buffer[MAX_TRANSFER_BUFFER_SIZE]{protocol::reserved::join_new, buffer.get()[offset++]};//todo shared game session id pool with set
+	    uint8_t join_new_buffer[MAX_TRANSFER_BUFFER_SIZE]{protocol::reserved::join_new, buffer.get()[offset++]};//use shared game session-like id pool with set
 
 	    write(join_new_buffer, sizeof(join_new_buffer));
 
@@ -236,7 +231,7 @@ void player_session::on_read(boost::beast::error_code error_code, std::size_t) {
     }
 
     if (error_code) {
-	logger.log_error(error_code.message().c_str());
+	nettgame_server.log_error(error_code.message().c_str());
 
 	return;
     }
@@ -254,7 +249,7 @@ void player_session::on_read(boost::beast::error_code error_code, std::size_t) {
 
     boost::beast::async_write(tcp_stream, std::move(message), [self, keep_alive](boost::beast::error_code error_code, std::size_t bytes){
 	    if (error_code) {
-	    logger.log_error(error_code.message().c_str());
+	    self->nettgame_server.log_error(error_code.message().c_str());
 
 	    return;
 	    }
@@ -274,14 +269,14 @@ void player_session::write(uint8_t *buffer, size_t length) {
     web_socket->write(boost::asio::buffer(buffer, length));
 
     if (error_code) {
-	logger.log_error(error_code.message().c_str());
+	nettgame_server.log_error(error_code.message().c_str());
     }
 }
 void player_session::on_write(boost::beast::error_code beast_error_code, std::size_t bytes_transfered){
     boost::ignore_unused(bytes_transfered);
 
     if (beast_error_code) {
-	logger.log_error(beast_error_code.what().c_str());
+	nettgame_server.log_error(beast_error_code.what().c_str());
 
 	return;
     }

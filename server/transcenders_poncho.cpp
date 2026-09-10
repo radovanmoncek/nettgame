@@ -1,3 +1,9 @@
+#include <boost/json.hpp>
+#include <boost/json/src.hpp>
+
+#include "transcenders_entity.cpp"
+#include "transcenders_persistence.cpp"
+
 /**
  * Synopsis:
  *
@@ -8,7 +14,7 @@
  * author: Radovan Moncek
  */
 struct poncho : entity { //name collectable, add silenced pistol?
-    poncho(int assigned_unique_id, std::vector<entity*> &entities): entity(entities) {
+    poncho(int assigned_unique_id, std::vector<entity*> &entities): entity(entities) { //add game_session
 	entity_id = protocol::usable::item;
 	unique_id = assigned_unique_id;
 	x = static_cast<float>(generate_random(-WORLD_WIDTH/2, WORLD_WIDTH/2));
@@ -36,7 +42,7 @@ struct poncho : entity { //name collectable, add silenced pistol?
 		parsed_db["spawanble_pool"] = boost::json::value_from(spawnable_pool);
 		persistence_json = boost::json::serialize(parsed_db);
 
-		logger.log_info(("saved new entry " + name).c_str());
+	//	.log_info(("saved new entry " + name).c_str());
 	    }
 	}
     };

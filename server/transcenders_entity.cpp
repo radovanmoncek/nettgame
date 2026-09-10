@@ -1,3 +1,9 @@
+#pragma once
+
+#include "transcenders_configuration.cpp"
+#include "transcenders_geometry.cpp"
+#include "transcenders_random.cpp"
+
 struct entity {
     float x=0.f, y=1.f, z=0.f, azimuth=0.f, velocity=0.f;
     int entity_id, unique_id, health_points=100;
