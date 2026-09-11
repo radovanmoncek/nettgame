@@ -1,8 +1,11 @@
 #include <vector>
 #include <mutex>
-#include <map>
+#include <map> // rewrite framework to C - major undertaking
+#include <arpa/inet.h>
+#include <unistd.h>
 
 #include "nettgame_game_session.cpp" //refactor to hpp and implementations, correct compilation inclusion
+#include "internal_service_codec.c"
 
 namespace nettgame {
     /**
@@ -52,7 +55,19 @@ namespace nettgame {
     template<class GameState>
 	 void nettgame_server<GameState>::make_logger_call(nettgame_logger::level level, const char *message) {
 	     if (!is_master) {
-		 //send to peers
+		 unsigned char buffer[1024]; //magic constant
+		 nettgame_logger::log log;
+		 log.message = (char *)message;
+		 log.message_length = 128; //fix
+		 log.message_type = level;
+
+		 multiplex_encode(nettgame_protocol::usable::log, /*buffer*/(void *)&log, sizeof(buffer), buffer);
+
+		 std::lock_guard<std::mutex> internal_service_clients_guard(internal_service_sync);
+
+		 for (int i = 0; i < internal_service_client_sockets_length; ++i) {
+		     send(internal_service_client_sockets[i], buffer, sizeof(buffer), 0);
+		 }
 
 		 return;
 	     }
@@ -82,10 +97,97 @@ namespace nettgame {
 	 }
 
     template<class GameState>
-	nettgame_server<GameState>::nettgame_server(std::string address, short signed int port, bool is_master): is_master(is_master) {
+	nettgame_server<GameState>::nettgame_server(const char *address, short signed int port, bool is_master):
+	    is_master(is_master)//,
+	    //internal_service_listener(&/*nettgame_server<GameState>::*/start_internal_service_acceptor, port)
+    {
 	    //add entry to shared_affinities
-	    logger.is_master = is_master;
+	    logger.is_master = is_master; 
+	    //internal_service_listener(&nettgame_server::start_internal_service_acceptor)
+	    internal_service_listener = std::thread(&nettgame_server<GameState>::start_internal_service_acceptor, this, port);
 	}
+    /**
+     * Synopsis:
+     *
+     * Adds a new topology member to the internal_service_client_sockets list.
+     *
+     * This new topology member will be connected to the internal/service p2p (peer-to-peer) network, and, in-turn, with this server.
+     *
+     * Description:
+     *
+     * TBD.
+     *
+     * I/O:
+     *
+     * Does not block.
+     * 
+     * Thread safety:
+     *
+     * IS NOT thread safe.
+     * 
+     * Attributions:
+     *
+     * author: Radovan Moncek
+     */
+    template<class GameState>
+    void nettgame_server<GameState>::register_topology_member(const char *address, short signed int port) {
+	//add socket from address and port to internal_service_client_sockets
+	//connect();
+	struct sockaddr_in client_address;
+	client_address.sin_family = AF_INET;
+	client_address.sin_addr.s_addr = inet_addr(address);
+	client_address.sin_family = htons(port);
+
+	if (connect(internal_service_socket, (struct sockaddr *)&client_address, sizeof(client_address)) < 0) {
+	    log_error("failed to connect to internal_service_socket peer");
+
+	    return;
+	}
+	//++internal_service_client_sockets_length;
+    };
+    /**
+     * Synopsis:
+     *
+     * Starts internal_service event loop.
+     *
+     * Description:
+     *
+     * TBD.
+     *
+     * I/O:
+     *
+     * Blocks indefinitely.
+     * 
+     * Thread safety:
+     *
+     * IS thread safe.
+     * 
+     * Attributions:
+     *
+     * author: Radovan Moncek
+     */
+    template<class GameState>
+    void nettgame_server<GameState>::join_internal_service_network() {
+	unsigned char buffer[1024]; //magic constant
+
+	while(1) {
+	    //memset(buffer, 0, 1024);
+
+	    for (int i = 0; i < internal_service_client_sockets_length; ++i) {
+		memset(buffer, 0, sizeof(buffer));
+		recv(internal_service_client_sockets[i], buffer, 1024, 0); //magic constant
+
+		if (buffer[0] == nettgame_protocol::usable::log) {
+		    //char log_message[buffer[1]];//move to codec, or null terminate \0?
+		    nettgame_logger::log log;
+
+		    multiplex_decode(buffer, sizeof(buffer), /*log_message*/&log);
+		    //make_logger_call(buffer[2], log_message);
+		    make_logger_call(log.message_type, log.message);
+		}
+	    }
+	}
+    };
     /**
      * Synopsis:
      *

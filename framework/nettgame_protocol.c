@@ -3,22 +3,33 @@
  *
  * Specification/constant definitions of the nettgame internal protocol.
  *
+ * Description:
+ *
+ * Range is [0x1, 0x16].
+ *
+ * Proposed:
+ *
+ * 1. Rewrite to macros.
+ *
  * Attributions:
  * 
  * author: Radovan Moncek
  */
-const struct nettgame_protocol {
+struct nettgame_protocol {
     /**
      * Synopsis:
      *
      * Control part of the nettgame internal protocol.
      *
+     * Description:
+     *
+     * Range is [0x1, 0x8].
+     *
      * Attributions:
      * 
      * author: Radovan Moncek
      */
-    const struct reserved {
-
+    struct reserved {
     };
 
     /**
@@ -26,11 +37,26 @@ const struct nettgame_protocol {
      *
      * Logic part of the nettgame internal protocol.
      *
+     * Description:
+     *
+     * Range is (0x8, 0x16].
+     *
      * Attributions:
      * 
      * author: Radovan Moncek
      */
-    const struct usable {
-
+    struct usable {
+	/**
+	  * Synopsis:
+	  *
+	  * Structure of the protocol message is to be as follows: 0x9|level|message_length|message.
+	  *
+	  * Propositions:
+	  *
+	  * 2: codec result is log struct containing all parts.
+	  *
+	  * 1: make into struct.
+	  */
+	static const signed int log = 0x9;
     };
 };

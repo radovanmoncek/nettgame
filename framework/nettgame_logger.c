@@ -1,3 +1,5 @@
+#pragma once
+
 #include <stdio.h>
 
 struct nettgame_logger {
@@ -7,6 +9,44 @@ struct nettgame_logger {
 	error=3,
 	fatal_error=2
     };
+
+    /**
+      * Propositions:
+      *
+      * 1: message_type should be message_level.
+      */
+    struct log {
+	signed int message_length;
+	level message_type;
+	char *message;
+    };
+
+    static level to_level(int numeric_level) {
+	switch (numeric_level) {
+	    case level::debug:
+		{
+		    return level::debug;
+		}
+		break;
+	    case info:
+		{
+		    return level::info;
+		}
+		break;
+	    case error:
+		{
+		    return level::error;
+		}
+		break;
+	    case fatal_error:
+		{
+		    return level::fatal_error;
+		}
+		break;
+	}
+
+	return /*numeric_level*/level::info;
+    }
 
     level log_level = level::info;
     signed char is_master = 1;
