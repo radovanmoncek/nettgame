@@ -24,7 +24,7 @@ int main(int argc, char **argv) {
     bool is_master = atoi(argv[offset++]);
     std::string document_root = argv[offset++];
     boost::asio::io_context io_context{threads};
-    nettgame::nettgame_server<game_state> nettgame_server(address_raw, port + 1/*, argv[1], port+1 todo maybe custom load balancer*/, is_master);
+    nettgame::nettgame_server<game_state> nettgame_server(address_raw, port + 1, is_master); //maybe custom load balancer?
 
     try {
 	if (argc < MIN_ARGV)
@@ -34,7 +34,10 @@ int main(int argc, char **argv) {
 
 	boost::asio::signal_set signals(io_context, SIGINT, SIGTERM);
 
-	signals.async_wait([&](boost::system::error_code const&, int){ io_context.stop(); });
+	signals.async_wait([&](boost::system::error_code const&, int){
+		io_context.stop();
+		nettgame_server.handle_signals();
+		});
 
 	std::vector<std::thread> thread_pool;
 
@@ -45,9 +48,8 @@ int main(int argc, char **argv) {
 	    thread_pool.emplace_back([&io_context]{ io_context.run(); });
 	}
 
-	for (/*auto i = offset*/; /*i*/offset < argc;/* ++i*/) {
-	//if (argc > i)
-	    nettgame_server.register_topology_member(argv[/*i*/offset++], /*4322*/port+1);
+	for (;offset < argc;){
+	    nettgame_server.register_topology_member(argv[offset++], port + 1);
 	}
 
 	nettgame_server.join_internal_service_network();

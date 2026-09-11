@@ -11,46 +11,14 @@ namespace nettgame {
     /**
      * Synopsis:
      *
-     * nettgame_server is a "server" that provisions emphemeral game_session instances via threads, and is not build upon any preexisting library/framework, only the standard library of the C++ language standard (std).
      *
-     * Example:
      *
-     * #include <nettgame.cpp>
+     * Description:
      *
-     * int main() {
-     *     nettgame::nettgame_server<YourStateSerializableType> nettgame_server("127.0.0.1", 4321);
+     * Attributions:
      *
-     *     nettgame_server.start_new_game_session(std::chrono::milliseconds(16), your_lambda_closure_with_business_logic, YourStateSerializable);
-     * }
+     * author: Radovan Moncek
      *
-     * End of example.
-     *
-     * Longer description:
-     *
-     * The ip, and port passed to the constructor are of pure logical sentiment, and do not, in any way, bind, as in not performing the bind action of the operating system, this "server" to them.
-     *
-     * This server in meant to run inside the environment of K8s/K3s.
-     *
-     * Responsibilities of this nettgame_server:
-     *
-     * - provisioning of game_session instances via runner threads,
-     * - handling thread unsafe operations within runner threads,
-     * - automatic failover,
-     * - load balancing,
-     * - transfering game_session stateful information to other replicas without information loss,
-     * -  and management of stateful information within game_session instances.
-     *
-     * Responsibilities of the implementor:
-     *
-     * - business logic,
-     * - calling the synchronize member functions when performing thread unsafe work within game sessions/runner threads,
-     * - transport layer protocol provisioning via TCP/UDP/KCP/RUDP, etc. (player session containers, listeners, etc.),
-     * -  and application layer protocol provisioning (data transfer, codecs, etc.).
-     *
-     * Attributions (you have forever my biggest gratitude):
-     *
-     * - Tsoding,
-     * -  and Yegor256.
      */
     template<class GameState>
 	 void nettgame_server<GameState>::make_logger_call(nettgame_logger::level level, const char *message) {
@@ -61,7 +29,7 @@ namespace nettgame {
 		 log.message_length = 128; //fix
 		 log.message_type = level;
 
-		 multiplex_encode(nettgame_protocol::usable::log, /*buffer*/(void *)&log, sizeof(buffer), buffer);
+		 multiplex_encode(nettgame_protocol::usable::log, (void *)&log, sizeof(buffer), buffer);
 
 		 std::lock_guard<std::mutex> internal_service_clients_guard(internal_service_sync);
 
@@ -97,13 +65,16 @@ namespace nettgame {
 	 }
 
     template<class GameState>
+    void nettgame_server<GameState>::handle_signals() {
+	signal_received = true;
+    }
+
+    template<class GameState>
 	nettgame_server<GameState>::nettgame_server(const char *address, short signed int port, bool is_master):
-	    is_master(is_master)//,
-	    //internal_service_listener(&/*nettgame_server<GameState>::*/start_internal_service_acceptor, port)
+	    is_master(is_master)
     {
-	    //add entry to shared_affinities
+	    //add entry to shared_affinities?
 	    logger.is_master = is_master; 
-	    //internal_service_listener(&nettgame_server::start_internal_service_acceptor)
 	    internal_service_listener = std::thread(&nettgame_server<GameState>::start_internal_service_acceptor, this, port);
 	}
     /**
@@ -132,11 +103,10 @@ namespace nettgame {
     template<class GameState>
     void nettgame_server<GameState>::register_topology_member(const char *address, short signed int port) {
 	//add socket from address and port to internal_service_client_sockets
-	//connect();
 	struct sockaddr_in client_address;
 	client_address.sin_family = AF_INET;
 	client_address.sin_addr.s_addr = inet_addr(address);
-	client_address.sin_family = htons(port);
+	client_address.sin_port = htons(port);
 
 	if (connect(internal_service_socket, (struct sockaddr *)&client_address, sizeof(client_address)) < 0) {
 	    log_error("failed to connect to internal_service_socket peer");
@@ -170,7 +140,7 @@ namespace nettgame {
     void nettgame_server<GameState>::join_internal_service_network() {
 	unsigned char buffer[1024]; //magic constant
 
-	while(1) {
+	while(!signal_received) {
 	    //memset(buffer, 0, 1024);
 
 	    for (int i = 0; i < internal_service_client_sockets_length; ++i) {

@@ -66,12 +66,36 @@ namespace nettgame {
 		std::mutex game_session_sync;
 		std::map<std::tuple<std::string, short signed int>, std::vector<std::string>> shared_affinities;
 		bool is_master;
-		int internal_service_socket = /*nullptr*/0x0;
+		int internal_service_socket = 0x0;
 		int internal_service_client_sockets[4]; // formerly std::vector<int>, replace magic constant
 		int internal_service_client_sockets_length = 0;
-		std::thread internal_service_listener/*(&start_internal_service_acceptor)*/;
+		std::thread internal_service_listener;
 		std::mutex internal_service_sync;
+		bool signal_received = false;
 
+		/**
+		 * Synopsis:
+		 *
+		 * TBD.
+		 *
+		 * Description:
+		 *
+		 * TBD.
+		 *
+		 * I/O:
+		 *
+		 * Does not block.
+		 * 
+		 * Thread safety:
+		 *
+		 * IS thread safe.
+		 *
+		 * Propositions:
+		 * 
+		 * Attributions:
+		 *
+		 * author: Radovan Moncek
+		 */
 		void make_logger_call(nettgame_logger::level level, const char *message);
 		/**
 		 * Synopsis:
@@ -110,10 +134,12 @@ namespace nettgame {
 		    struct sockaddr_in server_address;
 		    server_address.sin_family = AF_INET;
 		    server_address.sin_addr.s_addr = INADDR_ANY; //use address with conversion function like htons
-		    server_address.sin_family = htons(port);
-
-		    if (bind(internal_service_socket, (struct sockaddr *)&server_address, sizeof(server_address))) { //C-style cast, besause I want to eventually re-write to C, see above
-			log_fatal_error("failed to bind to internal_service_socket");
+		    server_address.sin_port = htons(port);
+		    int bind_result = bind(internal_service_socket, (struct sockaddr *)&server_address, sizeof(server_address));
+		    
+		    if (bind_result == -1) { //C-style cast, besause I want to eventually re-write to C, see above
+			close(internal_service_socket);
+			log_fatal_error(("failed to bind to internal_service_socket" + std::to_string(errno)).c_str()); // change to C style strcat?
 
 			return;
 		    }
@@ -151,6 +177,30 @@ namespace nettgame {
 		}
 
 	    public:
+		/**
+		 * Synopsis:
+		 *
+		 * TBD.
+		 *
+		 * Description:
+		 *
+		 * TBD.
+		 *
+		 * I/O:
+		 *
+		 * Does not block.
+		 * 
+		 * Thread safety:
+		 *
+		 * IS thread safe.
+		 *
+		 * Propositions:
+		 * 
+		 * Attributions:
+		 *
+		 * author: Radovan Moncek
+		 */
+		void handle_signals();
 		/**
 		 * Synopsis:
 		 *
