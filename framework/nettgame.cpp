@@ -5,11 +5,11 @@
 #include <unistd.h>
 
 #include "nettgame_game_session.cpp" //refactor to hpp and implementations, correct compilation inclusion
-#include "internal_service_codec.c"
+#include "headers/nettgame_internal_service_codec.h"
 
 namespace nettgame { // remove all docs from here, leave only in .hpp
     template<class GameState>
-	 void nettgame_server<GameState>::make_logger_call(nettgame_logger::level level, const char *message, signed char is_master_) {
+    void nettgame_server<GameState>::make_logger_call(nettgame_logger::level level, const char *message, signed char is_master_) {
 	     if (!is_master) {
 		 std::lock_guard<std::mutex> log_guard(log_sync);
 		 unsigned char buffer[1024-3*256]; //magic
@@ -139,30 +139,30 @@ namespace nettgame { // remove all docs from here, leave only in .hpp
     };
 
     template<typename GameState>
-	void nettgame_server<GameState>::start_new_game_session(std::chrono::milliseconds tick_rate, void (*perform_business_logic)(GameState*, game_session<GameState>*), GameState *state) {
-	    runners.emplace_back([tick_rate, perform_business_logic, state, this](){
-		    game_sessions.push_back(std::make_shared<game_session<GameState>>(std::this_thread::get_id(), tick_rate, perform_business_logic, static_cast<void*>(state), game_session_sync, static_cast<void*>(this)));
-		    game_sessions.back()->run();
-		    });
-	}
+    void nettgame_server<GameState>::start_new_game_session(std::chrono::milliseconds tick_rate, void (*perform_business_logic)(GameState*, game_session<GameState>*), GameState *state) {
+	runners.emplace_back([tick_rate, perform_business_logic, state, this](){
+		game_sessions.push_back(std::make_shared<game_session<GameState>>(std::this_thread::get_id(), tick_rate, perform_business_logic, static_cast<void*>(state), game_session_sync, static_cast<void*>(this)));
+		game_sessions.back()->run();
+	});
+    }
 
     template<typename GameState>
-	int nettgame_server<GameState>::remove_affinity(std::string address, short unsigned int port) {
-	    for (auto current_game_session : game_sessions) {
+    int nettgame_server<GameState>::remove_affinity(std::string address, short unsigned int port) {
+	for (auto current_game_session : game_sessions) {
 		if (current_game_session->has_affinity(address, port)) {
 		    return current_game_session->remove_affinity(address, port);
 		}
-	    }
-
-	    return INT_MIN;
 	}
+
+	return INT_MIN;
+    }
 
     template<typename GameState>
-	void nettgame_server<GameState>::synchronize(const std::function<void()> &thread_unsafe_action) {
-	    std::lock_guard<std::mutex> game_session_guard(game_session_sync);
+    void nettgame_server<GameState>::synchronize(const std::function<void()> &thread_unsafe_action) {
+	std::lock_guard<std::mutex> game_session_guard(game_session_sync);
 
-	    thread_unsafe_action();
-	}
+	thread_unsafe_action();
+    }
 
     template<typename GameState>
 	void nettgame_server<GameState>::log_info(const char *message) {
