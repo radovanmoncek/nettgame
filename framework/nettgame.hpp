@@ -128,7 +128,7 @@ namespace nettgame {
 		 *
 		 * author: Radovan Moncek
 		 */
-		void start_internal_service_acceptor(short signed int port) {
+		void start_internal_service_acceptor(const char *address, short signed int port) {
 		    internal_service_socket = socket(AF_INET, SOCK_STREAM, 0);
 
 		    if (internal_service_socket == -1) {
@@ -139,9 +139,9 @@ namespace nettgame {
 
 		    struct sockaddr_in server_address;
 		    server_address.sin_family = AF_INET;
-		    server_address.sin_addr.s_addr = INADDR_ANY; //use address with conversion function like htons
+		    server_address.sin_addr.s_addr = inet_addr(address);
 		    server_address.sin_port = htons(port);
-		    int bind_result = bind(internal_service_socket, (struct sockaddr *)&server_address, sizeof(server_address));
+		    int bind_result = bind(internal_service_socket, (struct sockaddr *)&server_address, sizeof(server_address)); // C style justified
 
 		    if (bind_result == -1) { //C-style cast, besause I want to eventually re-write to C, see above
 			close(internal_service_socket);
@@ -166,9 +166,8 @@ namespace nettgame {
 
 			{
 			    std::lock_guard<std::mutex> internal_service_clients_guard(internal_service_sync);
-			    //internal_service_client_sockets[internal_service_client_sockets_length] = client_socket;
 
-			    if (/*internal_service_client_sockets[internal_service_client_sockets_length++]*/client_socket < 0) {
+			    if (client_socket < 0) {
 				log_error("failed to accept socket");
 
 				continue;
@@ -177,14 +176,7 @@ namespace nettgame {
 			    internal_service_client_sockets[internal_service_client_sockets_length++] = client_socket;
 			}
 
-			    log_info("successfuly connected with a peer after accepting");
-			//}
-
-			//if (connect(internal_service_socket, (struct sockaddr *)&client_address, sizeof(client_address))) {
-			//   log_error(("failed to connect to internal_service_socket peer when accepting mirror connection" + std::to_string(errno)).c_str()); // change to C style strcat?
-			//
-			//			    return;
-			//			}
+			log_info("successfuly connected with a peer after accepting");
 		    }
 		}
 
@@ -332,7 +324,7 @@ namespace nettgame {
 		 *
 		 * I/O:
 		 *
-		 * Blocks, until the thread_unsafe_sync finishes its execution.
+		 * Blocks, until the thread_unsafe_sync finishes its execution, or if it is needed to await the mutex acquisition.
 		 *
 		 * Thread safety:
 		 *
@@ -343,10 +335,33 @@ namespace nettgame {
 		 * Author: Radovan Moncek
 		 */
 		void synchronize(const std::function<void()> &thread_unsafe_action);
+		/**
+		  *
+		  */
 		void log_info(const char *message);
+		/**
+		  *
+		  */
 		void log_debug(const char *message);
+		/**
+		  *
+		  */
 		void log_error(const char *message);
+		/**
+		  *
+		  */
 		void log_fatal_error(const char *message);
+		/**
+		  * Synopsis:
+		  *
+		  * Tell the internal logger to only log messages up to the level specified by nettgame_logger::level.
+		  *
+		  * For example, if the info level is set, debug messages will go unlogged.
+		  *
+		  * Attributions:
+		  *
+		  * author: Radovan Moncek
+		  */
 		void log_at_level(nettgame_logger::level level);
 	};
 }

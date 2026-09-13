@@ -12,7 +12,7 @@ namespace nettgame { // remove all docs from here, leave only in .hpp
 	 void nettgame_server<GameState>::make_logger_call(nettgame_logger::level level, const char *message, signed char is_master_) {
 	     if (!is_master) {
 		 std::lock_guard<std::mutex> log_guard(log_sync);
-		 unsigned char buffer[1024-3*256]; //magic constant
+		 unsigned char buffer[1024-3*256]; //magic
 
 		 memset(buffer, 0, sizeof(buffer));
 
@@ -22,7 +22,7 @@ namespace nettgame { // remove all docs from here, leave only in .hpp
 		 log.is_master = is_master;
 
 		 while (log.message[log.message_length] != '\000')
-		     ++log.message_length/*++*/;
+		     ++log.message_length;
 
 		 log.message_type = level;
 
@@ -35,7 +35,7 @@ namespace nettgame { // remove all docs from here, leave only in .hpp
 		     ++buffer_size;
 
 		 for (int i = 0; i < internal_service_client_sockets_length; ++i) {
-		     send(internal_service_client_sockets[i], buffer, /*sizeof(buffer)log)+16*2*2*/buffer_size, 0); // improve
+		     send(internal_service_client_sockets[i], buffer, buffer_size, 0); // improve
 		 }
 
 		 return;
@@ -77,11 +77,10 @@ namespace nettgame { // remove all docs from here, leave only in .hpp
 	    is_master(is_master)
     {
 	    //add entry to shared_affinities?
-	    internal_service_listener = std::thread(&nettgame_server<GameState>::start_internal_service_acceptor, this, port);
+	    internal_service_listener = std::thread(&nettgame_server<GameState>::start_internal_service_acceptor, this, address, port);
 	}
     template<class GameState>
     void nettgame_server<GameState>::register_topology_member(const char *address, short signed int port) {
-	//add socket from address and port to internal_service_client_sockets
 	int client_socket = socket(AF_INET, SOCK_STREAM, 0);
 	struct sockaddr_in client_address;
 	client_address.sin_family = AF_INET;
@@ -98,40 +97,13 @@ namespace nettgame { // remove all docs from here, leave only in .hpp
 	    std::lock_guard<std::mutex> internal_service_client_sockets_guard(internal_service_sync);
 	    internal_service_client_sockets[internal_service_client_sockets_length++] = client_socket;
 	}
-	// here stood one line tab plus ++internal_service_client_sockets_length;
 
 	log_info("registered a new p2p member"); // better wording required here
     };
-    /**
-     * Synopsis:
-     *
-     * Starts internal_service event loop.
-     *
-     * Description:
-     *
-     * TBD.
-     *
-     * I/O:
-     *
-     * Blocks indefinitely.
-     * 
-     * Thread safety:
-     *
-     * IS thread safe.
-     *
-     * Propositions:
-     *
-     * 2: change 1024 in recv to sizeof(buffer).
-     *
-     * 1: change recv 0 to MSG_WAITALL.
-     * 
-     * Attributions:
-     *
-     * author: Radovan Moncek
-     */
+
     template<class GameState>
     void nettgame_server<GameState>::join_internal_service_network() {
-	unsigned char buffer[1024-3*256]; //magic constant
+	unsigned char buffer[1024-3*256]; //magic
 
 	while(!signal_received) {
 	    //std::lock_guard<std::mutex> internal_service_clients_guard(internal_service_sync); // to C, also fix
@@ -139,46 +111,33 @@ namespace nettgame { // remove all docs from here, leave only in .hpp
 	    for (int i = 0; i < internal_service_client_sockets_length; ++i) {
 		memset(buffer, 0, sizeof(buffer));
 
-		int recv_result = recv(internal_service_client_sockets[i], buffer, sizeof(buffer), /*MSG_WAITALL*/0); //magic constant
+		int recv_result = recv(internal_service_client_sockets[i], buffer, sizeof(buffer), 0); //magic
 
 		if (recv_result > 0 && buffer[0] == nettgame_protocol::usable::log) {
-		    //move to codec, or null terminate \0?
 		    nettgame_logger::log log;
 		    char log_message_buffer[256]; // magic
+
+		    memset(log_message_buffer, /*NULL*/0x0, sizeof(log_message_buffer));
+
 		    log.message = log_message_buffer;
-
-		    memset(log.message, 0, sizeof(log.message));
-
 		    int type;
 
 		    multiplex_decode(&type, buffer, &log);
 		    log_debug("received log from peer");
-		    make_logger_call(log.message_type, log.message, log.is_master);
+
+		    switch(type) {
+			case nettgame_protocol::usable::log:
+			    {
+				make_logger_call(log.message_type, log.message, log.is_master);
+			    }
+
+			    break;
+		    }
 		}
 	    }
 	}
     };
-    /**
-     * Synopsis:
-     *
-     * Starts a new game session by creating a runner std::thread/inferior process, and a new game_session class instance.
-     *
-     * Description:
-     *
-     * TBD.
-     *
-     * I/O:
-     *
-     * Should not block longer than the duration required for creating an instance of the runner std::thread/inferior process, therefore, this member function should not block.
-     * 
-     * Thread safety:
-     *
-     * IS NOT thread safe.
-     * 
-     * Attributions:
-     *
-     * Author: Radovan Moncek
-     */
+
     template<typename GameState>
 	void nettgame_server<GameState>::start_new_game_session(std::chrono::milliseconds tick_rate, void (*perform_business_logic)(GameState*, game_session<GameState>*), GameState *state) {
 	    runners.emplace_back([tick_rate, perform_business_logic, state, this](){
@@ -186,23 +145,7 @@ namespace nettgame { // remove all docs from here, leave only in .hpp
 		    game_sessions.back()->run();
 		    });
 	}
-    /**
-     * Synopsis:
-     *
-     * Global version of the remove_affinity member function.
-     * 
-     * I/O:
-     *
-     * Blocks, for the duration of linear O(n) for cycle execution, best case scenario is constant O(1).
-     *
-     * Thread safety:
-     *
-     * IS NOT thread safe.
-     * 
-     * Attributions:
-     *
-     * Author: Radovan Moncek
-     */
+
     template<typename GameState>
 	int nettgame_server<GameState>::remove_affinity(std::string address, short unsigned int port) {
 	    for (auto current_game_session : game_sessions) {
@@ -213,64 +156,34 @@ namespace nettgame { // remove all docs from here, leave only in .hpp
 
 	    return INT_MIN;
 	}
-    /**
-     * Synopsis:
-     *
-     * Global version of the synchronize member function.
-     *
-     * Description:
-     *
-     * Acquires an std::mutex game_session_sync, and performs the thread_unsafe_action in the synchronized scope.
-     *
-     * I/O:
-     *
-     * Blocks, until the thread_unsafe_sync finishes its execution.
-     *
-     * Thread safety:
-     *
-     * IS thread safe.
-     *
-     * Attributions:
-     *
-     * Author: Radovan Moncek
-     */
+
     template<typename GameState>
 	void nettgame_server<GameState>::synchronize(const std::function<void()> &thread_unsafe_action) {
 	    std::lock_guard<std::mutex> game_session_guard(game_session_sync);
 
 	    thread_unsafe_action();
 	}
-    /**
-      *
-      */
+
     template<typename GameState>
 	void nettgame_server<GameState>::log_info(const char *message) {
 	    make_logger_call(nettgame_logger::level::info, message, is_master);
 	}
-    /**
-      *
-      */
+
     template<typename GameState>
 	void nettgame_server<GameState>::log_debug(const char *message) {
 	    make_logger_call(nettgame_logger::level::debug, message, is_master);
 	}
-    /**
-      *
-      */
+
     template<typename GameState>
 	void nettgame_server<GameState>::log_error(const char *message) {
 	    make_logger_call(nettgame_logger::level::error, message, is_master);
 	}
-    /**
-      *
-      */
+
     template<typename GameState>
 	void nettgame_server<GameState>::log_fatal_error(const char *message) {
 	    make_logger_call(nettgame_logger::level::fatal_error, message, is_master);
 	}
-    /**
-      *
-      */
+
     template<typename GameState>
 	void nettgame_server<GameState>::log_at_level(nettgame_logger::level level) {
 	    logger.log_at_level(level);
