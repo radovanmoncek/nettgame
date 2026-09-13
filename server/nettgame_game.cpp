@@ -45,10 +45,12 @@ int main(int argc, char **argv) {
 	nettgame_server.log_at_level(nettgame_logger::level::info);
 
 	for (auto thread_i = threads; thread_i > 0; --thread_i){
-	    thread_pool.emplace_back([&io_context]{ io_context.run(); });
+	    thread_pool.emplace_back([&io_context]{
+		    io_context.run();
+		    });
 	}
 
-	for (;offset < argc;){
+	for (;offset < argc;) {
 	    nettgame_server.register_topology_member(argv[offset++], port + 1);
 	}
 

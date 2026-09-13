@@ -74,7 +74,7 @@ class listener : public std::enable_shared_from_this<listener> {
 
 		joined_player->read();
 
-		std::string log = "handling new connection "+remote_endpoint.address().to_string()+":"+std::to_string(remote_endpoint.port());
+		std::string log = "handling new connection " + remote_endpoint.address().to_string() + ":" + std::to_string(remote_endpoint.port());
 
 		nettgame_server.log_debug(log.c_str());
 	    }

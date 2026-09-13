@@ -71,16 +71,17 @@ namespace nettgame {
 		int internal_service_client_sockets_length = 0;
 		std::thread internal_service_listener;
 		std::mutex internal_service_sync;
+		std::mutex log_sync;
 		bool signal_received = false;
 
 		/**
 		 * Synopsis:
 		 *
-		 * TBD.
+		 * Actually performs the call to logger.
 		 *
 		 * Description:
 		 *
-		 * TBD.
+		 * If the current server is not master, the logger call is sent over the internal service p2p network to the master server, where the actual log is sent to the print stream.
 		 *
 		 * I/O:
 		 *
@@ -96,15 +97,20 @@ namespace nettgame {
 		 *
 		 * author: Radovan Moncek
 		 */
-		void make_logger_call(nettgame_logger::level level, const char *message);
+		void make_logger_call(nettgame_logger::level level, const char *message, signed char is_master);
 		/**
 		 * Synopsis:
 		 *
 		 * Starts internal_service event loop.
 		 *
+		 * Listenes to other insternal service p2p network members, and connects them with this server.
+		 *
+		 * Mode of server is of no concern.
+		 *
 		 * Description:
 		 *
 		 * TBD.
+		 * This member function is meant to be run inside of a "listener thread/lightweight process".
 		 *
 		 * I/O:
 		 *
@@ -116,7 +122,7 @@ namespace nettgame {
 		 *
 		 * Propositions:
 		 *
-		 * 1: formely was in nettgame constructor - move to this thread.
+		 * 1: formerly was in nettgame constructor - move to this thread.
 		 * 
 		 * Attributions:
 		 *
@@ -136,7 +142,7 @@ namespace nettgame {
 		    server_address.sin_addr.s_addr = INADDR_ANY; //use address with conversion function like htons
 		    server_address.sin_port = htons(port);
 		    int bind_result = bind(internal_service_socket, (struct sockaddr *)&server_address, sizeof(server_address));
-		    
+
 		    if (bind_result == -1) { //C-style cast, besause I want to eventually re-write to C, see above
 			close(internal_service_socket);
 			log_fatal_error(("failed to bind to internal_service_socket" + std::to_string(errno)).c_str()); // change to C style strcat?
@@ -157,22 +163,28 @@ namespace nettgame {
 			struct sockaddr_in client_address;
 			socklen_t client_len = sizeof(client_address);
 			int client_socket = accept(internal_service_socket, (struct sockaddr *)&client_address, &client_len);
+
 			{
-			std::lock_guard<std::mutex> internal_service_clients_guard(internal_service_sync);
-			internal_service_client_sockets[internal_service_client_sockets_length] = client_socket;
+			    std::lock_guard<std::mutex> internal_service_clients_guard(internal_service_sync);
+			    //internal_service_client_sockets[internal_service_client_sockets_length] = client_socket;
 
-			if (internal_service_client_sockets[internal_service_client_sockets_length++] < 0) {
-			    log_error("failed to accept socket");
+			    if (/*internal_service_client_sockets[internal_service_client_sockets_length++]*/client_socket < 0) {
+				log_error("failed to accept socket");
 
-			    continue;
+				continue;
+			    }
+
+			    internal_service_client_sockets[internal_service_client_sockets_length++] = client_socket;
 			}
-			}
 
-			if (connect(internal_service_socket, (struct sockaddr *)&client_address, sizeof(client_address))) {
-			    log_error("failed to connect to internal_service_socket peer");
+			    log_info("successfuly connected with a peer after accepting");
+			//}
 
-			    return;
-			}
+			//if (connect(internal_service_socket, (struct sockaddr *)&client_address, sizeof(client_address))) {
+			//   log_error(("failed to connect to internal_service_socket peer when accepting mirror connection" + std::to_string(errno)).c_str()); // change to C style strcat?
+			//
+			//			    return;
+			//			}
 		    }
 		}
 
