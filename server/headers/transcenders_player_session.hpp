@@ -1,8 +1,11 @@
+#pragma once
+
 #include <queue>
 
 #include <boost/beast.hpp>
 
 #include "../../framework/headers/nettgame.hpp"
+//#include "transcenders_player_container.hpp" fix build.sh
 
 struct game_state;
 
@@ -39,3 +42,5 @@ class player_session : public std::enable_shared_from_this<player_session> {
 	std::string address();
 	short signed int port();
 };
+
+#include "../nettgame_game_player_session.cpp" // fix

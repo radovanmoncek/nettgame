@@ -1,6 +1,10 @@
 #pragma once
 
+#include <memory>
+#include <string>
+
 #include "nettgame_game_session.hpp"
+#include "../nettgame_logger.c" // fix this
 
 namespace nettgame {
     /**
@@ -58,7 +62,7 @@ namespace nettgame {
      * author: Radovan Moncek
      */
     template<class GameState>
-	class nettgame_server {
+    class nettgame_server {
 	    private:
 		nettgame_logger logger;
 		std::vector<std::thread> runners;
@@ -365,3 +369,5 @@ namespace nettgame {
 		void log_at_level(nettgame_logger::level level);
 	};
 }
+
+//#include "../nettgame.cpp" // fix

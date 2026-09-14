@@ -7,8 +7,9 @@
   *
   * author: Radovan Moncek
   */
-#include "nettgame_protocol.c"
-#include "nettgame_logger.c"
+//#include "nettgame_protocol.c"
+//#include "nettgame_logger.c"
+#include "headers/nettgame_internal_service_codec.h"
 
 /**
   * Synopsis:

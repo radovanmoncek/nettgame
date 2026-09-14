@@ -1,3 +1,7 @@
+#pragma once
+
+#include <string.h>
+
 /**
   * Synopsis:
   *
@@ -7,8 +11,8 @@
   *
   * author: Radovan Moncek
   */
-#include "nettgame_protocol.c"
-#include "nettgame_logger.c"
+#include "../nettgame_protocol.c"
+#include "../nettgame_logger.c" // fix to .h headers
 
 /**
   * Synopsis:

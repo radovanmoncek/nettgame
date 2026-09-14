@@ -2,7 +2,10 @@
 
 #include <boost/config.hpp>
 
+#include "headers/transcenders_configuration.hpp"
 #include "headers/transcenders_listener.hpp"
+//#include "../framework/headers/nettgame.hpp" // use this fix
+#include "../framework/nettgame.cpp" // fix
 
 /**
  * Synopsis:

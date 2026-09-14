@@ -1,6 +1,7 @@
 #include <boost/asio.hpp>
 
 #include "transcenders_player_session.hpp"
+//#include "../transcenders_player_container.cpp" // fix .hpp
 
 class listener : public std::enable_shared_from_this<listener> {
     private:
@@ -14,3 +15,5 @@ class listener : public std::enable_shared_from_this<listener> {
 	void accept();
 	void on_accept(boost::beast::error_code error_code, boost::asio::ip::tcp::socket socket);
 };
+
+#include "../nettgame_game_listener.cpp"

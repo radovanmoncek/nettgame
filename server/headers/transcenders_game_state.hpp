@@ -1,3 +1,5 @@
+#pragma once
+
 #include "nettgame_game_player_session.hpp"
 #include "transcenders_protocol.c"
 #include "transcenders_entity.cpp"

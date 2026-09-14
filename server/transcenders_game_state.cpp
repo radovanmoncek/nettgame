@@ -1,4 +1,5 @@
-#include "nettgame_game_player_session.hpp"
+//#include "nettgame_game_player_session.hpp"
+//#include "headers/transcenders_player_session.hpp"
 #include "transcenders_protocol.c"
 #include "transcenders_entity.cpp"
 #include "transcenders_player.cpp"

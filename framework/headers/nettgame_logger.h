@@ -3,39 +3,66 @@
 #include <stdio.h>
 #include <time.h>
 
-struct nettgame_logger;
-
-enum nettgame_logger::level;
-
 /**
  * Synopsis:
  *
- * Represents a singular log message sent over the internal service p2p network.
+ * Internal logger of nettgame.
  *
- * Propositions:
+ * Description:
  *
- * 2: use log struct instead of parameters/arguments.
- *
- * 1: message_type should be message_level.
+ * Logs to stdout.
  *
  * Attributions:
  *
  * author: Radovan Moncek
  */
-struct nettgame_logger::log;
-    
-static level nettgame_logger::to_level(int numeric_level);
+struct nettgame_logger {
+	/**
+	 * Synopsis:
+	 *
+	 * The level of the log.
+	 *
+	 * Description:
+	 *
+	 * Represents SYSLOG levels, as defined/specified by RFC.
+	 */
+	enum level {
+	    debug=7,
+	    info=6,
+	    error=3,
+	    fata_error=2
+	};
 
-nettgame_logger::level nettgame_logger::log_level = level::info;
+	/**
+	* Synopsis:
+	*
+	* Represents a singular log message sent over the internal service p2p network.
+	*
+	* Propositions:
+	*
+	* 2: use log struct instead of parameters/arguments.
+	*
+	* 1: message_type should be message_level.
+	*
+	* Attributions:
+	*
+	* author: Radovan Moncek
+	*/
+	struct log;
 
-void nettgame_logger::log_at_level(level level_);
+	static level to_level(int numeric_level);
 
-void nettgame_logger::output_to_stdout(const char *level_string, const char *message, signed char is_master);
+	level log_level = level::info;
 
-void nettgame_logger::log_info(const char *message, signed char is_master);
+	void log_at_level(level level_);
 
-void nettgame_logger::log_debug(const char *message, signed char is_master);
+	void output_to_stdout(const char *level_string, const char *message, signed char is_master);
 
-void nettgame_logger::log_error(const char *message, signed char is_master);
+	void log_info(const char *message, signed char is_master);
 
-void nettgame_logger::log_fatal_error(const char *message, signed char is_master);
+	void log_debug(const char *message, signed char is_master);
+
+	void log_error(const char *message, signed char is_master);
+
+	void log_fatal_error(const char *message, signed char is_master);
+};

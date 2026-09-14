@@ -3,8 +3,9 @@
 #include <chrono>
 #include <thread>
 
-#include "nettgame_logger.c"
-#include "nettgame.hpp"
+//#include "nettgame_logger.c" // fix to .h header from headers
+#include "headers/nettgame.hpp"
+//#include "headers/nettgame_game_session.hpp"
 
 namespace nettgame {
     /**
@@ -169,3 +170,5 @@ namespace nettgame {
 	    static_cast<nettgame_server<GameState>*>(server)->log_fatal_error(message);
 	}
 }
+
+//#include "../nettgame_game_session.cpp"

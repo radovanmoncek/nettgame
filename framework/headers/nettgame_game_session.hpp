@@ -1,3 +1,9 @@
+#pragma once
+
+#include <map>
+#include <functional>
+#include <climits>
+
 #include "nettgame_transferable_game_state.hpp"
 
 namespace nettgame {
@@ -20,7 +26,7 @@ namespace nettgame {
      * Author: Radovan Moncek
      */
     template<class GameState>
-	class game_session {
+    class game_session {
 	    public:
 		/**
 		 * Synopsis:
@@ -38,6 +44,19 @@ namespace nettgame {
 		     * game_session will exit after finishing the cycle in which this code was set.
 		     */
 		    exit,
+		    /**
+		    * Synopsis:
+		    *
+		    * game_session will continue standard operation.
+		    *
+		    * Description:
+		    *
+		    * Serves as an aknowledgement of correct operation.
+		    *
+		    * Attributions:
+		    *
+		    * author: Radovan Moncek
+		    */
 		    ok,
 		    idle //lower game session tick_rate to 1/4
 		};
@@ -111,3 +130,5 @@ namespace nettgame {
 		std::thread::id unique; //use better unique identifier
 	};
 }
+
+//#include "../nettgame_game_session.cpp"

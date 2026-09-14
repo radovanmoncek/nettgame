@@ -8,7 +8,7 @@ done
 
 if [[ $needs_rebuild -eq 1 ]] || ([[ $# -gt 0 ]] && [[ $1 == "recompile" ]]);
 then
-    kubectl exec nettgame -i -t -- g++ -g -time -o /development/server/nettgame_websockets /development/server/transcenders.cpp;
+    kubectl exec nettgame -i -t -- g++ -g -time -o /development/server/nettgame_websockets /development/server/transcenders.cpp /development/framework/internal_service_codec.c
 fi
 
 if [[ $(kubectl exec nettgame -- echo $?) -eq 0 ]];

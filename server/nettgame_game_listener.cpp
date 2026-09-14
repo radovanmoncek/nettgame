@@ -1,16 +1,17 @@
 #include <boost/asio.hpp>
 
-#include "nettgame_game_player_session.cpp"
+//#include "headers/transcenders_player_session.hpp"
+//#include "headers/transcenders_listener.hpp"
 
-class listener : public std::enable_shared_from_this<listener> {
-    private:
+//class listener : public std::enable_shared_from_this<listener> {
+    /*private:
 	boost::asio::io_context &listener_io_context;
 	boost::asio::ip::tcp::acceptor listener_acceptor;
 	std::string document_root;
-	nettgame::nettgame_server<game_state> &nettgame_server;
+	nettgame::nettgame_server<game_state> &nettgame_server;*/
 
-    public:
-	listener(boost::asio::io_context &external_io_context, boost::asio::ip::tcp::endpoint endpoint, std::string document_root, nettgame::nettgame_server<game_state> &nettgame_server) : 
+    //public:
+	listener::listener(boost::asio::io_context &external_io_context, boost::asio::ip::tcp::endpoint endpoint, std::string document_root, nettgame::nettgame_server<game_state> &nettgame_server): 
 	    listener_io_context(external_io_context), 
 	    listener_acceptor(external_io_context),
 	    document_root(document_root),
@@ -50,10 +51,10 @@ class listener : public std::enable_shared_from_this<listener> {
 	    return;
 	}
     }
-	void accept() {
+	void listener::accept() {
 	    listener_acceptor.async_accept(boost::asio::make_strand(listener_io_context), boost::beast::bind_front_handler(&listener::on_accept, shared_from_this()));
 	}
-	void on_accept(boost::beast::error_code error_code, boost::asio::ip::tcp::socket socket) {
+	void listener::on_accept(boost::beast::error_code error_code, boost::asio::ip::tcp::socket socket) {
 	    boost::system::error_code error_code_;
 
 	    auto remote_endpoint = socket.remote_endpoint(error_code_);
@@ -81,4 +82,4 @@ class listener : public std::enable_shared_from_this<listener> {
 
 	    accept();
 	}
-};
+//};
