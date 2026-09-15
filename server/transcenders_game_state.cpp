@@ -24,6 +24,18 @@ struct game_state : nettgame::transferable_game_state {
 	to_transfer["game_session_id"]=game_session_id;
 	to_transfer["player_count"]=player_count;
 	to_transfer["ticks_until_exit"]=ticks_until_exit;
+	to_transfer["initializing"] = initializing;
+	// add entities (each must be transferified
+	// add id pool
 	auto serialized = boost::json::serialize(to_transfer);
+
+	memcpy(transfer_buffer, serialized.c_str(), serialized.length());
+    };
+    void detransferify(std::string serialized) override {
+	auto parsed = boost::json::parse(serialized/*.as_obj()*/).as_object();
+	game_session_id = boost::json::value_to<int>(parsed["game_session_id"]);
+	player_count = boost::json::value_to<int>(parsed["player_count"]);
+	ticks_until_exit = boost::json::value_to<int>(parsed["ticks_until_exit"]);
+	initializing = boost::json::value_to<bool>(parsed["initializing"]);
     };
 };

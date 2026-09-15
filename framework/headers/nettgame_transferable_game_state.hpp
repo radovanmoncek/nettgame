@@ -1,3 +1,6 @@
+#include <string>
+#include <vector>
+
 namespace nettgame {
     /**
      * Synopsis:
@@ -13,6 +16,11 @@ namespace nettgame {
      * author: Radovan Moncek
      */
     struct transferable_game_state {
+	char unique_identifier[8]; // magic
+	char server_address[4*3+3]; // magic
+	std::string serialized_game_state; // make C
+	std::vector<std::string> clients; // make C
+
 	/**
 	 * Synopsis:
 	 *
@@ -27,5 +35,15 @@ namespace nettgame {
 	 * author: Radovan Moncek
 	 */
 	virtual void transferify(unsigned char *buffer) {}; //find out, why this virtual member function must have a body, and the program won't link otherwise.
+	/**
+	  * Synopsis:
+	  *
+	  * Deserialize game_state data into a new working game_session.
+	  *
+	  * Attributions:
+	  *
+	  * author: Radovan Moncek
+	  */
+	virtual void detransferify(std::string serialized_game_state_) {};
     };
 }

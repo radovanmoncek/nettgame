@@ -13,6 +13,8 @@ struct nettgame_protocol {
      * author: Radovan Moncek
      */
     struct reserved {
+    	static const unsigned int heart_beat = 0x1;
+    	static const unsigned int election_id = 0x2;
     };
 
     /**
@@ -41,5 +43,17 @@ struct nettgame_protocol {
 	  * 1: make into struct.
 	  */
 	static const signed int log = 0x9;
+	/**
+	 * Synopsis:
+	 *
+	 * This message contains stateful information of game sessions passed to each p2p peer/neighbour.
+	 *
+	 * Attributions:
+	 *
+	 * source: IPv6 DHCP
+	 *
+	 * author: Radovan Moncek
+	 */
+	static const signed int game_state_advertisment = 0xA;
     };
 };

@@ -1,4 +1,5 @@
-#include "transcenders_business_logic.cpp"
+//#include "headers/transcenders_business_logic.hpp"
+#include "transcenders_business_logic.cpp" // fix
 
 player_session::player_session(boost::asio::ip::tcp::socket &&socket, boost::asio::ip::tcp::endpoint remote_endpoint, std::string document_root, std::vector<std::shared_ptr<player_session>> &players, nettgame::nettgame_server<game_state> &nettgame_server):
     tcp_stream(std::move(socket)),

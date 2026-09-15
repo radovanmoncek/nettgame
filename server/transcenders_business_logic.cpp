@@ -161,6 +161,8 @@ void broadcast_do_for_all(game_state *state_, nettgame::game_session<game_state>
 	return unique_id;
     };
 
+    game_session->game_session_code = nettgame::game_session<game_state>::game_session_code::ok;
+
     if (state_->ticks_until_exit == 0) {
 	for (auto entity : state_->entities) {
 	    if (entity->entity_id == protocol::usable::player)
@@ -274,6 +276,7 @@ void broadcast_do_for_all(game_state *state_, nettgame::game_session<game_state>
 		game_session->log_info("step 2 done: items/weapons added");
 
 		state_->initializing=false;
+		game_session->game_session_code = nettgame::game_session<game_state>::game_session_code::updated;
 	    }
 
 	    if (!game_session->has_affinity(current_player->address(), current_player->port()))

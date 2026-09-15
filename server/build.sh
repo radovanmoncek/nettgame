@@ -13,6 +13,6 @@ fi
 
 if [[ $(kubectl exec nettgame -- echo $?) -eq 0 ]];
 then
-    kubectl exec nettgame -- ./development/server/nettgame_websockets 0.0.0.0 4321 2 0 /development/client 10.42.0.86 &
-    kubectl exec nettgame2 -i -t -- gdb --args ./development/server/nettgame_websockets 0.0.0.0 4321 2 1 /development/client 10.42.0.88
+    kubectl exec nettgame -- ./development/server/nettgame_websockets 2 /development/client 0.0.0.0 4321 0 10.42.0.86 &
+    kubectl exec nettgame2 -i -t -- gdb --args ./development/server/nettgame_websockets 2 /development/client 0.0.0.0 4321 1 10.42.0.94
 fi

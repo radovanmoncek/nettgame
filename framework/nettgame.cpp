@@ -69,6 +69,24 @@ namespace nettgame { // remove all docs from here, leave only in .hpp
 	 }
 
     template<class GameState>
+    void nettgame_server<GameState>::make_multicast_state_call(/*const GameState*/transferable_game_state game_state) { // make multicast member function to peers
+	unsigned char buffer[1024]; // magic
+	//game_state.serialized_game_state = game_state.transferify(); // use Polymorphism
+	/*unsigned*/ char game_state_buffer[512]; // magic
+
+	game_state.transferify(/*game_state.serialized_game_state*/(unsigned char *)game_state_buffer); // C style cast justified
+	
+	game_state.serialized_game_state = game_state_buffer;
+
+	int buffer_size = multiplex_encode(nettgame_protocol::usable::/*tran*/game_state_advertisment, /*buffer*/(void *)&game_state, buffer); // C style justified
+	std::lock_guard<std::mutex> /*peers_lock*/peers_guard(internal_service_sync);
+
+	for (int i = 0; i < internal_service_client_sockets_length; ++i) {
+	    send(internal_service_client_sockets[i], buffer, buffer_size, 0); // magic
+	}
+    }
+
+    template<class GameState>
     void nettgame_server<GameState>::handle_signals() {
 	signal_received = true;
     }
@@ -114,7 +132,12 @@ namespace nettgame { // remove all docs from here, leave only in .hpp
 
 		int recv_result = recv(internal_service_client_sockets[i], buffer, sizeof(buffer), 0); //magic
 
-		if (recv_result > 0 && buffer[0] == nettgame_protocol::usable::log) {
+		if (recv_result /*>*/<= 0)
+		    return;// && buffer[0] == nettgame_protocol::usable::log) {
+
+		switch (/*type*/buffer[0]) {
+		    case nettgame_protocol::usable::log:
+			{
 		    nettgame_logger::log log;
 		    char log_message_buffer[256]; // magic
 
@@ -126,14 +149,28 @@ namespace nettgame { // remove all docs from here, leave only in .hpp
 		    multiplex_decode(&type, buffer, &log);
 		    log_debug("received log from peer");
 
-		    switch(type) {
-			case nettgame_protocol::usable::log:
-			    {
+		    //switch(type) {
+			//case nettgame_protocol::usable::log:
+			    //{
 				make_logger_call(log.message_type, log.message, log.is_master);
 			    }
 
 			    break;
-		    }
+
+			case nettgame_protocol::usable::game_state_advertisment:
+			    {
+				log_info("game_state_advertisment received");
+				int type;
+				GameState game_state;
+
+				multiplex_decode( &type, buffer, &game_state);
+
+				// add game_state to shared_affinities, or update, if it already exists
+				// if there is a new client for existing game session, and a different nettgame server was assigned to it already, recreate it
+			    }
+
+			    break;
+		    //}
 		}
 	    }
 	}

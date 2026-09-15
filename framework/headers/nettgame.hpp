@@ -68,7 +68,9 @@ namespace nettgame {
 		std::vector<std::thread> runners;
 		std::vector<std::shared_ptr<game_session<GameState>>> game_sessions;
 		std::mutex game_session_sync;
-		std::map<std::tuple<std::string, short signed int>, std::vector<std::string>> shared_affinities;
+		//std::map<std::tuple<std::string, short signed int>, std::vector<std::string>> shared_affinities;
+		//std::map<char *, GameState> shared_affinities_lookup;
+		GameState shared_affinities[256]; // magic, set to number of max threads/LWPs
 		bool is_master;
 		int internal_service_socket = 0x0;
 		int internal_service_client_sockets[4]; // formerly std::vector<int>, replace magic constant
@@ -185,6 +187,7 @@ namespace nettgame {
 		}
 
 	    public:
+		void make_multicast_state_call(/*const GameState*/transferable_game_state game_state);
 		/**
 		 * Synopsis:
 		 *

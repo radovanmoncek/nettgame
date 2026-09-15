@@ -74,7 +74,7 @@ namespace nettgame {
 
 	    while (running) {
 		{
-		    perform_business_logic(static_cast<GameState*>(state), this);
+		    perform_business_logic(static_cast<GameState*>(state), this); // make C style cast
 
 		    switch (game_session_code) {
 			case game_session_code::exit: 
@@ -87,6 +87,12 @@ namespace nettgame {
 			    {
 				break;
 			    }
+			case game_session_code::updated:
+			    {
+				/*nettgame_*/static_cast<nettgame_server<GameState/***/>*>(server)/*.*/->make_multicast_state_call(*static_cast<GameState*>(state)); // make C style cast
+			    }
+
+			    break;
 		    }
 		}
 

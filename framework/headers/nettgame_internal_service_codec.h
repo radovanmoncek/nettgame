@@ -25,9 +25,11 @@
   *
   * Attributions:
   *
+  * source: arpa/inet.h design
+  *
   * author: Radovan Moncek
   */
-void multiplex_encode(const signed int type, const void *data, unsigned char *destination);
+/*void*/int multiplex_encode(const signed int type, const void *data, unsigned char *destination);
 
 /**
  * Synopsis:
@@ -36,6 +38,8 @@ void multiplex_encode(const signed int type, const void *data, unsigned char *de
  *
  * Attributions:
  *
+ * source: arpa/inet.h design
+ *
  * author: Radovan Moncek
  */
-void multiplex_decode(int *type_, const unsigned char *data, void *destination);
+/*void*/int multiplex_decode(int *type_, const unsigned char *data, void *destination);

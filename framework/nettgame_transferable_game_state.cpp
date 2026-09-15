@@ -8,11 +8,20 @@ namespace nettgame {
      *
      * This is, basically, a "serialization contract/dictating interface".
      *
+     * Propositions:
+     *
+     * 1: separate attributes into separate struct.
+     *
      * Attributions:
      *
      * author: Radovan Moncek
      */
     struct transferable_game_state {
+    	char unique_identifier[8]; // magic
+	char server_address[4*3+3] = "0.0.0.0"; //magic
+	std::string serialized_state; // C string
+	std::vector<std::string> clients; // C dynamic array - structure address:port (socket - transport protocol)
+
 	/**
 	 * Synopsis:
 	 *
@@ -27,5 +36,6 @@ namespace nettgame {
 	 * author: Radovan Moncek
 	 */
 	virtual void transferify(unsigned char *buffer) {}; //find out, why this virtual member function must have a body, and the program won't link otherwise.
+	virtual void detransferify(std::string serialiazed_state_) {};
     };
 }

@@ -58,7 +58,17 @@ namespace nettgame {
 		    * author: Radovan Moncek
 		    */
 		    ok,
-		    idle //lower game session tick_rate to 1/4
+		    idle, //lower game session tick_rate to 1/4
+		    /**
+		      * Synopsis:
+		      *
+		      * Notifies about game_state update.
+		      *
+		      * Attributions:
+		      *
+		      * author: Radovan Moncek
+		      */
+		    updated
 		};
 
 		game_session<GameState>::game_session_code game_session_code = game_session_code::ok;

@@ -20,13 +20,13 @@
  */
 int main(int argc, char **argv) {
     uint8_t offset = 1;
-    auto address_raw = argv[offset++];
-    boost::asio::ip::address address = boost::asio::ip::make_address(address_raw);
-    boost::asio::ip::port_type port = static_cast<boost::asio::ip::port_type>(atoi(argv[offset++]));
     int threads = std::max<int>(MIN_ASIO_THREADS, atoi(argv[offset++]));
-    bool is_master = atoi(argv[offset++]);
     std::string document_root = argv[offset++];
+    auto address_raw = argv[offset++];
+    boost::asio::ip::port_type port = static_cast<boost::asio::ip::port_type>(atoi(argv[offset++]));
     boost::asio::io_context io_context{threads};
+    boost::asio::ip::address address = boost::asio::ip::make_address(address_raw);
+    bool is_master = atoi(argv[offset++]);
     nettgame::nettgame_server<game_state> nettgame_server(address_raw, port + 1, is_master); //maybe custom load balancer?
 
     try {
