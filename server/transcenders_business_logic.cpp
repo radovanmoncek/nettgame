@@ -212,7 +212,9 @@ void broadcast_do_for_all(game_state *state_, nettgame::game_session<game_state>
 	    }
 
 	    if (current_player->front_pending(buffer, sizeof(buffer)) && buffer[offset]==protocol::reserved::join_existing) {
-		if(buffer[++offset]!=state_->game_session_id) {
+		std::string requested_session_identifier = /*static*/reinterpret_cast<char*>(&buffer[++offset]);
+
+		if(requested_session_identifier != state_->game_session_id) {
 		    continue;
 		}
 
@@ -241,7 +243,7 @@ void broadcast_do_for_all(game_state *state_, nettgame::game_session<game_state>
 
 		current_player->pop_pending();
 
-		std::string log = "player joined, current player count is "+std::to_string(state_->player_count);
+		std::string log = "player joined, current player count is " + std::to_string(state_->player_count);
 
 		game_session->log_info(log.c_str());
 

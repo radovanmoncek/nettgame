@@ -1,6 +1,6 @@
 //#include "nettgame_game_player_session.hpp"
 //#include "headers/transcenders_player_session.hpp"
-#include "transcenders_protocol.c"
+#include "transcenders_protocol.cpp"
 #include "transcenders_entity.cpp"
 #include "transcenders_player.cpp"
 #include "transcenders_enemy_threat.cpp"
@@ -10,7 +10,8 @@
 #include "transcenders_player_container.cpp"
 
 struct game_state : nettgame::transferable_game_state {
-    int game_session_id, player_count=0, ticks_until_exit=60;
+    std::string unique_identifier, /*std::string*/ game_session_id;
+    int player_count=0, ticks_until_exit=60;
     std::vector<entity*> entities;
     std::set<uint8_t> unique_id_pool;
     bool initializing = true;
@@ -21,7 +22,7 @@ struct game_state : nettgame::transferable_game_state {
     };
     void transferify(uint8_t *transfer_buffer) override {
 	boost::json::object to_transfer;
-	to_transfer["game_session_id"]=game_session_id;
+	to_transfer["unique_identifier"]=unique_identifier;
 	to_transfer["player_count"]=player_count;
 	to_transfer["ticks_until_exit"]=ticks_until_exit;
 	to_transfer["initializing"] = initializing;
@@ -32,8 +33,8 @@ struct game_state : nettgame::transferable_game_state {
 	memcpy(transfer_buffer, serialized.c_str(), serialized.length());
     };
     void detransferify(std::string serialized) override {
-	auto parsed = boost::json::parse(serialized/*.as_obj()*/).as_object();
-	game_session_id = boost::json::value_to<int>(parsed["game_session_id"]);
+	auto parsed = boost::json::parse(serialized).as_object();
+	game_session_id = boost::json::value_to<int>(parsed["unique_identifier"]);
 	player_count = boost::json::value_to<int>(parsed["player_count"]);
 	ticks_until_exit = boost::json::value_to<int>(parsed["ticks_until_exit"]);
 	initializing = boost::json::value_to<bool>(parsed["initializing"]);

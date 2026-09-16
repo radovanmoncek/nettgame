@@ -17,11 +17,6 @@ namespace nettgame {
      * author: Radovan Moncek
      */
     struct transferable_game_state {
-    	char unique_identifier[8]; // magic
-	char server_address[4*3+3] = "0.0.0.0"; //magic
-	std::string serialized_state; // C string
-	std::vector<std::string> clients; // C dynamic array - structure address:port (socket - transport protocol)
-
 	/**
 	 * Synopsis:
 	 *

@@ -31,9 +31,15 @@ export class Codec {
 		return view.buffer
 
 	    case Protocol.Reserved.joinNew:
+		view.setUint8(offset++, protocolId, true);
+
+		return view.buffer;
+
 	    case Protocol.Reserved.joinExisting:
 		view.setUint8(offset++,protocolId, true)
-		view.setUint8(offset++, input, true)
+		encodeString(input, view, offset);
+
+		offset += 4; // magic
 
 		return view.buffer
 
@@ -90,6 +96,8 @@ export class Codec {
 		return Protocol.Reserved.pingPong;
 
 	    case Protocol.Reserved.joinNew:
+		return decodeString(view, 4, offset) // magic, offset += 4
+
 	    case Protocol.Reserved.joinExisting:
 	    case Protocol.Reserved.deleteRequest:
 		return view.getUint8(offset++, true)

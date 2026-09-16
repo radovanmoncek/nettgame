@@ -662,9 +662,15 @@ class Game {
 	sessionIdInput.type="text"
 	sessionIdInput.placeholder="Code"
 	button.onclick = () => {
+	    if (nameInput.value === "")
+		return;
+
+	    if (/*sessionIdInput.value === "" || */sessionIdInput.value !== "" && sessionIdInput.value.length !== 4) // magic
+		return;
+
 	    this.name = nameInput.value
 
-	    this.webSocket.send(this.codec.multiplexEncode(sessionIdInput.value !== ""? Protocol.Reserved.joinExisting: Protocol.Reserved.joinNew, parseInt(sessionIdInput.value)))
+	    this.webSocket.send(this.codec.multiplexEncode(sessionIdInput.value !== ""? Protocol.Reserved.joinExisting: Protocol.Reserved.joinNew, sessionIdInput.value))
 	    this.uI.removeChild(menuOuter)
 
 	    this.entities=this.entities.filter(entity=>entity!==dummy)

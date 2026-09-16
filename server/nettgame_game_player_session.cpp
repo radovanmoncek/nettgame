@@ -1,5 +1,13 @@
+#include <boost/uuid/uuid.hpp>
+#include <boost/uuid/uuid_generators.hpp>
+#include <boost/uuid/string_generator.hpp>
+#include <boost/uuid/uuid_io.hpp>
+
 //#include "headers/transcenders_business_logic.hpp"
 #include "transcenders_business_logic.cpp" // fix
+
+//#include <boost/uuid/uuid.hpp> // swap up
+//#include <boost/uuid/uuid_generators.hpp>
 
 player_session::player_session(boost::asio::ip::tcp::socket &&socket, boost::asio::ip::tcp::endpoint remote_endpoint, std::string document_root, std::vector<std::shared_ptr<player_session>> &players, nettgame::nettgame_server<game_state> &nettgame_server):
     tcp_stream(std::move(socket)),
@@ -199,13 +207,18 @@ void player_session::on_read(boost::beast::error_code error_code, std::size_t) {
 	}
 	else if (buffer.get()[offset]==protocol::reserved::join_new) {
 	    auto game_state_ = new game_state;
-	    game_state_->game_session_id=buffer.get()[++offset];
+	    game_state_->unique_identifier=boost::uuids::to_string(boost::uuids::random_generator()());
+	    game_state_->game_session_id = game_state_->unique_identifier.substr(game_state_->unique_identifier.length() - 4); // magic
+	    //offset+=4; // magic
+	    ++offset;
 
 	    nettgame_server.synchronize([&]{
 		    nettgame_server.start_new_game_session(GAME_SESSION_TICK_RATE, &broadcast_do_for_all, game_state_);
 	    }); 
 
-	    uint8_t join_new_buffer[MAX_TRANSFER_BUFFER_SIZE]{protocol::reserved::join_new, buffer.get()[offset++]};//use shared game session-like id pool with set
+	    uint8_t join_new_buffer[MAX_TRANSFER_BUFFER_SIZE]{protocol::reserved::join_new};//use shared game session-like id pool with set
+
+	    memcpy(&join_new_buffer[1], /*&game_session*/game_state_->game_session_id.data(), /*game_session*/game_state_->game_session_id.length()); // magic
 
 	    write(join_new_buffer, sizeof(join_new_buffer));
 

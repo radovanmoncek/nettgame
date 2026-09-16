@@ -17,9 +17,9 @@ namespace nettgame {
      */
     struct transferable_game_state {
 	char unique_identifier[8]; // magic
-	char server_address[4*3+3]; // magic
+	char server_address[4*3+3] = "0.0.0.0"; //magic
 	std::string serialized_game_state; // make C
-	std::vector<std::string> clients; // make C
+	std::vector<std::string> clients; // make C, C dynamic array - structure address:port (socket - transport protocol)
 
 	/**
 	 * Synopsis:
