@@ -54,6 +54,11 @@
 	void listener::accept() {
 	    listener_acceptor.async_accept(boost::asio::make_strand(listener_io_context), boost::beast::bind_front_handler(&listener::on_accept, shared_from_this()));
 	}
+
+	void connection_filter(void *game_state_) {
+	    auto state = *static_cast<game_state*>(game_state_);
+	};
+
 	void listener::on_accept(boost::beast::error_code error_code, boost::asio::ip::tcp::socket socket) {
 	    boost::system::error_code error_code_;
 
@@ -71,6 +76,14 @@
 		return;
 	    }
 	    else {
+		//nettgame_server.perform_for_each_game_session([&](void *game_state_){
+			//auto state = *static_cast<game_state*>(game_state_);
+
+			//if ()
+			//return;
+
+		nettgame_server.handle_affinity(remote_endpoint.address().to_string().c_str(), /*std::to_string(*/remote_endpoint.port()/*)*/);
+
 		auto joined_player = std::make_shared<player_session>(std::move(socket), socket.remote_endpoint(), document_root, players, nettgame_server);
 
 		joined_player->read();
@@ -78,6 +91,7 @@
 		std::string log = "handling new connection " + remote_endpoint.address().to_string() + ":" + std::to_string(remote_endpoint.port());
 
 		nettgame_server.log_debug(log.c_str());
+		//};
 	    }
 
 	    accept();

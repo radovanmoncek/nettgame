@@ -213,7 +213,7 @@ void player_session::on_read(boost::beast::error_code error_code, std::size_t) {
 	    ++offset;
 
 	    nettgame_server.synchronize([&]{
-		    nettgame_server.start_new_game_session(GAME_SESSION_TICK_RATE, &broadcast_do_for_all, game_state_);
+		    nettgame_server.start_new_game_session(GAME_SESSION_TICK_RATE/*, &broadcast_do_for_all*/, game_state_);
 	    }); 
 
 	    uint8_t join_new_buffer[MAX_TRANSFER_BUFFER_SIZE]{protocol::reserved::join_new};//use shared game session-like id pool with set
@@ -226,6 +226,23 @@ void player_session::on_read(boost::beast::error_code error_code, std::size_t) {
 		    pop_pending();
 		    }); 
 	}
+//	else if (buffer.get()[offset] == protocol::reserved::join_existing) { // requesting player/ nettgame affinity/client must be redirected to the correct server (maybe will need custom load balancer)
+//		nettgame_server.perform_for_each_game_session([&](void *game_state_){
+//		auto state = *static_cast<game_state*>(game_state_);
+//		/*std::string*/char requested_session_id[4]; // magic
+//
+//		memcpy(request_session_id, &buffer[offset], 4); // magic
+
+//		if (state.game_session_id != requested_session_id) {
+			//web_socket->close(); // incorrect
+		// send state.address to redirect client/ nettgame affinity
+
+//			return;
+//		}
+
+//		nettgame_server.synchronize([&]{ pending.push(buffer); });
+//			});
+//	}
 	else {
 	    nettgame_server.synchronize([&]{
 		    pending.push(buffer);

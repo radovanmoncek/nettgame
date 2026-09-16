@@ -106,6 +106,7 @@ namespace nettgame {
 		 * Author: Radovan Moncek
 		 */
 		void run();
+		void perform(void (*perform)(void*));
 		void synchronize(const std::function<void()> &thread_unsafe_action);
 		void assign_affinity_to_slot(std::string address, short signed int port, int arbitrary);
 		int retrieve_affinity(std::string address, short signed int port);

@@ -70,7 +70,8 @@ namespace nettgame {
 		std::mutex game_session_sync;
 		//std::map<std::tuple<std::string, short signed int>, std::vector<std::string>> shared_affinities;
 		//std::map<char *, GameState> shared_affinities_lookup;
-		GameState shared_affinities[256]; // magic, set to number of max threads/LWPs
+		unsigned int shared_affinities_size = /*256*/0;
+		/*GameState*/transferable_game_state shared_affinities[/*shared_affinities_size*/256]; // set to number of max threads/LWPs, magic alloc
 		bool is_master;
 		int internal_service_socket = 0x0;
 		int internal_service_client_sockets[4]; // formerly std::vector<int>, replace magic constant
@@ -79,6 +80,8 @@ namespace nettgame {
 		std::mutex internal_service_sync;
 		std::mutex log_sync;
 		bool signal_received = false;
+		char /***/address[4*3+3] = "0.0.0.0"; // magic
+		void (*business_logic_blueprint)(/*void**/GameState*, game_session<GameState>*);
 
 		/**
 		 * Synopsis:
@@ -187,7 +190,7 @@ namespace nettgame {
 		}
 
 	    public:
-		void make_multicast_state_call(/*const GameState*/transferable_game_state game_state);
+		void make_multicast_state_call(/*const*/ GameState/*transferable_game_state*/ game_state);
 		/**
 		 * Synopsis:
 		 *
@@ -233,7 +236,7 @@ namespace nettgame {
 		 *
 		 * author: Radovan Moncek
 		 */
-		nettgame_server(const char *address, short signed int port, bool is_master = true); //formerly std::string, std::vector<std::tuple<std::string, short signed int>>
+		nettgame_server(const char *address, short signed int port, bool is_master/* = true*/, void (*business_logic_blueprint)(/*void**/GameState*, game_session<GameState>*)); //formerly std::string, std::vector<std::tuple<std::string, short signed int>>
 		/**
 		 * Synopsis:
 		 *
@@ -280,6 +283,8 @@ namespace nettgame {
 		 * author: Radovan Moncek
 		 */
 		void join_internal_service_network();
+		void handle_affinity(const char *address, const short unsigned int port);
+		void perform_for_each_game_session(void (*action)(void*));
 		/**
 		 * Synopsis:
 		 *
@@ -301,7 +306,7 @@ namespace nettgame {
 		 *
 		 * Author: Radovan Moncek
 		 */
-		void start_new_game_session(std::chrono::milliseconds tick_rate, void (*perform_business_logic)(GameState*, game_session<GameState>*), GameState *state);
+		void start_new_game_session(std::chrono::milliseconds tick_rate/*, void (*perform_business_logic)(GameState*, game_session<GameState>*)*/, GameState *state);
 		/**
 		 * Synopsis:
 		 *

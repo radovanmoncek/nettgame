@@ -50,7 +50,7 @@
 		const nettgame::transferable_game_state game_state = *((nettgame::transferable_game_state*)data);
 		destination[offset++] = nettgame_protocol::usable::game_state_advertisment;
 		// add game session unique identifier
-		memcpy(&destination[offset], /*=*/ game_state.unique_identifier, 8);
+		memcpy(&destination[offset], /*=*/ game_state.unique_identifier_, 8);
 		
 		offset += 8; //magic (maybe strlen)
 		// add server address (maybe unique id)
@@ -106,7 +106,10 @@
 	case nettgame_protocol::usable::game_state_advertisment:
 	    {
 		/*const*/ nettgame::transferable_game_state *game_state = (nettgame::transferable_game_state *)destination;
-		memcpy(game_state->unique_identifier, &data[offset], 8); // magic
+
+		memset(game_state->unique_identifier_, '\000', 9); // magic
+
+		memcpy(game_state->unique_identifier_, &data[offset], 8); // magic
 
 		offset+=8;
 

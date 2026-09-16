@@ -27,7 +27,7 @@ int main(int argc, char **argv) {
     boost::asio::io_context io_context{threads};
     boost::asio::ip::address address = boost::asio::ip::make_address(address_raw);
     bool is_master = atoi(argv[offset++]);
-    nettgame::nettgame_server<game_state> nettgame_server(address_raw, port + 1, is_master); //maybe custom load balancer?
+    nettgame::nettgame_server<game_state> nettgame_server(address_raw, port + 1, is_master, &broadcast_do_for_all); //maybe custom load balancer?
 
     try {
 	if (argc < MIN_ARGV)

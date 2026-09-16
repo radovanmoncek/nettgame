@@ -105,6 +105,12 @@ namespace nettgame {
 		last_time = std::chrono::steady_clock::now();
 	    }
 	}
+
+    template<class GameState>
+    void game_session<GameState>::perform(void (*action)(void*)) {
+	perform(state);
+    }
+
     template<class GameState>
 	void game_session<GameState>::synchronize(const std::function<void()> &thread_unsafe_action) {
 	    std::lock_guard<std::mutex> game_session_guard(game_session_sync);

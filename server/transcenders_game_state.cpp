@@ -17,6 +17,9 @@ struct game_state : nettgame::transferable_game_state {
     bool initializing = true;
 
     game_state() {
+	//unique_identifier_ = unique_identifier.substr(unique_identifier.length() - 8)./*data()*/c_str(); // magic
+	memcpy(unique_identifier_, unique_identifier.data(), 8); // magic
+
 	for (uint8_t i = 1; i < 255; ++i)
 	    unique_id_pool.insert(i);
     };
@@ -32,7 +35,7 @@ struct game_state : nettgame::transferable_game_state {
 
 	memcpy(transfer_buffer, serialized.c_str(), serialized.length());
     };
-    void detransferify(std::string serialized) override {
+    void detransferify(std::string serialized) override { // make void *
 	auto parsed = boost::json::parse(serialized).as_object();
 	game_session_id = boost::json::value_to<int>(parsed["unique_identifier"]);
 	player_count = boost::json::value_to<int>(parsed["player_count"]);
