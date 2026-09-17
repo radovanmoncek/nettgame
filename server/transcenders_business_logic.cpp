@@ -176,7 +176,7 @@ void broadcast_do_for_all(game_state *state_, nettgame::game_session<game_state>
     }
 
     if (!state_->player_count||!game_session->affinities_count())
-	--state_->ticks_until_exit;
+	state_->ticks_until_exit=std::max(0, state_->ticks_until_exit-1);
 
     game_session->synchronize([&]{
 	    uint8_t buffer[MAX_TRANSFER_BUFFER_SIZE];

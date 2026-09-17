@@ -442,8 +442,14 @@ class Game {
 		}
 	    }
 	}
-	this.webSocket.onerror=()=>this.changeSceneMenu()
-	this.webSocket.onclose=()=>this.changeSceneMenu()
+	this.webSocket.onerror=()=> {
+	    this.logger.logError("web socket encountered an error")
+	}
+	this.webSocket.onclose=()=> {
+	    this.logger.logInfo("web socket closed, will attempt reconnect")
+
+	    this.connectToServer(addresses, port)
+	}
     }
 
     /**
